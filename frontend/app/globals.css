@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-base: #07030d;
+  --bg-sidebar: #0b0614;
+  --bg-surface: #110a1b;
+  --bg-raised: #1a1026;
+  --border-subtle: #1f1330;
+  --border-strong: #3a2552;
+  --violet-700: #5a1f6b;
+  --violet-500: #8b32a0;
+  --violet-400: #a948bd;
+  --violet-glow: #8b32a066;
+  --ink: #eadcf7;
+  --ink-body: #c9b8da;
+  --ink-muted: #9886ab;
+  --ink-dim: #6b5a7d;
+  --on-primary: #fbf3ff;
+  --success: #4cc38a;
+  --success-bg: #0f2a20;
+  --warning: #e0a84a;
+  --danger: #ef6a80;
+  --shadow-glow: 0 0 24px 0 rgba(139, 50, 160, 0.35);
+  --shadow-panel: 0 24px 64px 0 rgba(0, 0, 0, 0.6);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-base: var(--bg-base);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-raised: var(--bg-raised);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-violet-700: var(--violet-700);
+  --color-violet-500: var(--violet-500);
+  --color-violet-400: var(--violet-400);
+  --color-violet-glow: var(--violet-glow);
+  --color-ink: var(--ink);
+  --color-ink-body: var(--ink-body);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-dim: var(--ink-dim);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  --shadow-glow: var(--shadow-glow);
+  --shadow-panel: var(--shadow-panel);
+
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@utility ts-display {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  line-height: 48px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+@utility ts-h1 {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+}
+@utility ts-h2 {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+@utility ts-h3 {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+@utility ts-stat {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+}
+@utility ts-body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
+@utility ts-body-strong {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+@utility ts-small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@utility ts-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility ts-mono-ui {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+@utility ts-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 22px;
+  font-weight: 400;
+}
+
+@utility hero-glow {
+  background: radial-gradient(
+    ellipse 60% 70% at 85% 0%,
+    var(--violet-glow),
+    transparent 70%
+  );
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-base);
+  color: var(--ink-body);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--violet-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
