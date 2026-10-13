@@ -3,20 +3,32 @@
 import { useSyncExternalStore } from "react";
 import type { Scan } from "./types";
 
-// localStorage key. The whole history is stored under it as one JSON array of Scan objects.
-const KEY = "projectmd.history";
+// localStorage key prefix. Each signed-in user's history is stored under `projectmd.history.<uid>`
+// as one JSON array of Scan objects, so two accounts in one browser never see each other's scans.
+// The old shared `projectmd.history` key is deliberately left alone (not migrated or deleted).
+const KEY_PREFIX = "projectmd.history.";
 const EMPTY: Scan[] = [];
 const listeners = new Set<() => void>();
-// In-memory copy of the history so we only parse localStorage once per page load.
+// Whose history is currently loaded (the signed-in user's uid), or null when signed out.
+// Set by the auth provider through setHistoryOwner.
+let owner: string | null = null;
+// In-memory copy of the owner's history so we only parse localStorage once per owner.
 let cache: Scan[] | null = null;
 
-// Returns the saved scans (newest first). On first call it loads and parses the JSON
-// from localStorage into `cache`; if it is missing or corrupt it falls back to [].
-// Stores nothing.
+// Returns the localStorage key for the current owner, or null when nobody is signed in. Stores nothing.
+function storageKey(): string | null {
+  return owner === null ? null : KEY_PREFIX + owner;
+}
+
+// Returns the saved scans (newest first) for the current owner. With no owner it returns an
+// empty list. On first call for an owner it loads and parses the JSON from localStorage into
+// `cache`; if it is missing, corrupt or storage is blocked it falls back to []. Stores nothing.
 function read(): Scan[] {
+  const key = storageKey();
+  if (key === null) return EMPTY;
   if (cache === null) {
     try {
-      const parsed = JSON.parse(localStorage.getItem(KEY) ?? "[]");
+      const parsed = JSON.parse(localStorage.getItem(key) ?? "[]");
       cache = Array.isArray(parsed) ? parsed : [];
     } catch {
       cache = [];
@@ -25,13 +37,15 @@ function read(): Scan[] {
   return cache;
 }
 
-// Replaces the whole history. Stores the new array in the in-memory cache AND saves it to
-// localStorage as JSON (if the browser blocks storage, only the cache is kept). Then
-// notifies every subscribed component so they re-render.
+// Replaces the current owner's whole history. Stores the new array in the in-memory cache AND
+// saves it to localStorage as JSON (if the browser blocks storage, only the cache is kept). Then
+// notifies every subscribed component so they re-render. With no owner it does nothing.
 function write(next: Scan[]) {
+  const key = storageKey();
+  if (key === null) return;
   cache = next;
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    localStorage.setItem(key, JSON.stringify(next));
   } catch {
     // storage blocked: keep the in-memory copy
   }
@@ -47,13 +61,32 @@ function subscribe(cb: () => void) {
   };
 }
 
-// Saves a finished scan at the top of the history. Persists the full Scan
+// Tells the store whose history to use (the signed-in user's uid, or null when signed out).
+// Changing the owner clears the in-memory copy, makes the next read load that user's key from
+// localStorage, and notifies subscribers. With null the history is empty and nothing is written.
+// Called by the auth provider; stores nothing itself.
+export function setHistoryOwner(uid: string | null) {
+  if (uid === owner) return;
+  owner = uid;
+  cache = null;
+  listeners.forEach((l) => l());
+}
+
+// Returns the uid whose history is currently loaded, or null. Lets the scan provider check that
+// the user did not change while a scan was being generated. Stores nothing.
+export function getHistoryOwner(): string | null {
+  return owner;
+}
+
+// Saves a finished scan at the top of the current owner's history. Persists the full Scan
 // (url, host, date, duration, confidence, pages, tech list and generated markdown) to localStorage.
+// Does nothing when signed out.
 export function addScan(scan: Scan) {
   write([scan, ...read()]);
 }
 
-// Deletes every saved scan. Overwrites the localStorage entry with an empty array.
+// Deletes every saved scan for the current owner. Overwrites their localStorage entry with an
+// empty array. No permission check here; the UI gates it with RBAC ("history:clear").
 export function clearHistory() {
   write([]);
 }
