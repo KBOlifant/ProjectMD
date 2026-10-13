@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PermissionError } from "@/app/functions/rbac/errors";
+import { useCan, useDenyReason } from "@/app/functions/rbac/useCan";
+import { ScanBlockedNotice } from "@/components/auth-status/scan-blocked-notice";
 import { useScan } from "@/components/scan-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HistoryRow } from "@/components/ui/history-row";
@@ -14,21 +17,31 @@ import { parseUrl } from "@/lib/url";
 
 // Home page (/): URL box, summary stats and the 3 latest scans. Stats are calculated from the saved
 // history on every render (not stored). The typed URL and error are temporary state, not stored.
+// The URL box is disabled (with the reason shown) when the account may not create scans.
 export default function GeneratePage() {
   const router = useRouter();
   const { startScan } = useScan();
   const history = useHistory();
   const hydrated = useIsHydrated();
+  const canCreate = useCan("scan:create");
+  const denyReason = useDenyReason("scan:create");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Called when the form is submitted: validates the typed URL with parseUrl. On error it shows
-  // the message; otherwise it starts a scan and goes to /processing. Nothing is saved yet.
+  // the message; otherwise it starts a scan and goes to /processing. If startScan refuses with a
+  // PermissionError (signed out, unverified email or read-only role) its message is shown as the
+  // form error and we stay here. Nothing is saved yet.
   function submit() {
     const parsed = parseUrl(value);
     if (!parsed.ok) return setError(parsed.error);
     setError(null);
-    startScan(parsed.url);
+    try {
+      startScan(parsed.url);
+    } catch (err) {
+      if (err instanceof PermissionError) return setError(err.message);
+      throw err;
+    }
     router.push("/processing");
   }
 
@@ -58,7 +71,14 @@ export default function GeneratePage() {
           Markdown.
         </p>
         <div className="mt-8 max-w-2xl">
-          <UrlInput value={value} onChange={setValue} onSubmit={submit} error={error} />
+          <UrlInput
+            value={value}
+            onChange={setValue}
+            onSubmit={submit}
+            error={error}
+            disabled={!canCreate}
+            notice={denyReason ? <ScanBlockedNotice reason={denyReason} /> : undefined}
+          />
         </div>
       </section>
 

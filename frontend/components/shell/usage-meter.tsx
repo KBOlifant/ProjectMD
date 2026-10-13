@@ -1,11 +1,15 @@
 "use client";
 
+import { useDenyReason } from "@/app/functions/rbac/useCan";
 import { USAGE_LIMIT, useHistory } from "@/lib/history-store";
 
 // Sidebar bar showing how many scans are saved vs USAGE_LIMIT. Reads the history count;
-// stores nothing.
+// stores nothing. Hidden when the account's role cannot create scans at all (read-only
+// viewers), because a scan quota means nothing to them.
 export function UsageMeter() {
   const used = useHistory().length;
+  const readOnly = useDenyReason("scan:create") === "role";
+  if (readOnly) return null;
   const pct = Math.min(100, (used / USAGE_LIMIT) * 100);
   return (
     <div className="rounded-lg border border-border-subtle bg-bg-surface p-3">

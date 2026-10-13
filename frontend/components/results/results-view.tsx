@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { useCan } from "@/app/functions/rbac/useCan";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, CopyIcon, DownloadIcon } from "@/components/ui/icons";
@@ -14,10 +15,13 @@ type Format = "md" | "txt";
 
 // Shows one scan's documentation: header, copy/download buttons, tech chips and Preview/Raw tabs.
 // Finds the scan in saved history by `id` (or the newest scan if no id). Only reads history;
-// the tab, format and copy status are temporary UI state and are not stored.
+// the tab, format and copy status are temporary UI state and are not stored. Copy and Download
+// are disabled (with an explanation) for accounts without the "scan:export" permission.
 export function ResultsView({ id }: { id?: string }) {
   const history = useHistory();
   const hydrated = useIsHydrated();
+  const canExport = useCan("scan:export");
+  const exportBlocked = "Your account cannot export scans.";
   const [tab, setTab] = useState<Tab>("preview");
   const [format, setFormat] = useState<Format>("md");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -37,6 +41,7 @@ export function ResultsView({ id }: { id?: string }) {
 
   // Copies the scan's markdown to the clipboard and flashes "Copied"/"Copy blocked" for 1.5s. Stores nothing.
   async function copy() {
+    if (!canExport) return;
     try {
       await navigator.clipboard.writeText(scan!.markdown);
       setCopyState("copied");
@@ -48,6 +53,7 @@ export function ResultsView({ id }: { id?: string }) {
 
   // Downloads the markdown as <host>.md or <host>.txt (chosen format) via a temporary file link. Nothing is stored in the app.
   function download() {
+    if (!canExport) return;
     const blob = new Blob([scan!.markdown], { type: format === "md" ? "text/markdown" : "text/plain" });
     const href = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -92,14 +98,23 @@ export function ResultsView({ id }: { id?: string }) {
             <option value="txt">Plain text (.txt)</option>
           </select>
         </label>
-        <Button variant="secondary" onClick={copy} className="ml-auto">
+        <Button
+          variant="secondary"
+          onClick={copy}
+          disabled={!canExport}
+          title={canExport ? undefined : exportBlocked}
+          className="ml-auto"
+        >
           {copyState === "copied" ? <CheckIcon /> : <CopyIcon />}
           {copyState === "copied" ? "Copied" : copyState === "failed" ? "Copy blocked" : "Copy"}
         </Button>
-        <Button onClick={download}>
+        <Button onClick={download} disabled={!canExport} title={canExport ? undefined : exportBlocked}>
           <DownloadIcon />
           Download
         </Button>
+        {!canExport && (
+          <p className="ts-small basis-full text-right text-ink-dim">{exportBlocked}</p>
+        )}
       </div>
 
       <section aria-labelledby="fingerprint">

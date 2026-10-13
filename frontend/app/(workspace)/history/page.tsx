@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Can } from "@/app/functions/rbac/can-gate";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HistoryRow } from "@/components/ui/history-row";
 import { clearHistory, useHistory, useIsHydrated } from "@/lib/history-store";
 
-// /history page: lists every saved scan and offers a two-step "Clear history" button.
-// Reads scans from the history store; clearing wipes them from localStorage.
-// `confirming` is temporary UI state and is not stored.
+// /history page: lists every saved scan and offers a two-step "Clear history" button, shown only
+// to accounts with the "history:clear" permission. Reads scans from the history store; clearing
+// wipes them from localStorage. `confirming` is temporary UI state and is not stored.
 export default function HistoryPage() {
   const history = useHistory();
   const hydrated = useIsHydrated();
@@ -25,28 +26,30 @@ export default function HistoryPage() {
             </p>
           )}
         </div>
-        {history.length > 0 &&
-          (confirming ? (
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setConfirming(false)}>
-                Keep
+        <Can permission="history:clear">
+          {history.length > 0 &&
+            (confirming ? (
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setConfirming(false)}>
+                  Keep
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="text-danger hover:text-danger"
+                  onClick={() => {
+                    clearHistory();
+                    setConfirming(false);
+                  }}
+                >
+                  Confirm clear
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" onClick={() => setConfirming(true)}>
+                Clear history
               </Button>
-              <Button
-                variant="secondary"
-                className="text-danger hover:text-danger"
-                onClick={() => {
-                  clearHistory();
-                  setConfirming(false);
-                }}
-              >
-                Confirm clear
-              </Button>
-            </div>
-          ) : (
-            <Button variant="ghost" onClick={() => setConfirming(true)}>
-              Clear history
-            </Button>
-          ))}
+            ))}
+        </Can>
       </div>
 
       {!hydrated ? null : history.length === 0 ? (

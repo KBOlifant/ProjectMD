@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { VerifyBanner } from "@/components/auth-status/verify-banner";
+import { UserMenu, UserMenuCompact } from "@/components/auth-status/user-menu";
 import { MainNav } from "./main-nav";
 import { UsageMeter } from "./usage-meter";
 
@@ -12,7 +14,8 @@ function Brand() {
   );
 }
 
-// Page frame: desktop sidebar (logo, nav, usage meter), mobile top bar, and the content area. Stores nothing.
+// Page frame: desktop sidebar (logo, nav, user menu, usage meter), mobile top bar (logo, compact
+// user menu, nav), and the content area with the verify-email banner above the page. Stores nothing.
 export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen md:flex">
@@ -22,17 +25,22 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
         <p className="ts-label mb-2 mt-6 px-3 text-ink-dim">Workspace</p>
         <MainNav />
-        <div className="mt-auto">
+        <div className="mt-auto space-y-3">
+          <UserMenu />
           <UsageMeter />
         </div>
       </aside>
 
       <header className="border-b border-border-subtle bg-bg-sidebar px-4 pt-3 md:hidden">
-        <Brand />
+        <div className="flex items-center justify-between gap-3">
+          <Brand />
+          <UserMenuCompact />
+        </div>
         <MainNav row />
       </header>
 
       <main className="min-w-0 flex-1">
+        <VerifyBanner />
         <div className="mx-auto w-full max-w-[1040px] px-4 py-8 md:px-8">{children}</div>
       </main>
     </div>
