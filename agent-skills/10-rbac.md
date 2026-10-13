@@ -34,7 +34,7 @@ rbac/permissions.ts  Permission, ROLE_PERMISSIONS (single const, easy to audit)
 rbac/can.ts          can(user: CurrentUser | null, p): boolean;  denyReason(user, p): "signed-out" | "unverified" | "role" | null
 rbac/errors.ts       class PermissionError extends Error { permission; reason }; assertCan(user, p) throws it
 rbac/useCan.ts       "use client"; useCan(p): boolean (false while auth is loading); useDenyReason(p)
-rbac/Can.tsx         <Can permission fallback?>children</Can>
+rbac/can-gate.tsx    <Can permission fallback?>children</Can>   // not Can.tsx: it would collide with can.ts on case-insensitive file systems
 ```
 `roles.ts` and `can.ts` must stay pure (no React, no Firebase) so they can be unit-tested with a plain script. `useCan` reads `useAuth().user`.
 

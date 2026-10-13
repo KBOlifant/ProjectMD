@@ -18,7 +18,7 @@ description: Wire auth and RBAC into the signed-in app: user menu, role badge, v
 - **Usage meter:** unchanged unless the user is `viewer`, then hide it.
 
 ## Rules
-- Gate with `useCan`/`Can`; never duplicate role logic in components.
+- Gate with `useCan`/`Can`; never duplicate role logic in components. Import `Can` from `@/app/functions/rbac/can-gate`.
 - Existing screens' visuals and copy stay as they are for permitted users.
 - Token classes only; no new dependencies; short plain-English comment above each function.
 
