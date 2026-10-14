@@ -9,8 +9,10 @@ backend/
   .config/dotnet-tools.json   local tool: dotnet-ef (matches the EF Core major version)
   ProjectMD.Api/
     Program.cs                composition root (marked blocks for auth and scans)
-    Models/                   AppUser, Scan, ScanTech
+    Models/                   AppUser, Scan, ScanTech, ExtractionCacheEntry, LlmUsageRecord
     Data/                     AppDbContext, design-time factory, Migrations/
+    Services/Ai/              AI half of the pipeline: options, prompt builder, LLM seam, budget guard, cache
+    Services/Pipeline/        PipelineScanGenerator, deterministic Markdown builder, scanner modes
     Dtos/                     ScanDto, TechDto, CreateScanRequest, UsageDto, MeDto
     Controllers/              HealthController (more are added by the auth and scans work)
     Auth/  Services/          reserved for the auth and scans work
@@ -42,6 +44,16 @@ Check it is up: `GET http://localhost:5080/api/health` returns `{ "status": "ok"
 | `Firebase:ProjectId` | `project-md-51f14` | Used to validate Firebase ID tokens |
 | `Cors:AllowedOrigins` | `["http://localhost:3000"]` | Browser origins allowed to call the API |
 | `Usage:MonthlyLimit` | `10` | Scans per user per UTC calendar month |
+| `Scanner:Mode` | `static` | `static` (mock), `extract` (real fetch, no AI) or `ai` (see [Scanner modes](#scanner-modes-and-ai-credits)) |
+| `Ai:MaxInputTokens` | `3000` | Hard ceiling for the prompt sent to the model (estimated tokens) |
+| `Ai:MaxOutputTokens` | `700` | Hard `max_tokens` for the answer |
+| `Ai:FastModel` | empty | Cheap model used for everything. Required only once a real AI client exists |
+| `Ai:QualityModel` | empty | Dearer model, only for a future option that asks for it |
+| `Ai:CacheDays` | `7` | How long an AI answer is reused for identical page content (`0` = cache off) |
+| `Ai:DailyTokenCapPerUser` | `20000` | Tokens (input + output) one user may spend per UTC day |
+| `Ai:DailyTokenCapGlobal` | `200000` | Tokens all users together may spend per UTC day |
+| `Ai:FallbackOnBudget` | `true` | Over a cap: `true` = finish with the basic AI-free document, `false` = `429` with `reason: "budget"` |
+| `Ai:RetryBackoffMs` | `1000` | Pause before the single retry after a provider 429/5xx |
 
 Never put a real connection string, password or token in a tracked file, a script, this README
 or a log.
@@ -85,8 +97,9 @@ dotnet ef migrations script --project ProjectMD.Api
 dotnet ef database update --project ProjectMD.Api
 ```
 
-`InitialCreate` creates the `AppUsers` and `Scans` tables (including `Scans.DeletedAt`). It has to
-be reviewed and applied deliberately; the API never migrates the database on startup.
+`InitialCreate` creates the `AppUsers` and `Scans` tables (including `Scans.DeletedAt`).
+`AddAiPipeline` adds the `ExtractionCache` and `LlmUsage` tables for the AI pipeline. Migrations
+have to be reviewed and applied deliberately; the API never migrates the database on startup.
 
 ### Generating a migration without a database
 
@@ -109,6 +122,14 @@ $env:ConnectionStrings__Default = $null
   `CreatedAt`, `DurationMs`, `Confidence` (0-100), `Pages`, `Tech` (`jsonb` array of
   `{ Name, Highlighted }`), `Markdown` (`text`), `DeletedAt` (`timestamptz`, nullable, UTC; null
   while the scan is visible). Index on `(UserId, CreatedAt DESC)`.
+- `ExtractionCache`: composite primary key `(ContentHash varchar(64), PromptVersion int, Model
+  varchar(100))`, `Markdown` (`text`, the AI-written prose only), `CreatedAt`, `ExpiresAt`,
+  `HitCount`. Public page-derived text only: no page HTML and no user data, so one entry serves any
+  user. Expired rows are ignored and overwritten on the next store (no purge job yet).
+- `LlmUsage`: `Id`, `UserId` (FK to `AppUsers`, cascade delete), `ScanId` (nullable, no FK; usually
+  null because the usage is recorded before the scan row exists), `Model` (max 100),
+  `PromptTokens`, `CompletionTokens` (the provider's real counts, 0 for a cache hit), `CacheHit`,
+  `CreatedAt`. Index on `(UserId, CreatedAt)`. Token counts and model name only.
 
 All timestamps are UTC: always write `DateTime.UtcNow`.
 
@@ -135,7 +156,60 @@ down). With a soft delete, a cleared scan still counts for the UTC month it was 
 
 JSON is camelCase. A scan is `{ id, url, host, createdAt, durationMs, confidence, pages,
 tech: [{ name, highlighted }], markdown }` and matches `frontend/lib/types.ts`. Errors are
-ProblemDetails JSON.
+ProblemDetails JSON. `POST /api/scans` errors carry a `reason`: `"url"` (400, bad URL), `"quota"`
+(429, monthly allowance), `"rate"` (429, too fast), `"extract"` (400 when the address is not a
+public HTML page, 502 when the site or the page renderer failed; the `detail` is a safe message)
+and `"budget"` (429, the daily AI budget is used up and `Ai:FallbackOnBudget` is `false`; has
+`resetsAt`, the next midnight UTC).
+
+## Scanner modes and AI credits
+
+`Scanner:Mode` chooses how `POST /api/scans` produces the document:
+
+| Mode | What happens |
+|---|---|
+| `static` (default) | The MOCK generator. No network, no AI. |
+| `extract` | Real fetch (Playwright), reduce and tech fingerprint, then the Markdown is built **without any AI** by `DeterministicMarkdownBuilder`. |
+| `ai` | Everything in `extract`, plus one AI call that writes only the short prose (summary, what the site does, notable sections). If the AI is not configured, over budget or fails, the scan still succeeds with the `extract` document and a footer starting with "Basic scan". |
+
+There is no AI client yet: `ILlmClient` is a seam with only `NotConfiguredLlmClient`, which makes
+no network call. So `ai` mode starts fine (one warning is logged), behaves like `extract` and ends
+the document with "Basic scan: AI writing is not configured." A real client will read its key from
+server-side configuration only; nothing in this repo holds a key.
+
+How credits are saved, in order of effect:
+
+1. **Free work stays free.** Tech list, outline, headings, links, meta, page count and structure come
+   from deterministic code. The AI only writes the prose, and the document around it is always built
+   locally.
+2. **Small ranked prompt.** `PromptBuilder` sends title, description, JSON-LD, outline, tech names,
+   main text and top links, in that priority, stopping at `Ai:MaxInputTokens` (estimated at about 4
+   ASCII characters per token, each other character counted as one token, so it over-counts). No
+   raw HTML, scripts, CSS, screenshots or full link list.
+3. **One call per scan.** No chunk-and-summarise. A too-large page is truncated by priority.
+4. **Capped output.** `Ai:MaxOutputTokens` is the hard `max_tokens`; the template asks for about 180
+   words; temperature 0 is for the real client to apply.
+5. **Cache.** Identical page content (`ContentHash`) + `PromptBuilder.PromptVersion` + model is
+   served from `ExtractionCache` for `Ai:CacheDays` for any user: zero credits, recorded in
+   `LlmUsage` as a cache hit. Bump `PromptVersion` whenever the prompt changes.
+6. **Cheap model first.** `Ai:FastModel` is used for everything; `Ai:QualityModel` is reserved. Model
+   names are configuration only; with a real client and no `Ai:FastModel` the app stops at startup
+   with a clear message.
+7. **Stable prefix.** The instructions are one fixed system message and the page facts come last, with
+   no user names, ids, timestamps or URL, so provider-side prompt caching can apply.
+8. **Hard daily caps.** Before every call `ILlmBudgetGuard` checks the current UTC day's tokens in
+   `LlmUsage` against `Ai:DailyTokenCapPerUser` and `Ai:DailyTokenCapGlobal`, reserving the worst
+   case (the full prompt plus `Ai:MaxOutputTokens`). Cache hits cost 0. Several requests at the very
+   same instant can overshoot a cap by a few calls; the per-user scan rate limit keeps that small.
+   A provider 429/5xx gets at most one retry after `Ai:RetryBackoffMs`, never a loop.
+9. **No payment for failures.** A failed extraction makes no AI call. A failed AI call is not retried
+   automatically (beyond the one transient retry) and the scan falls back to the basic document.
+
+The AI answer is untrusted (it is built from untrusted page text): `AiProseSanitizer` strips HTML and
+links, demotes headings and caps the length before it is cached or stored.
+
+The `Confidence` number is a heuristic (how much usable information the page gave us), not a measured
+accuracy, and the document says so. `Pages` is 1 because only the one page is fetched.
 
 ## Logging
 
@@ -169,3 +243,67 @@ caller from `ICurrentUser`; `IUserSync.GetOrCreateAsync` returns the caller's `A
 
 TODO(roles): assigning the `role` custom claim to users needs a Firebase service account (Admin
 SDK) and is a later task. Until then every account has no claim and is therefore a `member`.
+
+## Page extraction
+
+The free front half of a scan (used when `Scanner:Mode` is `extract` or `ai`; no AI, no credits):
+`IExtractionService.ExtractAsync(url)` renders the page in headless Chromium (Playwright for .NET),
+`HtmlReducer` turns it into a small `PageDigest` (title, description, outline, main text, links,
+JSON-LD, script/stylesheet addresses, a few headers, a content hash; typically over 90% fewer
+characters than the HTML), and `TechFingerprinter` detects technologies from `Services/Extraction/TechRules.json`
+(about 45 rules; add a technology by adding data, not code). Code is in `ProjectMD.Api/Services/Extraction`.
+
+### Install the browser (once per machine; the app never downloads it)
+
+Build first, then install Chromium with the script that the build copies next to the app:
+
+```powershell
+cd backend
+dotnet build
+pwsh ProjectMD.Api/bin/Debug/net10.0/playwright.ps1 install chromium
+```
+
+On Linux add `--with-deps` (needs root) and use the `bin/Release/...` path for a release build. If
+`pwsh` is not installed, use the Playwright CLI instead: `dotnet tool install --global
+Microsoft.Playwright.CLI` then `playwright install chromium`. Alternatively, set
+`Scanner:BrowserChannel` to `chrome` or `msedge` to use a browser that is already installed.
+Without a browser, a scan fails with the message "The page renderer is not installed on the server"
+(HTTP 502); nothing else breaks.
+
+### Settings (section `Scanner`, all optional)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `MaxConcurrentFetches` | `2` | Pages rendered at the same time (others wait up to `QueueWaitSeconds`, default 30) |
+| `MaxHtmlBytes` | `2097152` | HTML kept per page; more is cut off, not rejected |
+| `MaxResourceBytes` / `MaxTotalBytes` | `5242880` / `26214400` | Largest single script/style/data file, and total bytes one page may load |
+| `NavigationTimeoutSeconds` / `OverallTimeoutSeconds` | `30` / `45` | Wait for the page to settle, and the hard limit for the whole fetch |
+| `RequestTimeoutSeconds` | `15` | Limit for one network request |
+| `MaxRedirects` / `MaxRequestsPerPage` | `8` / `300` | Redirect hops per request, and requests per page |
+| `RejectHttpErrors` | `true` | A site answering HTTP 400 or higher is an error, not a page to document |
+| `BrowserChannel` | empty | `chrome` or `msedge` to use an installed browser instead of Playwright's Chromium |
+| `MaxTextChars` / `MaxLinks` / `MaxHeadings` | `12000` / `40` / `60` | Size of the reduced page |
+
+### How requests are kept away from private networks (SSRF)
+
+Intercepting the browser's requests is not enough on its own: Playwright does not show the redirect
+hops of an intercepted request to the handler, so `public site -> 302 -> http://169.254.169.254/`
+would get through. So the browser is started with name resolution switched off (it cannot connect to
+anything by itself, not even an IP address) and every request is answered by our own code:
+`RequestGuard` allows only http/https, ports that are not mail/database/admin ports, and hosts whose
+DNS records are ALL public (`UrlValidator.IsPublicAddress`); `GuardedHttpClient` then connects only
+to the addresses that were checked (no DNS rebinding), follows redirects one hop at a time with a
+check on each hop, and enforces the size and time limits. Service workers are blocked, WebSockets
+are closed, popups, downloads and dialogs are refused, and images, fonts and media are not fetched.
+Errors reach the user as `ExtractionException` with a safe message (no URL, address or stack trace).
+
+Known limits: `robots.txt` is not read yet (`TODO(robots)`); the guard cannot replace network egress
+rules, so also deny the server access to private ranges and the cloud metadata address at the
+firewall; some sites block headless browsers, which shows up as an HTTP error or a thin page.
+
+### Tests
+
+`dotnet test` runs the extraction tests with fixture HTML, a fake DNS resolver and a local test web
+server (no external network, no browser). Tests that drive a real browser are skipped unless
+`PROJECTMD_BROWSER_TESTS=1` (and a browser is installed; set `PROJECTMD_BROWSER_CHANNEL=chrome` to use
+an installed Chrome). One of them fetches `https://example.com`.

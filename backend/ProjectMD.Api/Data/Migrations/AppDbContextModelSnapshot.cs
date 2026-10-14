@@ -51,6 +51,73 @@ namespace ProjectMD.Api.Data.Migrations
                     b.ToTable("AppUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ProjectMD.Api.Models.ExtractionCacheEntry", b =>
+                {
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("PromptVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("HitCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Markdown")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ContentHash", "PromptVersion", "Model");
+
+                    b.ToTable("ExtractionCache", (string)null);
+                });
+
+            modelBuilder.Entity("ProjectMD.Api.Models.LlmUsageRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CacheHit")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("CompletionTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("PromptTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ScanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("LlmUsage", (string)null);
+                });
+
             modelBuilder.Entity("ProjectMD.Api.Models.Scan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -95,6 +162,15 @@ namespace ProjectMD.Api.Data.Migrations
                         .IsDescending(false, true);
 
                     b.ToTable("Scans", (string)null);
+                });
+
+            modelBuilder.Entity("ProjectMD.Api.Models.LlmUsageRecord", b =>
+                {
+                    b.HasOne("ProjectMD.Api.Models.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ProjectMD.Api.Models.Scan", b =>

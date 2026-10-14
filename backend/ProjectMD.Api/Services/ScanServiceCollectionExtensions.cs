@@ -1,4 +1,8 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using ProjectMD.Api.Services.Ai;
+using ProjectMD.Api.Services.Extraction;
+using ProjectMD.Api.Services.Pipeline;
 
 namespace ProjectMD.Api.Services;
 
@@ -6,24 +10,68 @@ namespace ProjectMD.Api.Services;
 // SERVICES block.
 public static class ScanServiceCollectionExtensions
 {
-    // Registers the clock, the URL validator, the MOCK scan generator, the usage counter, the
+    // Registers the clock, the URL validator, the scan generator chosen by Scanner:Mode, the AI
+    // pieces (settings, prompt builder, cache, budget guard, LLM seam), the usage counter, the
     // quota-checked scan recorder, the settings and the per-user rate limiter.
+    //
+    // Scanner:Mode picks the IScanGenerator:
+    //   static  (default)  the MOCK StaticScanGenerator. Nothing else changes.
+    //   extract            PipelineScanGenerator: real fetch + reduce + fingerprint, no AI.
+    //   ai                 PipelineScanGenerator plus the AI stage (falls back to extract output
+    //                      when no AI client is configured, which is the case today).
+    // An unknown mode throws at startup with a clear message.
     public static IServiceCollection AddScanServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.TryAddSingleton(TimeProvider.System);
 
         services.Configure<UsageOptions>(configuration.GetSection("Usage"));
         services.Configure<ScanRateLimitOptions>(configuration.GetSection("RateLimiting:ScanCreate"));
+        services.Configure<ScannerModeOptions>(configuration.GetSection("Scanner"));
 
         services.AddSingleton<IUrlValidator, UrlValidator>();
 
-        // MOCK generator today; a Groq-backed IScanGenerator replaces this registration later.
-        services.AddSingleton<IScanGenerator, StaticScanGenerator>();
+        var mode = ScannerModeOptions.Parse(configuration["Scanner:Mode"]);
+        services.AddAiPipeline(configuration, mode);
 
         services.AddScoped<IUsageService, UsageService>();
         services.AddScoped<IScanRecorder, ScanRecorder>();
 
         services.AddScanRateLimiting();
         return services;
+    }
+
+    // Registers the AI settings and helpers (always, they cost nothing until used) and picks the
+    // generator for the mode. The extraction code (Playwright and friends) is only registered when
+    // the mode needs it, so `static` mode never touches it.
+    private static void AddAiPipeline(this IServiceCollection services, IConfiguration configuration, ScannerMode mode)
+    {
+        // Settings. They are validated at startup only in `ai` mode, so a bad Ai value can never
+        // stop the app while the AI is not in use.
+        var aiOptions = services.AddOptions<AiOptions>().Bind(configuration.GetSection("Ai"));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AiOptions>, AiOptionsValidator>());
+        if (mode == ScannerMode.Ai)
+        {
+            aiOptions.ValidateOnStart();
+            services.AddHostedService<AiModeStartupNotice>();
+        }
+
+        // The seam to the language model. Only the "not configured" client exists; a real one
+        // would be registered before this line and win because of TryAdd.
+        services.TryAddSingleton<ILlmClient, NotConfiguredLlmClient>();
+
+        services.AddSingleton<PromptBuilder>();
+        services.AddScoped<IExtractionCache, DbExtractionCache>();
+        services.AddScoped<ILlmBudgetGuard, LlmBudgetGuard>();
+        services.AddScoped<IScanOwnerProvider, CurrentScanOwnerProvider>();
+
+        if (mode == ScannerMode.Static)
+        {
+            // MOCK generator, exactly as before.
+            services.AddSingleton<IScanGenerator, StaticScanGenerator>();
+            return;
+        }
+
+        services.AddExtraction(configuration);
+        services.AddScoped<IScanGenerator, PipelineScanGenerator>();
     }
 }

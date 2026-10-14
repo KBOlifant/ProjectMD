@@ -9,6 +9,8 @@ using ProjectMD.Api.Data;
 using ProjectMD.Api.Dtos;
 using ProjectMD.Api.Models;
 using ProjectMD.Api.Services;
+using ProjectMD.Api.Services.Ai;
+using ProjectMD.Api.Services.Extraction;
 
 namespace ProjectMD.Api.Controllers;
 
@@ -92,7 +94,9 @@ public class ScansController : ControllerBase
 
     // POST /api/scans { url }: validates the URL, checks the monthly quota, generates the scan,
     // saves it and returns 201 with the scan and a Location header. Errors are ProblemDetails:
-    // 400 (bad URL, reason "url"), 429 (quota used up, reason "quota"; too fast, reason "rate").
+    // 400 (bad URL, reason "url"; page not scannable, reason "extract"), 429 (quota used up,
+    // reason "quota"; too fast, reason "rate"; daily AI budget used up with fallback off, reason
+    // "budget"), 502 (page could not be fetched, reason "extract").
     [HttpPost]
     [Authorize(Policy = Permissions.ScanCreate)]
     [EnableRateLimiting(ScanRateLimiting.PolicyName)]
@@ -122,7 +126,23 @@ public class ScansController : ControllerBase
             return QuotaExceeded(usage);
         }
 
-        var generated = await _generator.GenerateAsync(validation.Uri!, ct);
+        GeneratedScan generated;
+        try
+        {
+            generated = await _generator.GenerateAsync(validation.Uri!, ct);
+        }
+        catch (ExtractionException ex)
+        {
+            // The page could not be fetched or read. The exception's message is written to be safe
+            // to show (no stack trace, no internal address), and the AI was never called.
+            return ExtractionFailed(ex);
+        }
+        catch (BudgetExceededException ex)
+        {
+            // Only reaches here when Ai:FallbackOnBudget is false; otherwise the generator hands
+            // back the basic, AI-free document instead.
+            return BudgetExceeded(ex);
+        }
 
         // Refuse to store an oversized document. The message is generic on purpose.
         if (Encoding.UTF8.GetByteCount(generated.Markdown) > MaxMarkdownBytes)
@@ -180,6 +200,38 @@ public class ScansController : ControllerBase
 
         _logger.LogInformation("Cleared {Count} scans for one user", cleared);
         return NoContent();
+    }
+
+    // The response for a page that could not be extracted: 400 when the address itself is the
+    // problem (a non-public address, not an HTML page), otherwise 502 (the site or our page
+    // renderer failed). reason is "extract" and the detail is the exception's user-safe message.
+    private ObjectResult ExtractionFailed(ExtractionException ex)
+    {
+        var status = ex.IsClientError ? StatusCodes.Status400BadRequest : StatusCodes.Status502BadGateway;
+        var problem = ProblemDetailsFactory.CreateProblemDetails(
+            HttpContext,
+            statusCode: status,
+            title: ex.IsClientError ? "That page cannot be scanned" : "The page could not be fetched",
+            detail: ex.Message);
+        problem.Extensions["reason"] = "extract";
+        return new ObjectResult(problem) { StatusCode = status };
+    }
+
+    // The 429 response for a used-up daily AI budget, with reason "budget" and a friendly detail
+    // (no token numbers). resetsAt is the next midnight UTC, when the daily caps start again.
+    private ObjectResult BudgetExceeded(BudgetExceededException ex)
+    {
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var resetsAt = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1)
+            .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
+        var problem = ProblemDetailsFactory.CreateProblemDetails(
+            HttpContext,
+            statusCode: StatusCodes.Status429TooManyRequests,
+            title: "Daily AI limit reached",
+            detail: ex.Message);
+        problem.Extensions["reason"] = "budget";
+        problem.Extensions["resetsAt"] = resetsAt;
+        return new ObjectResult(problem) { StatusCode = StatusCodes.Status429TooManyRequests };
     }
 
     // The 429 response for a used-up monthly allowance, with reason "quota" and the numbers the

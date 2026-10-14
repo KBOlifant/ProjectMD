@@ -3,7 +3,8 @@ using ProjectMD.Api.Models;
 
 namespace ProjectMD.Api.Data;
 
-// The EF Core database context: the two tables (AppUsers, Scans) and how they map to PostgreSQL.
+// The EF Core database context: the tables (AppUsers, Scans, ExtractionCache, LlmUsage) and how
+// they map to PostgreSQL.
 // All DateTime values are UTC and stored as timestamptz; always write DateTime.UtcNow.
 public class AppDbContext : DbContext
 {
@@ -17,6 +18,12 @@ public class AppDbContext : DbContext
 
     // Saved scans, each owned by one AppUser.
     public DbSet<Scan> Scans => Set<Scan>();
+
+    // Cached AI prose per page content (table "ExtractionCache"), so identical work is not paid for twice.
+    public DbSet<ExtractionCacheEntry> ExtractionCache => Set<ExtractionCacheEntry>();
+
+    // The AI usage ledger (table "LlmUsage"): token counts per call, used for the daily caps.
+    public DbSet<LlmUsageRecord> LlmUsage => Set<LlmUsageRecord>();
 
     // Describes the schema: key sizes, indexes, the cascade delete, the soft-delete filter on Scans
     // and the jsonb tech column.
@@ -72,6 +79,35 @@ public class AppDbContext : DbContext
                 tech.ToJson();
                 tech.Property(t => t.Name).IsRequired();
             });
+        });
+
+        // AI cache: one row per (page content hash, prompt version, model). Holds the AI-written
+        // prose only; never the page HTML.
+        modelBuilder.Entity<ExtractionCacheEntry>(entry =>
+        {
+            entry.ToTable("ExtractionCache");
+            entry.HasKey(e => new { e.ContentHash, e.PromptVersion, e.Model });
+
+            entry.Property(e => e.ContentHash).IsRequired().HasMaxLength(64);
+            entry.Property(e => e.Model).IsRequired().HasMaxLength(100);
+            entry.Property(e => e.Markdown).IsRequired(); // unbounded "text" column
+        });
+
+        // AI usage ledger: one row per model call or cache hit. Deleting a user deletes their rows.
+        modelBuilder.Entity<LlmUsageRecord>(usage =>
+        {
+            usage.ToTable("LlmUsage");
+            usage.HasKey(u => u.Id);
+
+            usage.Property(u => u.Model).IsRequired().HasMaxLength(100);
+
+            usage.HasOne<AppUser>()
+                .WithMany()
+                .HasForeignKey(u => u.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Serves "how many tokens has this user spent today".
+            usage.HasIndex(u => new { u.UserId, u.CreatedAt });
         });
     }
 }
