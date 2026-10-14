@@ -17,6 +17,10 @@ public interface ILlmClient
 {
     // Sends one request and returns the answer. Must honour request.MaxOutputTokens as a hard cap.
     Task<LlmResult> CompleteAsync(LlmRequest request, CancellationToken ct);
+
+    // True for a client that allows extra output tokens for hidden reasoning (see
+    // AiOptions.ReasoningTokenHeadroom). The budget guard then reserves the same larger total.
+    bool AddsReasoningHeadroom => false;
 }
 
 // The only ILlmClient that exists today. It never makes a network call; it always says the AI is

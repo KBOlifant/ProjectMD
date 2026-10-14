@@ -170,7 +170,11 @@ internal sealed class PipelineHarness : IDisposable
     }
 
     // Builds a generator on a fresh database context (like one request would).
-    public PipelineScanGenerator CreateGenerator(Guid? userId = null)
+    public PipelineScanGenerator CreateGenerator(ILlmClient client, Guid? userId = null) =>
+        CreateGenerator(userId, client);
+
+    // Same, but with a given client instead of the harness default.
+    public PipelineScanGenerator CreateGenerator(Guid? userId = null, ILlmClient? client = null)
     {
         var db = Db.CreateContext();
         var options = Options.Create(Ai);
@@ -182,7 +186,7 @@ internal sealed class PipelineHarness : IDisposable
                 new ScanTech { Name = "Tailwind CSS", Highlighted = false }),
             new DbExtractionCache(db, options, Clock),
             new LlmBudgetGuard(db, options, Clock),
-            Llm,
+            client ?? Llm,
             new PromptBuilder(),
             new FakeOwner(userId ?? User.Id),
             Options.Create(new ScannerModeOptions { Mode = Mode.ToString() }),

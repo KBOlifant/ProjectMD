@@ -135,7 +135,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
         // full output allowance), so a call can never take the day over a cap.
         var estimatedTokens = TokenEstimator.Estimate(request.System)
             + TokenEstimator.Estimate(request.User)
-            + request.MaxOutputTokens;
+            + options.OutputTokenCap(_llm.AddsReasoningHeadroom);
         try
         {
             await _budget.EnsureAsync(userId, estimatedTokens, ct);

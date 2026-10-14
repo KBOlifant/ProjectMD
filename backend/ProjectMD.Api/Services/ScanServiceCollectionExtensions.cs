@@ -48,15 +48,27 @@ public static class ScanServiceCollectionExtensions
         // Settings. They are validated at startup only in `ai` mode, so a bad Ai value can never
         // stop the app while the AI is not in use.
         var aiOptions = services.AddOptions<AiOptions>().Bind(configuration.GetSection("Ai"));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AiOptions>, AiOptionsValidator>());
+        services.AddSingleton<IValidateOptions<AiOptions>>(
+            sp => new AiOptionsValidator(() => sp.GetRequiredService<ILlmClient>()));
         if (mode == ScannerMode.Ai)
         {
             aiOptions.ValidateOnStart();
             services.AddHostedService<AiModeStartupNotice>();
         }
 
-        // The seam to the language model. Only the "not configured" client exists; a real one
-        // would be registered before this line and win because of TryAdd.
+        // The seam to the language model. The real Groq client is registered only in `ai` mode when
+        // Ai:ApiKey is non-empty; otherwise the "not configured" client stays. A real client is
+        // registered before the TryAdd line below, so it wins.
+        if (mode == ScannerMode.Ai && !string.IsNullOrWhiteSpace(configuration["Ai:ApiKey"]))
+        {
+            // No automatic redirects (a redirect must never carry the bearer key elsewhere) and no
+            // built-in request logging; the client logs its own safe summary.
+            services.AddHttpClient(GroqLlmClient.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
+                .RemoveAllLoggers();
+            services.AddSingleton<ILlmClient, GroqLlmClient>();
+        }
+
         services.TryAddSingleton<ILlmClient, NotConfiguredLlmClient>();
 
         services.AddSingleton<PromptBuilder>();

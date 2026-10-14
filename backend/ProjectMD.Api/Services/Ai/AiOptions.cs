@@ -37,6 +37,30 @@ public sealed class AiOptions
     // Pause before the single retry after a provider 429/5xx, in milliseconds (Ai:RetryBackoffMs,
     // default 1000). There is never more than one retry.
     public int RetryBackoffMs { get; set; } = 1000;
+
+    // Where the Groq (OpenAI-compatible) API lives (Ai:BaseUrl). The client adds /chat/completions.
+    public string BaseUrl { get; set; } = "https://api.groq.com/openai/v1";
+
+    // The provider key (Ai:ApiKey). Secret: set it only in backend/.env (Ai__ApiKey) or a real
+    // environment variable, never in a tracked file. Empty means no real AI client is registered.
+    public string ApiKey { get; set; } = string.Empty;
+
+    // How hard a reasoning model thinks before answering (Ai:ReasoningEffort, default "low"): low,
+    // medium or high. Hidden reasoning tokens are billed as output, so low saves credits.
+    public string ReasoningEffort { get; set; } = "low";
+
+    // Extra output tokens allowed for hidden reasoning on top of Ai:MaxOutputTokens
+    // (Ai:ReasoningTokenHeadroom, default 400). Added by the Groq client AND reserved by the budget.
+    public int ReasoningTokenHeadroom { get; set; } = 400;
+
+    // Seconds to wait for the provider before giving up (Ai:TimeoutSeconds, default 30).
+    public int TimeoutSeconds { get; set; } = 30;
+
+    // The one place that decides the hard output cap: the answer allowance, plus the reasoning
+    // headroom when the client is one that adds it. The client sends this number and the budget
+    // guard reserves this same number, so the daily limits stay honest.
+    public int OutputTokenCap(bool withReasoningHeadroom) =>
+        MaxOutputTokens + (withReasoningHeadroom ? Math.Max(0, ReasoningTokenHeadroom) : 0);
 }
 
 // Checks the Ai settings once at startup (in `ai` mode) so a bad value stops the app with one
@@ -46,13 +70,23 @@ public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
     // The longest model name the cache and usage tables can hold.
     public const int MaxModelNameLength = 100;
 
-    private readonly ILlmClient _client;
+    private readonly Func<ILlmClient> _clientSource;
 
-    // Receives the registered AI client, because model names are only required for a real one.
+    // Receives the AI client directly (used by tests).
     public AiOptionsValidator(ILlmClient client)
+        : this(() => client)
     {
-        _client = client;
     }
+
+    // Receives a way to get the registered AI client later, because model names are only required
+    // for a real one. It is a function (not the client itself) so building the client, which reads
+    // the options, can never loop back into this validator.
+    public AiOptionsValidator(Func<ILlmClient> clientSource)
+    {
+        _clientSource = clientSource;
+    }
+
+    private ILlmClient _client => _clientSource();
 
     // Returns Success, or Fail with every problem listed. Model names are required only when the
     // registered client is a real one (not NotConfiguredLlmClient); otherwise `ai` mode behaves
@@ -96,6 +130,30 @@ public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
         if (options.FastModel.Length > MaxModelNameLength || options.QualityModel.Length > MaxModelNameLength)
         {
             errors.Add($"Ai model names must be at most {MaxModelNameLength} characters.");
+        }
+
+        if (options.ReasoningTokenHeadroom is < 0 or > 20_000)
+        {
+            errors.Add("Ai:ReasoningTokenHeadroom must be between 0 and 20000.");
+        }
+
+        if (options.TimeoutSeconds is < 1 or > 300)
+        {
+            errors.Add("Ai:TimeoutSeconds must be between 1 and 300.");
+        }
+
+        if (!string.Equals(options.ReasoningEffort, "low", StringComparison.Ordinal)
+            && !string.Equals(options.ReasoningEffort, "medium", StringComparison.Ordinal)
+            && !string.Equals(options.ReasoningEffort, "high", StringComparison.Ordinal))
+        {
+            errors.Add("Ai:ReasoningEffort must be low, medium or high.");
+        }
+
+        if (_client is GroqLlmClient
+            && (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl)
+                || (baseUrl.Scheme != Uri.UriSchemeHttps && !baseUrl.IsLoopback)))
+        {
+            errors.Add("Ai:BaseUrl must be an absolute https address.");
         }
 
         if (_client is not NotConfiguredLlmClient && string.IsNullOrWhiteSpace(options.FastModel))

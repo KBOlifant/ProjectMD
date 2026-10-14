@@ -55,7 +55,12 @@ Check it is up: `GET http://localhost:5080/api/health` returns `{ "status": "ok"
 | `Ai:DailyTokenCapPerUser` | `20000` | Tokens (input + output) one user may spend per UTC day |
 | `Ai:DailyTokenCapGlobal` | `200000` | Tokens all users together may spend per UTC day |
 | `Ai:FallbackOnBudget` | `true` | Over a cap: `true` = finish with the basic AI-free document, `false` = `429` with `reason: "budget"` |
-| `Ai:RetryBackoffMs` | `1000` | Pause before the single retry after a provider 429/5xx |
+| `Ai:RetryBackoffMs` | `1000` | Pause before the single retry after a provider 429/5xx (a `Retry-After` header up to 5 s wins) |
+| `Ai:ApiKey` | empty | Groq API key. Secret: only in `backend/.env` (`Ai__ApiKey`) or a real environment variable. Empty = no real AI client |
+| `Ai:BaseUrl` | `https://api.groq.com/openai/v1` | Groq's OpenAI-compatible API root |
+| `Ai:ReasoningEffort` | `low` | `low`, `medium` or `high` (gpt-oss reasoning effort; hidden reasoning tokens are billed as output) |
+| `Ai:ReasoningTokenHeadroom` | `400` | Extra output tokens allowed for hidden reasoning on top of `Ai:MaxOutputTokens`; the budget reserves the same total |
+| `Ai:TimeoutSeconds` | `30` | Give up on the provider after this long |
 
 Never put a real connection string, password or token in a tracked file, a script, this README
 or a log.
@@ -181,10 +186,31 @@ and `"budget"` (429, the daily AI budget is used up and `Ai:FallbackOnBudget` is
 | `extract` | Real fetch (Playwright), reduce and tech fingerprint, then the Markdown is built **without any AI** by `DeterministicMarkdownBuilder`. |
 | `ai` | Everything in `extract`, plus one AI call that writes only the short prose (summary, what the site does, notable sections). If the AI is not configured, over budget or fails, the scan still succeeds with the `extract` document and a footer starting with "Basic scan". |
 
-There is no AI client yet: `ILlmClient` is a seam with only `NotConfiguredLlmClient`, which makes
-no network call. So `ai` mode starts fine (one warning is logged), behaves like `extract` and ends
-the document with "Basic scan: AI writing is not configured." A real client will read its key from
-server-side configuration only; nothing in this repo holds a key.
+The real client is `GroqLlmClient` (Groq's OpenAI-compatible `POST {Ai:BaseUrl}/chat/completions`).
+It is registered only when `Scanner:Mode` is `ai` AND `Ai:ApiKey` is non-empty; otherwise
+`NotConfiguredLlmClient` stays, which makes no network call, so `ai` mode starts fine (one warning
+is logged), behaves like `extract` and ends the document with "Basic scan: AI writing is not
+configured." Nothing in this repo holds a key.
+
+**Set it up.** Copy `.env.example` to `.env` (ignored by git) and fill in, with your own key:
+
+```
+Scanner__Mode=ai
+Ai__ApiKey=YOUR_GROQ_API_KEY
+Ai__FastModel=openai/gpt-oss-20b
+```
+
+`Ai:FastModel` is the model id sent to Groq; it is required when a key is set (startup stops with a
+message naming `Ai:FastModel` otherwise). The client sends `max_completion_tokens` (the answer cap
+plus `Ai:ReasoningTokenHeadroom`), `temperature` 0, `reasoning_effort` (default `low`) and
+`include_reasoning: false` (no reasoning text comes back). A cut-off (`finish_reason: length`) or
+empty answer is treated as a failed call: the basic document is used and the real tokens are still
+recorded. 401/403 give the safe message "The AI service rejected the server's credentials"; 429/5xx
+are retried once. The key, prompts and response bodies are never logged (only status, model, token
+counts and latency). To verify, run in `ai` mode, scan a site, and check the document has no "Basic
+scan" footer and `LlmUsage` has a row with real token counts; a second scan of the same page is a
+cache hit costing zero. An opt-in live test (`PROJECTMD_LIVE_GROQ=1` plus `Ai__ApiKey` in the
+environment) makes one tiny real call.
 
 How credits are saved, in order of effect:
 

@@ -4,7 +4,6 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
-- **Later, not started:** writing the documentation with the Groq AI model (the API key will live only on the server).
 
 ## Website and server connected
 
@@ -13,6 +12,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Backend server
 
+- **Connected the server to Groq (model `openai/gpt-oss-20b`).** With `Scanner__Mode=ai` and a Groq key in `backend/.env`, each scan now makes one request to Groq and uses the answer for the written overview. To keep costs down, the model is told to think briefly (its hidden thinking is billed too), the answer length is capped with a little extra room for that thinking, and the daily limits count the same total. A cut-off or empty answer, or a refused or failed request, falls back to the free document instead of retrying in a loop. Without a key, scans still work and carry a note that AI writing is not configured. The key is never logged or written to git. Tested with a pretend Groq server only; no real call has been made yet.
 - **The backend now starts with just `dotnet run`.** Typing `dotnet run` in the `backend` folder works: a small launcher project there forwards to the real server, which starts on http://localhost:5080. (Before, you had to add `--project ProjectMD.Api`.) To build or test, use `dotnet build ProjectMD.sln` / `dotnet test ProjectMD.sln`. The README also explains the "file is locked by ProjectMD.Api.exe" build error: it means an older copy of the server is still running and needs to be stopped.
 - **Clearer message when the database setting is not found.** The server keeps the database address in a private setting that is only read in Development mode. Starting it another way (for example from some editors, or without the launch settings) hid that setting and gave a confusing error. The message now says which mode it is in and how to start it correctly: `dotnet run --project ProjectMD.Api` from the `backend` folder.
 - **Roles now live in your own database.** The server decides who is a viewer, member or admin and saves it in your database; anything a sign-in token claims about roles is ignored, so nobody can promote themselves. Your email is in a private admin list, so you become admin when you sign in with it after verifying it. Admins get server addresses to list users and change roles, with safeguards: nobody can change their own role or remove the last admin. If the database cannot be reached the server refuses the request instead of guessing a role. Note: someone on the admin-email list who is demoted on the Admin page is promoted again within about 30 seconds, so also remove their email from the list. About 35 new tests.
