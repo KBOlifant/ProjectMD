@@ -78,7 +78,9 @@ if (!isTesting && !isEfTooling && string.IsNullOrWhiteSpace(app.Configuration.Ge
         "ConnectionStrings:Default is not set. In development run: " +
         "dotnet user-secrets set \"ConnectionStrings:Default\" \"<npgsql connection string>\" " +
         "--project ProjectMD.Api. Elsewhere set the ConnectionStrings__Default environment " +
-        "variable. See backend/README.md.");
+        "variable. See backend/README.md. User secrets are only read when the environment is " +
+        "Development (current: " + app.Environment.EnvironmentName + "). Start the server with " +
+        "`dotnet run --project ProjectMD.Api` from backend/, or set ASPNETCORE_ENVIRONMENT=Development.");
     Environment.Exit(1);
 }
 
