@@ -6,3 +6,4 @@ TestResults/
 appsettings.*.local.json
 .env
 !.env.example
+artifacts/

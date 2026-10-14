@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Build output goes to backend/artifacts/ instead of each project's own bin/ and obj/ folders.
+    Reason: a server that is still running (or stuck) keeps its files in bin/ locked, and the next
+    build then fails with "file is locked by ProjectMD.Api.exe". A fresh output folder avoids that.
+    The old bin/ and obj/ folders are excluded from compilation so leftovers in them are ignored.
+  -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

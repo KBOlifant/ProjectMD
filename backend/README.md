@@ -96,6 +96,9 @@ dotnet tool restore
 
 # Create a new migration after changing the models
 
+> **Build output** goes to `backend/artifacts/` (not each project's `bin/` and `obj/`). If an older copy of the server is still running or stuck, it keeps its old files locked, and building into the same folder fails with "file is locked by ProjectMD.Api.exe"; a separate output folder avoids that. If `dotnet run` ever serves old behaviour, make sure no other copy is still listening on port 5080.
+
+
 > **Testing endpoints by hand (Swagger):** start the server with `dotnet run` and open http://localhost:5080/swagger (Development only; it is off in Production). `GET /api/health` needs no sign-in. For the others, sign in on the website (run with `npm run dev`, which shows a **Copy API token** button in the account menu), then in Swagger click **Authorize** and paste the token. Tokens last about an hour; copy a new one when you get 401.
 
 
