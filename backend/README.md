@@ -91,6 +91,9 @@ dotnet tool restore
 
 # Create a new migration after changing the models
 
+> **Running it:** from the `backend` folder just type `dotnet run`. A small launcher (`Run.csproj`) forwards to the API project and starts it on http://localhost:5080. To build or test, name the solution: `dotnet build ProjectMD.sln` and `dotnet test ProjectMD.sln` (a bare `dotnet build` in this folder is ambiguous). If a build says a file is locked by `ProjectMD.Api.exe`, an earlier copy of the server is still running: stop it (Ctrl+C in its terminal, or `taskkill /F /IM ProjectMD.Api.exe`) and try again.
+
+
 > **Private settings now live in `backend/.env`** (ignored by git; copy `backend/.env.example`). It holds `ConnectionStrings__Default` and `Auth__AdminEmails__0`. Real environment variables override it, and it works in any environment (Development or Production). Wherever this README mentions user-secrets, the `.env` file now does the same job.
 
 dotnet ef migrations add <Name> --project ProjectMD.Api --output-dir Data/Migrations

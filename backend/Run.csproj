@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Launcher only. It lets you type just `dotnet run` in the backend folder: it builds nothing
+    of its own and forwards to "dotnet run" for the ProjectMD.Api project, which starts the server
+    with the launch settings (http://localhost:5080). Not part of ProjectMD.sln, so build and
+    test with `dotnet build ProjectMD.sln` / `dotnet test ProjectMD.sln`.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <IsPackable>false</IsPackable>
+    <RunCommand>dotnet</RunCommand>
+    <RunArguments>run --project "$(MSBuildThisFileDirectory)ProjectMD.Api"</RunArguments>
+    <RunWorkingDirectory>$(MSBuildThisFileDirectory)</RunWorkingDirectory>
+  </PropertyGroup>
+
+  <!-- An empty app needs a Main to compile; supply one without a source file. -->
+  <Target Name="NoSourceMain" BeforeTargets="CoreCompile" Condition="'@(Compile)' == ''">
+    <WriteLinesToFile File="$(IntermediateOutputPath)Launcher.g.cs" Lines="internal static class Launcher { private static void Main() { } }" Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)Launcher.g.cs" />
+    </ItemGroup>
+  </Target>
+
+</Project>
