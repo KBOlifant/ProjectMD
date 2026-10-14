@@ -15,9 +15,17 @@ var isEfTooling = Assembly.GetEntryAssembly()?.GetName().Name == "ef";
 // (SQLite or in-memory) and does not need a real connection string.
 var isTesting = builder.Environment.IsEnvironment("Testing");
 
+// Private settings (database address, admin emails) are read from backend/.env, which git
+// ignores. Real environment variables still win. Tests never read the file.
+if (!isTesting)
+{
+    builder.Configuration.AddInMemoryCollection(
+        DotEnv.Read(DotEnv.DefaultFolders(builder.Environment.ContentRootPath)));
+}
+
 // ---- Database ---------------------------------------------------------------------------------
-// The connection string comes from user-secrets in development and from the
-// ConnectionStrings__Default environment variable elsewhere. It is never stored in the repo.
+// The connection string comes from backend/.env (or user-secrets in development, or the
+// ConnectionStrings__Default environment variable). It is never stored in the repo.
 if (!isTesting)
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
@@ -75,12 +83,9 @@ var app = builder.Build();
 if (!isTesting && !isEfTooling && string.IsNullOrWhiteSpace(app.Configuration.GetConnectionString("Default")))
 {
     Console.Error.WriteLine(
-        "ConnectionStrings:Default is not set. In development run: " +
-        "dotnet user-secrets set \"ConnectionStrings:Default\" \"<npgsql connection string>\" " +
-        "--project ProjectMD.Api. Elsewhere set the ConnectionStrings__Default environment " +
-        "variable. See backend/README.md. User secrets are only read when the environment is " +
-        "Development (current: " + app.Environment.EnvironmentName + "). Start the server with " +
-        "`dotnet run --project ProjectMD.Api` from backend/, or set ASPNETCORE_ENVIRONMENT=Development.");
+        "ConnectionStrings:Default is not set. Put ConnectionStrings__Default=<npgsql connection " +
+        "string> in backend/.env (see backend/.env.example), or set it as an environment " +
+        "variable. See backend/README.md.");
     Environment.Exit(1);
 }
 

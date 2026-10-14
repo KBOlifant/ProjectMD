@@ -90,6 +90,9 @@ and use `ProjectMD.Api` as both the project and the startup project:
 dotnet tool restore
 
 # Create a new migration after changing the models
+
+> **Private settings now live in `backend/.env`** (ignored by git; copy `backend/.env.example`). It holds `ConnectionStrings__Default` and `Auth__AdminEmails__0`. Real environment variables override it, and it works in any environment (Development or Production). Wherever this README mentions user-secrets, the `.env` file now does the same job.
+
 dotnet ef migrations add <Name> --project ProjectMD.Api --output-dir Data/Migrations
 
 # Review the SQL before applying anything

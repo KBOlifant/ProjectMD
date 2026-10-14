@@ -4,3 +4,5 @@ obj/
 .vs/
 TestResults/
 appsettings.*.local.json
+.env
+!.env.example

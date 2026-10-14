@@ -17,6 +17,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             .AddJsonFile("appsettings.json", optional: true)
             .AddUserSecrets<DesignTimeDbContextFactory>(optional: true)
             .AddEnvironmentVariables()
+            .AddInMemoryCollection(DotEnv.Read(DotEnv.DefaultFolders(Directory.GetCurrentDirectory())))
             .Build();
 
         var connectionString = configuration.GetConnectionString("Default");
