@@ -31,6 +31,10 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 | 15 | [15-backend-auth.md](15-backend-auth.md) | `backend/.../Auth/*`, `MeController` | 14 |
 | 16 | [16-backend-scans.md](16-backend-scans.md) | `ScansController`, `Services/*`, backend tests | 14, 15 |
 | 17 | [17-frontend-api-connect.md](17-frontend-api-connect.md) | frontend api client, api provider, remote history, usage | contract from 14-16 |
+| 18 | [18-backend-extraction.md](18-backend-extraction.md) | `Services/Extraction/*` (Playwright fetch, HTML reduction, tech fingerprint) | 14, 16 |
+| 19 | [19-backend-ai-budget.md](19-backend-ai-budget.md) | `Services/Ai/*`, `Services/Pipeline/*`, cache and usage tables | 18 contract |
+
+Extraction waves: 18 and 19 in parallel (19 codes to 18's contract).
 
 Backend waves: **A**: 14. **B** (parallel): 15, 16, 17. Then migrate, smoke-test and 08.
 
