@@ -5,6 +5,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 ## Coming next
 
 
+## Working with Claude
+
+- **Added a set of review and planning helpers for Claude (from the open-source ECC project).** Claude now has 15 specialist helpers in `.claude/agents` (planning, design, code review, security review, test-first coding, C# and TypeScript/React review, build-error fixing, browser testing, hunting silent failures, tidying and docs) and a set of coding rules in `.claude/rules/ecc` (general, C# and TypeScript) that it follows automatically when working in this project. Nothing in the app itself changed. No automatic scripts ("hooks") were installed. *Why:* so Claude plans first, writes tests, and has its work reviewed the same way every time.
+
 ## Website and server connected
 
 - **Website takes your role from the server and has an Admin page.** In server mode the website now asks the server who you are and what your role is, instead of trusting the sign-in token, and never gives more than read-only access if the server cannot be reached (it shows a notice with a Retry button). Admins get an Admin link and a Users page where they can change other people's roles, with clear messages for the safeguards (you cannot change your own role, and there must always be one admin). The server side of this is still to come, so it was tested against a stand-in server.
@@ -12,6 +16,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Backend server
 
+- **Added a Swagger page for testing the server by hand.** With the server running in Development, open http://localhost:5080/swagger to see every endpoint (health, me, scans, admin users) and try them from the browser. It is switched off in Production. Protected endpoints still need a sign-in: the page has an Authorize button where you paste your Firebase token. Three new tests check the page loads, lists the endpoints and does not weaken the sign-in rules.
 - **Connected the server to Groq (model `openai/gpt-oss-20b`).** With `Scanner__Mode=ai` and a Groq key in `backend/.env`, each scan now makes one request to Groq and uses the answer for the written overview. To keep costs down, the model is told to think briefly (its hidden thinking is billed too), the answer length is capped with a little extra room for that thinking, and the daily limits count the same total. A cut-off or empty answer, or a refused or failed request, falls back to the free document instead of retrying in a loop. Without a key, scans still work and carry a note that AI writing is not configured. The key is never logged or written to git. Tested with a pretend Groq server only; no real call has been made yet.
 - **The backend now starts with just `dotnet run`.** Typing `dotnet run` in the `backend` folder works: a small launcher project there forwards to the real server, which starts on http://localhost:5080. (Before, you had to add `--project ProjectMD.Api`.) To build or test, use `dotnet build ProjectMD.sln` / `dotnet test ProjectMD.sln`. The README also explains the "file is locked by ProjectMD.Api.exe" build error: it means an older copy of the server is still running and needs to be stopped.
 - **Clearer message when the database setting is not found.** The server keeps the database address in a private setting that is only read in Development mode. Starting it another way (for example from some editors, or without the launch settings) hid that setting and gave a confusing error. The message now says which mode it is in and how to start it correctly: `dotnet run --project ProjectMD.Api` from the `backend` folder.

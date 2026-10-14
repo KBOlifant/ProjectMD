@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using ProjectMD.Api.Data;
 
 // Entry point for the Project MD API. Skills 15 (auth) and 16 (scans) each edit ONLY their own
@@ -37,6 +38,34 @@ builder.Services.AddControllers();
 
 // Turns errors (including empty 401/403/404 and unhandled exceptions) into ProblemDetails JSON.
 builder.Services.AddProblemDetails();
+
+// Swagger (a test page for the endpoints) is only switched on in Development and in the test host,
+// never in Production. It adds an "Authorize" box where a Firebase ID token can be pasted.
+var swaggerEnabled = builder.Environment.IsDevelopment() || isTesting;
+if (swaggerEnabled)
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Project MD API",
+            Version = "v1",
+            Description = "Paste a Firebase ID token with the Authorize button to call the protected endpoints.",
+        });
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Firebase ID token (only the token, without the word Bearer).",
+        });
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
+        });
+    });
+}
 
 // Request logging: method, path (no query string), status code and duration only. Headers are
 // never logged, so the Authorization header (the Firebase token) cannot end up in the logs.
@@ -103,6 +132,13 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpLogging();
+
+// The Swagger page lives at /swagger (Development only).
+if (swaggerEnabled)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Project MD API v1"));
+}
 
 app.UseRouting();
 

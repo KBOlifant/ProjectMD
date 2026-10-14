@@ -16,6 +16,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Playwright" Version="1.63.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.0" />
   </ItemGroup>
 
   <!-- The technology fingerprint rules (data, not code) ship inside the assembly. -->
