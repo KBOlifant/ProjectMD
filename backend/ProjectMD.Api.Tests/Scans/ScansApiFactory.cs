@@ -150,7 +150,33 @@ public class ScansApiFactory : WebApplicationFactory<Program>
     public HttpClient CreateClientFor(string uid, bool emailVerified = true, string? role = null)
     {
         var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        var token = TestTokens.Create(uid: uid, email: uid + "@example.com", emailVerified: emailVerified, role: role);
+        // The role lives in the database, so a requested role is stored there (the token carries none).
+        if (role is not null)
+        {
+            using var scope = Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = db.AppUsers.FirstOrDefault(u => u.FirebaseUid == uid);
+            if (user is null)
+            {
+                db.AppUsers.Add(new AppUser
+                {
+                    Id = Guid.NewGuid(),
+                    FirebaseUid = uid,
+                    Email = uid + "@example.com",
+                    Role = role,
+                    CreatedAt = DateTime.UtcNow,
+                    LastSeenAt = DateTime.UtcNow,
+                });
+            }
+            else
+            {
+                user.Role = role;
+            }
+
+            db.SaveChanges();
+        }
+
+        var token = TestTokens.Create(uid: uid, email: uid + "@example.com", emailVerified: emailVerified);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }

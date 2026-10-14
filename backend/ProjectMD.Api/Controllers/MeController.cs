@@ -26,8 +26,8 @@ public class MeController : ControllerBase
     }
 
     // GET /api/me creates or refreshes the caller's AppUser row (this is the first call after
-    // sign-in) and returns { uid, email, emailVerified, role, usage }. Identity and role come from
-    // the verified token, not from the database.
+    // sign-in) and returns { uid, email, emailVerified, role, usage }. Identity comes from the
+    // verified token; the role is the one stored in the database.
     [HttpGet]
     public async Task<ActionResult<MeDto>> Get(CancellationToken cancellationToken)
     {
@@ -38,7 +38,7 @@ public class MeController : ControllerBase
             _currentUser.Uid,
             _currentUser.Email,
             _currentUser.EmailVerified,
-            _currentUser.Role,
+            Roles.FromStored(appUser.Role),
             usage);
     }
 }

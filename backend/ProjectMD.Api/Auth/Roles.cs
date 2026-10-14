@@ -1,7 +1,7 @@
 namespace ProjectMD.Api.Auth;
 
 // The three roles, from least to most privileged: viewer < member < admin. The role comes from
-// the Firebase custom claim `role` on the ID token (set server-side only, never by the client).
+// the AppUsers.Role column (decided by the server; a `role` token claim is ignored).
 // This mirrors frontend/app/functions/rbac/roles.ts; the backend is the real enforcement.
 public static class Roles
 {
@@ -20,6 +20,10 @@ public static class Roles
     // True only for an exact, case-sensitive match of a known role name (no trimming).
     public static bool IsRole(string? value) =>
         value is Viewer or Member or Admin;
+
+    // Turns the role stored in the database into a usable role and fails closed: a known name is
+    // used as is, anything else (null, empty, corrupt, wrong case) becomes "viewer".
+    public static string FromStored(string? stored) => IsRole(stored) ? stored! : Viewer;
 
     // Turns the raw `role` claim into a role and fails closed. A missing claim (null) means a
     // normal account and becomes "member". A valid role name is used as is. Anything else (wrong

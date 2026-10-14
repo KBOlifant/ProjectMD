@@ -7,7 +7,8 @@ namespace ProjectMD.Api.Auth;
 public interface IUserSync
 {
     // Finds the AppUser row for the caller's Firebase uid, creating it on first use, and
-    // refreshes Email (when the token has one) and LastSeenAt (UTC). Safe to call from two
+    // refreshes Email (when the token has one) and LastSeenAt (UTC, at most once a minute). New
+    // rows get the Auth:DefaultRole. Safe to call from two
     // requests at once: if both try to insert, the loser re-reads the winner's row.
     Task<AppUser> GetOrCreateAsync(ICurrentUser user, CancellationToken cancellationToken = default);
 }

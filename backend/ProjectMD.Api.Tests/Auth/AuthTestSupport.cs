@@ -206,6 +206,10 @@ public sealed class AuthTestFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Firebase:ProjectId", TestFirebase.ProjectId);
+        foreach (var (name, value) in Settings)
+        {
+            builder.UseSetting(name, value);
+        }
 
         builder.ConfigureLogging(logging =>
         {
@@ -238,6 +242,8 @@ public sealed class AuthTestFactory : WebApplicationFactory<Program>
             });
 
             services.AddControllers().AddApplicationPart(typeof(AuthProbeController).Assembly);
+
+            ConfigureServices?.Invoke(services);
         });
     }
 
@@ -248,6 +254,45 @@ public sealed class AuthTestFactory : WebApplicationFactory<Program>
         using var scope = host.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
         return host;
+    }
+
+    // Extra configuration (for example Auth:AdminEmails) and service replacements for one test.
+    // Set before the host is first used.
+    public Dictionary<string, string?> Settings { get; } = new();
+
+    // Optional hook to replace services in the test host (for example a failing database).
+    public Action<IServiceCollection>? ConfigureServices { get; set; }
+
+    // Stores a user with the given role straight in the database (creating or updating the row).
+    public Guid SeedUser(string uid, string role, string? email = null)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = db.AppUsers.FirstOrDefault(u => u.FirebaseUid == uid);
+        if (user is null)
+        {
+            user = new ProjectMD.Api.Models.AppUser
+            {
+                Id = Guid.NewGuid(),
+                FirebaseUid = uid,
+                Email = email ?? uid + "@example.com",
+                CreatedAt = DateTime.UtcNow,
+                LastSeenAt = DateTime.UtcNow,
+            };
+            db.AppUsers.Add(user);
+        }
+
+        user.Role = role;
+        db.SaveChanges();
+        return user.Id;
+    }
+
+    // Reads a user's stored role straight from the database (null when there is no row).
+    public string? StoredRole(string uid)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return db.AppUsers.AsNoTracking().Where(u => u.FirebaseUid == uid).Select(u => u.Role).FirstOrDefault();
     }
 
     // Closes the database with the host.

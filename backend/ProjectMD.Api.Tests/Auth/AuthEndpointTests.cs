@@ -240,35 +240,64 @@ public class AuthEndpointTests : IClassFixture<AuthTestFactory>
     [InlineData("admin", "admin")]
     [InlineData("superuser", "viewer")]
     [InlineData("Admin", "viewer")]
-    // The role comes from the token claim and fails closed.
-    public async Task Me_reports_the_resolved_role(string claim, string expected)
+    // The role comes from the database and an unknown stored value fails closed to viewer.
+    public async Task Me_reports_the_stored_role(string stored, string expected)
     {
-        var response = await GetAsync("/api/me", TestTokens.Create(uid: NewUid(), role: claim));
+        var uid = NewUid();
+        _factory.SeedUser(uid, stored);
+
+        var response = await GetAsync("/api/me", TestTokens.Create(uid: uid));
 
         Assert.Equal(expected, (await JsonAsync(response)).GetProperty("role").GetString());
     }
 
-    [Fact]
-    // A role array in the token is ambiguous and fails closed to viewer.
-    public async Task Me_with_a_role_array_is_viewer()
+    [Theory]
+    [InlineData("admin")]
+    [InlineData("viewer")]
+    // The database role beats a conflicting token claim, both for /api/me and for the policies.
+    public async Task Database_role_beats_a_conflicting_token_claim(string claim)
     {
-        var token = TestTokens.Create(uid: NewUid(), extraClaims: new Dictionary<string, object> { ["role"] = new[] { "admin", "member" } });
+        var uid = NewUid();
+        var stored = claim == "admin" ? "viewer" : "admin";
+        _factory.SeedUser(uid, stored);
+        var token = TestTokens.Create(uid: uid, role: claim);
 
-        var response = await GetAsync("/api/me", token);
+        var me = await GetAsync("/api/me", token);
+        var probe = await GetAsync("/api/_authprobe/admin-access", token);
 
-        Assert.Equal("viewer", (await JsonAsync(response)).GetProperty("role").GetString());
+        Assert.Equal(stored, (await JsonAsync(me)).GetProperty("role").GetString());
+        Assert.Equal(stored == "admin" ? HttpStatusCode.OK : HttpStatusCode.Forbidden, probe.StatusCode);
     }
 
     [Fact]
-    // A role claim that is JSON null counts as "no claim" (member), like the frontend.
-    public async Task Me_with_a_null_role_claim_is_member()
+    // A new user whose token claims admin is still a member (a user cannot raise their own role).
+    public async Task Token_claiming_admin_stays_member()
     {
-        var token = TestTokens.Create(uid: NewUid(), extraClaims: new Dictionary<string, object> { ["role"] = null! });
+        var uid = NewUid();
+        var token = TestTokens.Create(uid: uid, role: "admin");
 
-        var response = await GetAsync("/api/me", token);
+        var me = await GetAsync("/api/me", token);
+        var probe = await GetAsync("/api/_authprobe/admin-access", token);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("member", (await JsonAsync(response)).GetProperty("role").GetString());
+        Assert.Equal("member", (await JsonAsync(me)).GetProperty("role").GetString());
+        Assert.Equal(HttpStatusCode.Forbidden, probe.StatusCode);
+        Assert.Equal("member", _factory.StoredRole(uid));
+    }
+
+    [Fact]
+    // Role claims of any shape in the token (array, JSON null) are ignored.
+    public async Task Odd_role_claims_in_the_token_are_ignored()
+    {
+        var array = TestTokens.Create(uid: NewUid(), extraClaims: new Dictionary<string, object> { ["role"] = new[] { "admin", "member" } });
+        var nulled = TestTokens.Create(uid: NewUid(), extraClaims: new Dictionary<string, object> { ["role"] = null! });
+
+        foreach (var token in new[] { array, nulled })
+        {
+            var response = await GetAsync("/api/me", token);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("member", (await JsonAsync(response)).GetProperty("role").GetString());
+        }
     }
 
     [Fact]
@@ -287,8 +316,8 @@ public class AuthEndpointTests : IClassFixture<AuthTestFactory>
         var uid = NewUid();
 
         await GetAsync("/api/me", TestTokens.Create(uid: uid, email: "first@example.com"));
+        await AgeLastSeenAsync(uid);
         var first = await LoadUserAsync(uid);
-        await Task.Delay(50);
         await GetAsync("/api/me", TestTokens.Create(uid: uid, email: "second@example.com"));
         var second = await LoadUserAsync(uid);
 
@@ -311,6 +340,16 @@ public class AuthEndpointTests : IClassFixture<AuthTestFactory>
         await GetAsync("/api/me", TestTokens.Create(uid: uid, key: TestTokens.UntrustedKey));
 
         Assert.Null(await LoadUserAsync(uid));
+    }
+
+    // Pretends the user was last seen five minutes ago (LastSeenAt is only refreshed once a minute).
+    private async Task AgeLastSeenAsync(string uid)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.AppUsers.SingleAsync(u => u.FirebaseUid == uid);
+        user.LastSeenAt = user.LastSeenAt.AddMinutes(-5);
+        await db.SaveChangesAsync();
     }
 
     // Reads the AppUser row straight from the test database.
@@ -347,7 +386,9 @@ public class AuthEndpointTests : IClassFixture<AuthTestFactory>
     // The matrix, enforced end to end: status code and the `reason` in the 403 body.
     public async Task Policies_enforce_the_matrix(string role, bool verified, string route, int status, string? reason)
     {
-        var token = TestTokens.Create(uid: NewUid(), role: role, emailVerified: verified);
+        var uid = NewUid();
+        _factory.SeedUser(uid, role);
+        var token = TestTokens.Create(uid: uid, emailVerified: verified);
 
         var response = await GetAsync($"/api/_authprobe/{route}", token);
 

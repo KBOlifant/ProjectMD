@@ -44,10 +44,10 @@ public class UserSyncTests : IDisposable
         {
             var created = await new UserSync(first).GetOrCreateAsync(Caller(email: "old@example.com"));
             id = created.Id;
+            created.LastSeenAt = created.LastSeenAt.AddMinutes(-5); // LastSeenAt refreshes once a minute
+            await first.SaveChangesAsync();
             firstSeen = created.LastSeenAt;
         }
-
-        await Task.Delay(50);
 
         await using var second = _db.CreateContext();
         var again = await new UserSync(second).GetOrCreateAsync(Caller(email: "new@example.com"));
@@ -56,6 +56,39 @@ public class UserSyncTests : IDisposable
         Assert.Equal("new@example.com", again.Email);
         Assert.True(again.LastSeenAt > firstSeen);
         Assert.Equal(1, await second.AppUsers.CountAsync());
+    }
+
+    [Fact]
+    // LastSeenAt is not written again within a minute.
+    public async Task Does_not_refresh_last_seen_more_than_once_a_minute()
+    {
+        await using var context = _db.CreateContext();
+        var sync = new UserSync(context);
+        var created = await sync.GetOrCreateAsync(Caller());
+        var stamp = created.LastSeenAt;
+        await Task.Delay(30);
+
+        var again = await sync.GetOrCreateAsync(Caller());
+
+        Assert.Equal(stamp, again.LastSeenAt);
+    }
+
+    [Theory]
+    [InlineData(null, "member")]
+    [InlineData("viewer", "viewer")]
+    [InlineData("member", "member")]
+    [InlineData("admin", "member")] // an admin default is refused
+    [InlineData("nonsense", "member")]
+    // New users get Auth:DefaultRole (viewer or member only).
+    public async Task New_users_get_the_default_role(string? configured, string expected)
+    {
+        await using var context = _db.CreateContext();
+        var options = Microsoft.Extensions.Options.Options.Create(
+            configured is null ? new AuthOptions() : new AuthOptions { DefaultRole = configured });
+
+        var user = await new UserSync(context, options).GetOrCreateAsync(Caller());
+
+        Assert.Equal(expected, user.Role);
     }
 
     [Fact]

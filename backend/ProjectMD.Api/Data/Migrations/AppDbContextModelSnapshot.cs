@@ -43,6 +43,13 @@ namespace ProjectMD.Api.Data.Migrations
                     b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("member");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FirebaseUid")

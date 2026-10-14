@@ -43,6 +43,8 @@ Check it is up: `GET http://localhost:5080/api/health` returns `{ "status": "ok"
 | `ConnectionStrings:Default` | empty | PostgreSQL connection string (set it as a secret, see below) |
 | `Firebase:ProjectId` | `project-md-51f14` | Used to validate Firebase ID tokens |
 | `Cors:AllowedOrigins` | `["http://localhost:3000"]` | Browser origins allowed to call the API |
+| `Auth:AdminEmails` | `[]` | Bootstrap admin emails, set as a secret (see [Roles in the database](#roles-in-the-database)) |
+| `Auth:DefaultRole` | `member` | Role given to new users (`viewer` or `member`) |
 | `Usage:MonthlyLimit` | `10` | Scans per user per UTC calendar month |
 | `Scanner:Mode` | `static` | `static` (mock), `extract` (real fetch, no AI) or `ai` (see [Scanner modes](#scanner-modes-and-ai-credits)) |
 | `Ai:MaxInputTokens` | `3000` | Hard ceiling for the prompt sent to the model (estimated tokens) |
@@ -98,7 +100,8 @@ dotnet ef database update --project ProjectMD.Api
 ```
 
 `InitialCreate` creates the `AppUsers` and `Scans` tables (including `Scans.DeletedAt`).
-`AddAiPipeline` adds the `ExtractionCache` and `LlmUsage` tables for the AI pipeline. Migrations
+`AddAiPipeline` adds the `ExtractionCache` and `LlmUsage` tables for the AI pipeline. `AddUserRole`
+adds `AppUsers.Role` (`varchar(20) NOT NULL DEFAULT 'member'`; existing users become members). Migrations
 have to be reviewed and applied deliberately; the API never migrates the database on startup.
 
 ### Generating a migration without a database
@@ -116,8 +119,8 @@ $env:ConnectionStrings__Default = $null
 ## Data model
 
 - `AppUsers`: `Id` (guid, PK), `FirebaseUid` (unique, max 128), `Email` (max 320), `CreatedAt`,
-  `LastSeenAt` (both `timestamptz`, UTC). Roles are not stored; the Firebase custom claim `role`
-  is the source of truth.
+  `LastSeenAt` (both `timestamptz`, UTC), `Role` (`viewer` | `member` | `admin`, max 20, default
+  `member`; added by the `AddUserRole` migration).
 - `Scans`: `Id`, `UserId` (FK to `AppUsers`, cascade delete), `Url` (max 2048), `Host` (max 255),
   `CreatedAt`, `DurationMs`, `Confidence` (0-100), `Pages`, `Tech` (`jsonb` array of
   `{ Name, Highlighted }`), `Markdown` (`text`), `DeletedAt` (`timestamptz`, nullable, UTC; null
@@ -226,9 +229,10 @@ is `401`; a valid token that lacks the permission is `403` ProblemDetails. For `
 403 body has a `reason` field: `"unverified"` (verify the email) or `"role"` (the role cannot do
 it). The same `reason` is sent for every refused permission. Tokens are never logged.
 
-The role comes from the Firebase custom claim `role` (never from the database): no claim means
-`member`, `viewer`/`member`/`admin` are used as is, and any other value is `viewer` (fail closed).
-This is the same matrix as `frontend/app/functions/rbac`:
+The role is stored in the database (`AppUsers.Role`) and decided by the server. A `role` claim in the
+Firebase token is IGNORED, so a user can never raise their own role. A stored value that is not
+`viewer`, `member` or `admin` is treated as `viewer` (fail closed). The matrix is the same as
+`frontend/app/functions/rbac`:
 
 | Role | Permissions (policy names) |
 |---|---|
@@ -241,8 +245,39 @@ This is the same matrix as `frontend/app/functions/rbac`:
 caller from `ICurrentUser`; `IUserSync.GetOrCreateAsync` returns the caller's `AppUsers` row.
 `GET /api/me` returns `{ uid, email, emailVerified, role, usage }`.
 
-TODO(roles): assigning the `role` custom claim to users needs a Firebase service account (Admin
-SDK) and is a later task. Until then every account has no claim and is therefore a `member`.
+### Roles in the database
+
+| Key | Default | Meaning |
+|---|---|---|
+| `Auth:AdminEmails` | `[]` | Bootstrap admins (string array). Set it as a secret, never in a tracked file |
+| `Auth:DefaultRole` | `member` | Role of new users. Only `viewer` or `member` are accepted; anything else is `member` |
+
+```powershell
+dotnet user-secrets set "Auth:AdminEmails:0" "<admin email>" --project ProjectMD.Api
+```
+
+Elsewhere use the environment variable `Auth__AdminEmails__0` (and `__1`, ...).
+
+- **Bootstrap.** A request whose token has `email_verified == true` and an email on
+  `Auth:AdminEmails` (case-insensitive, trimmed) promotes that user to `admin` in the database.
+  An unverified email is never promoted. It is promotion only: removing an address does not demote
+  anyone, but note that a listed, verified person who is demoted on the admin screen is promoted
+  again the next time their role is looked up (within about 30 seconds). Remove the address from the
+  list as well to demote them for good.
+- **Per request.** `DbRoleClaimsTransformation` runs after the token is validated, finds or creates
+  the `AppUsers` row and sets the single `role` claim from the database. The role is cached per
+  uid for 30 seconds (`IMemoryCache`, in this server process only) and evicted when an admin
+  changes it. `LastSeenAt` is written at most once a minute per user. If the database cannot be read
+  the request is `503` ProblemDetails; no default role is ever assumed.
+- **Admin endpoints** (need `admin:access`, so `403` with `reason: "role"` for others):
+  - `GET /api/admin/users`: up to 200 users, newest first: `[{ id, email, role, createdAt, lastSeenAt }]`.
+  - `PUT /api/admin/users/{id}/role` with `{ "role": "viewer|member|admin" }` returns the updated
+    user. Errors are ProblemDetails with a `reason`: unknown role `400` `role`; your own account
+    `400` `self`; removing the last admin `409` `last-admin`; unknown user `404`. The last-admin
+    check and the update run in one serializable transaction (and one at a time per server).
+    Role changes are logged at Information level with ids only (no emails).
+- Because the cache is per process, with several server instances a role change can take up to 30
+  seconds to reach the other instances.
 
 ## Page extraction
 

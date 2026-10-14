@@ -38,6 +38,7 @@ public class AppDbContext : DbContext
 
             user.Property(u => u.FirebaseUid).IsRequired().HasMaxLength(128);
             user.Property(u => u.Email).HasMaxLength(320);
+            user.Property(u => u.Role).IsRequired().HasMaxLength(20).HasDefaultValue("member");
 
             // DateTime maps to "timestamp with time zone" (timestamptz) in Npgsql, so every
             // timestamp is stored as UTC. No explicit column type is set, to keep the model

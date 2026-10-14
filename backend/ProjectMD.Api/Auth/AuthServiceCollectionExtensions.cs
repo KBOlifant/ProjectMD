@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -47,6 +48,18 @@ public static class AuthServiceCollectionExtensions
 
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
         services.AddScoped<IUserSync, UserSync>();
+
+        // Roles live in the database: Auth:AdminEmails (bootstrap admins) and Auth:DefaultRole.
+        services.AddOptions<AuthOptions>().Configure<IConfiguration>((options, configuration) =>
+            configuration.GetSection("Auth").Bind(options));
+        services.AddMemoryCache();
+
+        // After the token is validated, replace its role claim with the database role (scoped,
+        // because it uses the request's database context).
+        services.Replace(ServiceDescriptor.Scoped<IClaimsTransformation, DbRoleClaimsTransformation>());
+
+        // A database failure while reading the role is a 503, never a default role.
+        services.AddExceptionHandler<RoleLookupUnavailableHandler>();
 
         return services;
     }

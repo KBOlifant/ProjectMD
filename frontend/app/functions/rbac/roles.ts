@@ -1,7 +1,8 @@
 // Leaf module: imports nothing from the app, so it can run in a plain script as well as in React.
 
-// Roles from least to most privileged. The role comes from the Firebase custom claim `role`
-// on the ID token. Claims are set only server-side (Admin SDK / backend), never from the client.
+// Roles from least to most privileged. In server mode the role comes from the Project MD
+// database via GET /api/me (the backend decides it; a token claim is ignored). In static mode
+// (no backend) it falls back to the token claim `role` or the dev override. Never set by the client.
 export const ROLES = ["viewer", "member", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 

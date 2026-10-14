@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ProjectMD.Api.Data;
 using ProjectMD.Api.Models;
 
@@ -10,12 +11,18 @@ public sealed class UserSync : IUserSync
     // Longest email the AppUsers.Email column holds (see AppDbContext).
     private const int MaxEmailLength = 320;
 
-    private readonly AppDbContext _db;
+    // LastSeenAt is refreshed at most this often per user (not on every request).
+    private static readonly TimeSpan LastSeenInterval = TimeSpan.FromMinutes(1);
 
-    // Receives the request's database context.
-    public UserSync(AppDbContext db)
+    private readonly AppDbContext _db;
+    private readonly AuthOptions _options;
+
+    // Receives the request's database context and (optionally) the auth settings, which supply the
+    // default role for new users.
+    public UserSync(AppDbContext db, IOptions<AuthOptions>? options = null)
     {
         _db = db;
+        _options = options?.Value ?? new AuthOptions();
     }
 
     // Reads the row by uid, inserts it when missing, then bumps LastSeenAt. The unique index on
@@ -34,6 +41,7 @@ public sealed class UserSync : IUserSync
                 Id = Guid.NewGuid(),
                 FirebaseUid = user.Uid,
                 Email = email,
+                Role = _options.ResolvedDefaultRole,
                 CreatedAt = now,
                 LastSeenAt = now,
             };
@@ -57,13 +65,25 @@ public sealed class UserSync : IUserSync
             }
         }
 
-        if (email is not null)
+        var changed = false;
+        if (email is not null && row.Email != email)
         {
             row.Email = email;
+            changed = true;
         }
 
-        row.LastSeenAt = now;
-        await _db.SaveChangesAsync(cancellationToken);
+        // Only touch LastSeenAt about once a minute so a busy user does not cause a write per request.
+        if (now - row.LastSeenAt >= LastSeenInterval)
+        {
+            row.LastSeenAt = now;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
         return row;
     }
 
