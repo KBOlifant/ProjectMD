@@ -32,6 +32,20 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
     private static Task<HttpResponseMessage> PostScanAsync(HttpClient client, string? url) =>
         client.PostAsJsonAsync("/api/scans", new { url });
 
+    // The caller's `usage.used` as reported by GET /api/me.
+    private static async Task<int> UsedAsync(HttpClient client)
+    {
+        var me = await JsonAsync(await client.GetAsync("/api/me"));
+        return me.GetProperty("usage").GetProperty("used").GetInt32();
+    }
+
+    // The ids of the scans in the caller's list.
+    private static async Task<List<string>> ListedIdsAsync(HttpClient client)
+    {
+        var scans = await client.GetFromJsonAsync<List<ScanDto>>("/api/scans");
+        return scans!.Select(s => s.Id).ToList();
+    }
+
     // --- Authentication and permissions -----------------------------------------------------------
 
     // Without a token every scans endpoint answers 401.
@@ -365,6 +379,9 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
         Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "two.example.com")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/scans")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+
+        // Clearing does not give the allowance back: creating is still refused.
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "two.example.com")).StatusCode);
     }
 
     // Each person has their own allowance.
@@ -398,6 +415,31 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
 
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
         Assert.Equal("2026-11-01T00:00:00.000Z", (await JsonAsync(third)).GetProperty("resetsAt").GetString());
+    }
+
+    // Scans the person cleared from their history still use up the allowance of the month they were
+    // created in, but a cleared scan from an earlier month does not count (same month rule as any scan).
+    [Fact]
+    public async Task Quota_counts_cleared_scans_from_the_current_month_only()
+    {
+        var now = new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
+        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000, clock: new FixedTimeProvider(now));
+        var uid = NewUid("alice");
+        var clearedAt = new DateTime(2026, 10, 10, 9, 0, 0, DateTimeKind.Utc);
+        await factory.SeedScanAsync(uid, new DateTime(2026, 9, 30, 23, 59, 59, DateTimeKind.Utc), deletedAtUtc: clearedAt.AddDays(-20)); // last month, cleared
+        await factory.SeedScanAsync(uid, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), deletedAtUtc: clearedAt);                  // this month, cleared
+        await factory.SeedScanAsync(uid, new DateTime(2026, 10, 5, 8, 0, 0, DateTimeKind.Utc));                                         // this month, visible
+        var client = factory.CreateClientFor(uid);
+
+        Assert.Equal(2, await UsedAsync(client));
+        var response = await PostScanAsync(client, "one.example.com");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        var problem = await JsonAsync(response);
+        Assert.Equal("quota", problem.GetProperty("reason").GetString());
+        Assert.Equal(2, problem.GetProperty("used").GetInt32());
+        Assert.Equal(1, await factory.CountScansAsync(uid));      // only the visible one
+        Assert.Equal(3, await factory.CountAllScansAsync(uid));   // nothing was added or removed
     }
 
     // A failed (400) request does not use up any allowance.
@@ -448,22 +490,36 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
 
     // --- Clearing ---------------------------------------------------------------------------------
 
-    // Clearing deletes the caller's scans only.
+    // Clearing is a soft delete and only touches the caller's scans: their rows stay (with DeletedAt
+    // set) and disappear from the list, while another person's scans are left completely alone.
     [Fact]
-    public async Task Clear_deletes_only_the_callers_scans()
+    public async Task Clear_soft_deletes_only_the_callers_scans()
     {
         var alice = NewUid("alice");
         var bob = NewUid("bob");
         await _factory.SeedScanAsync(alice, DateTime.UtcNow);
         await _factory.SeedScanAsync(alice, DateTime.UtcNow.AddMinutes(-5));
         await _factory.SeedScanAsync(bob, DateTime.UtcNow);
+        var before = DateTime.UtcNow.AddSeconds(-5);
 
         var response = await _factory.CreateClientFor(alice).DeleteAsync("/api/scans");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(0, await _factory.CountScansAsync(alice));
-        Assert.Equal(1, await _factory.CountScansAsync(bob));
 
+        // Alice: nothing visible, but both rows are still in the table and marked as cleared now.
+        Assert.Equal(0, await _factory.CountScansAsync(alice));
+        Assert.Equal(2, await _factory.CountAllScansAsync(alice));
+        var aliceDeletedAt = await _factory.GetDeletedAtValuesAsync(alice);
+        Assert.All(aliceDeletedAt, deletedAt =>
+        {
+            Assert.NotNull(deletedAt);
+            Assert.InRange(deletedAt.Value, before, DateTime.UtcNow.AddSeconds(5));
+        });
+
+        // Bob: untouched, still listed, DeletedAt still null.
+        Assert.Equal(1, await _factory.CountScansAsync(bob));
+        Assert.Equal(1, await _factory.CountAllScansAsync(bob));
+        Assert.All(await _factory.GetDeletedAtValuesAsync(bob), deletedAt => Assert.Null(deletedAt));
         var bobsList = await _factory.CreateClientFor(bob).GetFromJsonAsync<List<ScanDto>>("/api/scans");
         Assert.Single(bobsList!);
     }
@@ -475,6 +531,151 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
         var response = await _factory.CreateClientFor(NewUid("fresh")).DeleteAsync("/api/scans");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    // Clearing again does not rewrite the time an earlier clear recorded; it only marks scans that
+    // were still visible.
+    [Fact]
+    public async Task Clearing_again_keeps_the_original_cleared_time()
+    {
+        var uid = NewUid("alice");
+        var firstClear = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        await _factory.SeedScanAsync(uid, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), deletedAtUtc: firstClear);
+        await _factory.SeedScanAsync(uid, DateTime.UtcNow);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await _factory.CreateClientFor(uid).DeleteAsync("/api/scans")).StatusCode);
+
+        var deletedAt = await _factory.GetDeletedAtValuesAsync(uid);
+        Assert.Equal(2, deletedAt.Count);
+        Assert.Contains(deletedAt, d => d == firstClear);
+        Assert.Contains(deletedAt, d => d is not null && d.Value > firstClear.AddDays(1));
+        Assert.Equal(2, await _factory.CountAllScansAsync(uid));
+    }
+
+    // The loophole this fixes: clearing history must NOT change `used` (a hard delete used to refund it).
+    [Fact]
+    public async Task Clear_does_not_change_usage()
+    {
+        using var factory = new ScansApiFactory(monthlyLimit: 5, permitsPerMinute: 1000);
+        var client = factory.CreateClientFor(NewUid("alice"));
+        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "one.example.com")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "two.example.com")).StatusCode);
+        Assert.Equal(2, await UsedAsync(client));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+
+        Assert.Equal(2, await UsedAsync(client));
+        Assert.Empty(await ListedIdsAsync(client));
+
+        // Clearing an already empty history changes nothing either.
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+        Assert.Equal(2, await UsedAsync(client));
+    }
+
+    // A cleared scan is a 404 (same as a missing one) and is gone from the list, while scans made
+    // after the clear show up normally.
+    [Fact]
+    public async Task Cleared_scan_returns_404_and_is_absent_from_the_list()
+    {
+        var client = _factory.CreateClientFor(NewUid("alice"));
+        var first = await (await PostScanAsync(client, "one.example.com")).Content.ReadFromJsonAsync<ScanDto>();
+        var second = await (await PostScanAsync(client, "two.example.com")).Content.ReadFromJsonAsync<ScanDto>();
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/scans/{first!.Id}")).StatusCode);
+        Assert.Equal(2, (await ListedIdsAsync(client)).Count);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/scans/{first.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/scans/{second!.Id}")).StatusCode);
+        Assert.Empty(await ListedIdsAsync(client));
+
+        var third = await (await PostScanAsync(client, "three.example.com")).Content.ReadFromJsonAsync<ScanDto>();
+        Assert.Equal(new[] { third!.Id }, await ListedIdsAsync(client));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/scans/{first.Id}")).StatusCode);
+    }
+
+    // A scan that is already marked deleted is hidden from its owner and from everyone else: 404 and
+    // not listed. Other scans of the same owner are unaffected.
+    [Fact]
+    public async Task Scans_marked_deleted_are_hidden_from_list_and_get()
+    {
+        var alice = NewUid("alice");
+        var bob = NewUid("bob");
+        var visible = await _factory.SeedScanAsync(alice, new DateTime(2026, 3, 7, 10, 0, 0, DateTimeKind.Utc), "visible.example.com");
+        var cleared = await _factory.SeedScanAsync(alice, new DateTime(2026, 3, 8, 10, 0, 0, DateTimeKind.Utc), "cleared.example.com", deletedAtUtc: DateTime.UtcNow);
+        var aliceClient = _factory.CreateClientFor(alice);
+        var bobClient = _factory.CreateClientFor(bob);
+
+        Assert.Equal(new[] { visible.ToString() }, await ListedIdsAsync(aliceClient));
+        Assert.Equal(HttpStatusCode.OK, (await aliceClient.GetAsync($"/api/scans/{visible}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await aliceClient.GetAsync($"/api/scans/{cleared}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await bobClient.GetAsync($"/api/scans/{cleared}")).StatusCode);
+        Assert.Empty(await ListedIdsAsync(bobClient));
+    }
+
+    // A new scan after clearing still respects the monthly limit, and so does the whole loop
+    // "create, clear, repeat" the old hard delete allowed.
+    [Fact]
+    public async Task New_scan_after_clearing_still_respects_the_limit()
+    {
+        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000);
+        var uid = NewUid("alice");
+        var client = factory.CreateClientFor(uid);
+        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "one.example.com")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "two.example.com")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+
+        var response = await PostScanAsync(client, "three.example.com");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        var problem = await JsonAsync(response);
+        Assert.Equal("quota", problem.GetProperty("reason").GetString());
+        Assert.Equal(2, problem.GetProperty("used").GetInt32());
+        Assert.Equal(2, problem.GetProperty("limit").GetInt32());
+        Assert.Empty(await ListedIdsAsync(client));
+        Assert.Equal(2, await factory.CountAllScansAsync(uid));
+    }
+
+    // Create, clear, repeat: the (otherwise unthrottled) loop stops at the monthly limit, and the
+    // cleared rows are all still counted.
+    [Fact]
+    public async Task Create_clear_repeat_stops_at_the_monthly_limit()
+    {
+        using var factory = new ScansApiFactory(monthlyLimit: 3, permitsPerMinute: 1000);
+        var uid = NewUid("alice");
+        var client = factory.CreateClientFor(uid);
+
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, $"round{i}.example.com")).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "round3.example.com")).StatusCode);
+        Assert.Equal(3, await UsedAsync(client));
+        Assert.Equal(0, await factory.CountScansAsync(uid));
+        Assert.Equal(3, await factory.CountAllScansAsync(uid));
+    }
+
+    // Own-data isolation still holds after a clear: Alice clearing her history does not hide Bob's
+    // scans or change Bob's (or her own) usage, and Bob cannot open Alice's cleared scan.
+    [Fact]
+    public async Task Clearing_one_persons_history_does_not_affect_another_person()
+    {
+        using var factory = new ScansApiFactory(monthlyLimit: 5, permitsPerMinute: 1000);
+        var aliceClient = factory.CreateClientFor(NewUid("alice"));
+        var bobClient = factory.CreateClientFor(NewUid("bob"));
+        var alicesScan = await (await PostScanAsync(aliceClient, "alice.example.com")).Content.ReadFromJsonAsync<ScanDto>();
+        var bobsScan = await (await PostScanAsync(bobClient, "bob.example.com")).Content.ReadFromJsonAsync<ScanDto>();
+        await PostScanAsync(aliceClient, "alice2.example.com");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await aliceClient.DeleteAsync("/api/scans")).StatusCode);
+
+        Assert.Equal(new[] { bobsScan!.Id }, await ListedIdsAsync(bobClient));
+        Assert.Equal(HttpStatusCode.OK, (await bobClient.GetAsync($"/api/scans/{bobsScan.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await bobClient.GetAsync($"/api/scans/{alicesScan!.Id}")).StatusCode);
+        Assert.Equal(1, await UsedAsync(bobClient));
+        Assert.Equal(2, await UsedAsync(aliceClient));
     }
 
     // --- Storage limit ----------------------------------------------------------------------------

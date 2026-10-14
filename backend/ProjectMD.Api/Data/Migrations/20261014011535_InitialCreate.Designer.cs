@@ -12,7 +12,7 @@ using ProjectMD.Api.Data;
 namespace ProjectMD.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261014004739_InitialCreate")]
+    [Migration("20261014011535_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -64,6 +64,9 @@ namespace ProjectMD.Api.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DurationMs")

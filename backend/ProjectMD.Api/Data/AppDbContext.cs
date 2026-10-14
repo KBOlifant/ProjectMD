@@ -18,7 +18,8 @@ public class AppDbContext : DbContext
     // Saved scans, each owned by one AppUser.
     public DbSet<Scan> Scans => Set<Scan>();
 
-    // Describes the schema: key sizes, indexes, the cascade delete and the jsonb tech column.
+    // Describes the schema: key sizes, indexes, the cascade delete, the soft-delete filter on Scans
+    // and the jsonb tech column.
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -53,6 +54,13 @@ public class AppDbContext : DbContext
                 .WithMany(u => u.Scans)
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Clearing history is a soft delete (DeletedAt is set, the row stays). This global filter
+            // hides cleared scans from every query on Scans (list, get by id, anything else), so a
+            // cleared scan can never leak back out. The one caller that must still see them is the
+            // monthly usage count (UsageService), which uses IgnoreQueryFilters so a cleared scan
+            // keeps using up the allowance for the month it was created in.
+            scan.HasQueryFilter(s => s.DeletedAt == null);
 
             // Serves "my scans, newest first" and the monthly quota count.
             scan.HasIndex(s => new { s.UserId, s.CreatedAt })

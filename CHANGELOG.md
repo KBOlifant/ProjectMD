@@ -4,7 +4,6 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
-- **Fix for the monthly limit.** Right now, clearing history also gives scans back, so someone could create and clear over and over. The server will keep deleted scans out of sight but still count them.
 - **Creating the database tables.** The tables are written but not created in your database yet.
 - **Later, not started:** writing the documentation with the Groq AI model (the API key will live only on the server), and a way to give people the admin or viewer role.
 
@@ -14,6 +13,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Backend server
 
+- **Stopped "clear history" from resetting the monthly limit.** Clearing history now hides scans instead of erasing them. Hidden scans disappear from the person's list but still count toward the 10 scans a month, so nobody can create and clear over and over to get around the limit. This matters once each scan costs real money to generate. The database setup script was rewritten to include this (it had not been run yet). About 20 new tests check it.
 - **Added the scans part of the server.** The server can now create a scan, list a person's scans, open one, and clear their history. Each person only ever sees their own scans (someone else's scan looks like it does not exist). Before anything is saved the web address is checked and refused if it points at a private or internal machine, so the app cannot be used to poke around inside a network. Each person gets 10 scans a month, and a limit on how fast they can start them. The scan content is still the made-up sample data, produced in one place so the real AI (Groq) can replace it later. *Why:* history and limits have to live on the server, not in the browser. About 185 automatic tests cover the address checks, limits and privacy between users.
 - **Added sign-in checks and role rules to the server.** The server now checks that every request comes from someone signed in with Firebase, and applies the same viewer / member / admin rules as the website (starting a scan needs a verified email). A request with no valid sign-in is turned away, and a refused request says why (for example "verify your email"). There is also a "who am I" address (`/api/me`) that returns your email, role and scan usage. *Why:* the website's rules can be bypassed by anyone with browser tools, so the server has to enforce them too. About 130 automatic tests check the rules. Giving people the admin or viewer role is not possible yet.
 - **Created the backend server project and database layout.** A C# server (ASP.NET Core) now exists in the `backend` folder. It describes two database tables, users and scans, and has a health-check address (`/api/health`). The database address and password are kept in a private setting on your computer, never in the code. The first database setup script is written but has not been run yet. *Why:* the website needs a real place to store accounts and scans.

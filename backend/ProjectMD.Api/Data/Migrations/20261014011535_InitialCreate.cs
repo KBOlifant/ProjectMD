@@ -39,6 +39,7 @@ namespace ProjectMD.Api.Data.Migrations
                     Confidence = table.Column<int>(type: "integer", nullable: false),
                     Pages = table.Column<int>(type: "integer", nullable: false),
                     Markdown = table.Column<string>(type: "text", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Tech = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>

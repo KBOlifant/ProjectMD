@@ -13,7 +13,9 @@ using ProjectMD.Api.Services;
 namespace ProjectMD.Api.Controllers;
 
 // The signed-in user's scans: list, open one, create one, clear them all. Every query is filtered
-// by the caller's own AppUser id, so nobody can see or delete another person's scans.
+// by the caller's own AppUser id, so nobody can see or clear another person's scans. Cleared scans
+// are soft deleted (see Scan.DeletedAt): AppDbContext hides them from every query here, but they
+// still count toward the monthly allowance.
 [ApiController]
 [Authorize]
 [Route("api/scans")]
@@ -55,7 +57,8 @@ public class ScansController : ControllerBase
         _logger = logger;
     }
 
-    // GET /api/scans: the caller's scans, newest first.
+    // GET /api/scans: the caller's scans, newest first. Cleared scans are not listed (the global
+    // query filter on Scans hides them).
     [HttpGet]
     [Authorize(Policy = Permissions.ScanRead)]
     public async Task<ActionResult<IReadOnlyList<ScanDto>>> List(CancellationToken ct)
@@ -72,7 +75,8 @@ public class ScansController : ControllerBase
     }
 
     // GET /api/scans/{id}: one of the caller's scans. A scan that does not exist and a scan that
-    // belongs to someone else both give the same 404, so ids cannot be probed.
+    // belongs to someone else both give the same 404, so ids cannot be probed. A cleared scan is
+    // also a 404 (the global query filter on Scans hides it).
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permissions.ScanRead)]
     public async Task<ActionResult<ScanDto>> GetById(Guid id, CancellationToken ct)
@@ -158,18 +162,23 @@ public class ScansController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = scan.Id }, scan.ToDto());
     }
 
-    // DELETE /api/scans: deletes every scan the caller owns (and nobody else's). Returns 204.
+    // DELETE /api/scans: clears the caller's history (and nobody else's). Returns 204.
+    // This is a SOFT delete: the rows are kept and only get DeletedAt = now, so they disappear from
+    // the list and from GET by id but still count toward this month's allowance. Hard deleting
+    // would refund the quota ("create, clear, repeat"). Scans that were already cleared are left
+    // alone, so their original DeletedAt is not overwritten.
     [HttpDelete]
     [Authorize(Policy = Permissions.HistoryClear)]
     public async Task<IActionResult> Clear(CancellationToken ct)
     {
         var user = await _userSync.GetOrCreateAsync(_currentUser, ct);
 
-        var removed = await _db.Scans
-            .Where(s => s.UserId == user.Id)
-            .ExecuteDeleteAsync(ct);
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var cleared = await _db.Scans
+            .Where(s => s.UserId == user.Id && s.DeletedAt == null)
+            .ExecuteUpdateAsync(set => set.SetProperty(s => s.DeletedAt, now), ct);
 
-        _logger.LogInformation("Cleared {Count} scans for one user", removed);
+        _logger.LogInformation("Cleared {Count} scans for one user", cleared);
         return NoContent();
     }
 

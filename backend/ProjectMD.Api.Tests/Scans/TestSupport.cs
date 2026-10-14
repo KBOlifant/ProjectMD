@@ -56,24 +56,37 @@ internal sealed class TestDatabase : IDisposable
         return user;
     }
 
-    // Adds a scan for the user, created at the given UTC time.
-    public Scan AddScan(Guid userId, DateTime createdAtUtc, string host = "example.com")
+    // Adds a scan for the user, created at the given UTC time. Pass deletedAtUtc to add a scan the
+    // user has already cleared from their history (a soft-deleted row).
+    public Scan AddScan(Guid userId, DateTime createdAtUtc, string host = "example.com", DateTime? deletedAtUtc = null)
     {
         using var db = CreateContext();
-        var scan = NewScan(userId, createdAtUtc, host);
+        var scan = NewScan(userId, createdAtUtc, host, deletedAtUtc);
         db.Scans.Add(scan);
         db.SaveChanges();
         return scan;
     }
 
-    // Builds a small valid Scan row.
-    public static Scan NewScan(Guid userId, DateTime createdAtUtc, string host = "example.com") => new()
+    // Clears the user's visible history the way the API does (sets DeletedAt, keeps the rows) and
+    // returns how many scans were cleared.
+    public int SoftDeleteScans(Guid userId, DateTime whenUtc)
+    {
+        using var db = CreateContext();
+        var when = DateTime.SpecifyKind(whenUtc, DateTimeKind.Utc);
+        return db.Scans
+            .Where(s => s.UserId == userId && s.DeletedAt == null)
+            .ExecuteUpdate(set => set.SetProperty(s => s.DeletedAt, when));
+    }
+
+    // Builds a small valid Scan row (soft deleted when deletedAtUtc is given).
+    public static Scan NewScan(Guid userId, DateTime createdAtUtc, string host = "example.com", DateTime? deletedAtUtc = null) => new()
     {
         Id = Guid.NewGuid(),
         UserId = userId,
         Url = "https://" + host + "/",
         Host = host,
         CreatedAt = DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc),
+        DeletedAt = deletedAtUtc is null ? null : DateTime.SpecifyKind(deletedAtUtc.Value, DateTimeKind.Utc),
         DurationMs = 3000,
         Confidence = 90,
         Pages = 10,

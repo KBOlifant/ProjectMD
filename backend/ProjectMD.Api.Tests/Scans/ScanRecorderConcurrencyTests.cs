@@ -13,9 +13,12 @@ namespace ProjectMD.Api.Tests.Scans;
 // the same code serialises per user through the row lock taken by the first UPDATE.
 public class ScanRecorderConcurrencyTests
 {
-    // Many simultaneous creates with a limit of 3 save exactly 3 scans and refuse the rest.
-    [Fact]
-    public async Task Parallel_creates_never_exceed_the_limit()
+    // What a parallel run ended up with.
+    private sealed record RaceResult(int Saved, int Refused, int VisibleRows, int AllRows);
+
+    // Fires `attempts` simultaneous creates (limit `limit`) plus `clears` simultaneous "clear
+    // history" calls for one user against a throwaway SQLite file, then reports the outcome.
+    private static async Task<RaceResult> RunRaceAsync(int limit, int attempts, int clears)
     {
         var path = Path.Combine(Path.GetTempPath(), $"projectmd-recorder-{Guid.NewGuid():N}.db");
         var connectionString = $"Data Source={path};Pooling=False";
@@ -41,21 +44,33 @@ public class ScanRecorderConcurrencyTests
                 await setup.SaveChangesAsync();
             }
 
-            const int limit = 3;
-            const int attempts = 8;
-            var results = await Task.WhenAll(Enumerable.Range(0, attempts).Select(_ => Task.Run(async () =>
+            var creates = Enumerable.Range(0, attempts).Select(_ => Task.Run(async () =>
             {
                 using var db = NewContext();
                 var usage = new UsageService(db, Options.Create(new UsageOptions { MonthlyLimit = limit }), clock);
                 var recorder = new ScanRecorder(db, usage, clock);
                 return await recorder.TryRecordAsync(TestDatabase.NewScan(userId, now.UtcDateTime), CancellationToken.None);
-            })));
+            }));
 
-            Assert.Equal(limit, results.Count(saved => saved));
-            Assert.Equal(attempts - limit, results.Count(saved => !saved));
+            // The same statement ScansController.Clear runs: soft delete the user's visible scans.
+            var clearing = Enumerable.Range(0, clears).Select(_ => Task.Run(async () =>
+            {
+                using var db = NewContext();
+                var when = now.UtcDateTime;
+                await db.Scans
+                    .Where(s => s.UserId == userId && s.DeletedAt == null)
+                    .ExecuteUpdateAsync(set => set.SetProperty(s => s.DeletedAt, when));
+            }));
+
+            var results = await Task.WhenAll(creates);
+            await Task.WhenAll(clearing);
 
             using var check = NewContext();
-            Assert.Equal(limit, await check.Scans.CountAsync());
+            return new RaceResult(
+                results.Count(saved => saved),
+                results.Count(saved => !saved),
+                await check.Scans.CountAsync(),
+                await check.Scans.IgnoreQueryFilters().CountAsync());
         }
         finally
         {
@@ -65,5 +80,36 @@ public class ScanRecorderConcurrencyTests
                 File.Delete(file);
             }
         }
+    }
+
+    // Many simultaneous creates with a limit of 3 save exactly 3 scans and refuse the rest.
+    [Fact]
+    public async Task Parallel_creates_never_exceed_the_limit()
+    {
+        const int limit = 3;
+        const int attempts = 8;
+
+        var result = await RunRaceAsync(limit, attempts, clears: 0);
+
+        Assert.Equal(limit, result.Saved);
+        Assert.Equal(attempts - limit, result.Refused);
+        Assert.Equal(limit, result.AllRows);
+        Assert.Equal(limit, result.VisibleRows);
+    }
+
+    // Clearing history while creates are racing never frees up allowance: still exactly 3 scans are
+    // saved (all rows are kept, cleared ones included), however the clears interleave with them.
+    [Fact]
+    public async Task Parallel_creates_and_clears_never_exceed_the_limit()
+    {
+        const int limit = 3;
+        const int attempts = 8;
+
+        var result = await RunRaceAsync(limit, attempts, clears: 4);
+
+        Assert.Equal(limit, result.Saved);
+        Assert.Equal(attempts - limit, result.Refused);
+        Assert.Equal(limit, result.AllRows);
+        Assert.InRange(result.VisibleRows, 0, limit);
     }
 }

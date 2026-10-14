@@ -35,4 +35,10 @@ public class Scan
 
     // The generated Markdown document.
     public string Markdown { get; set; } = string.Empty;
+
+    // When the owner cleared their history (UTC, timestamptz), or null while the scan is visible.
+    // Clearing is a SOFT delete: the row stays in the table so it keeps counting toward the monthly
+    // quota (otherwise "create, clear, repeat" would refund the allowance). AppDbContext hides rows
+    // where this is set from every normal query; only usage counting looks at them.
+    public DateTime? DeletedAt { get; set; }
 }

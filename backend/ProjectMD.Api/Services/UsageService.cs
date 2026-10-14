@@ -29,6 +29,10 @@ public sealed class UsageService : IUsageService
 
     // used = scans with CreatedAt in the current UTC month; limit = Usage:MonthlyLimit (never
     // below 0); resetsAt = midnight UTC on the 1st of next month. Read-only, so no tracking.
+    // IgnoreQueryFilters is deliberate and essential: scans the user cleared from their history
+    // are soft deleted (DeletedAt set) and hidden by the global filter, but they were still
+    // created this month, so they must still count. Without it, clearing history would refund
+    // the allowance. Do not remove it, and do not add a DeletedAt condition here.
     public async Task<UsageDto> GetAsync(Guid userId, CancellationToken ct)
     {
         var now = _clock.GetUtcNow().UtcDateTime;
@@ -36,6 +40,7 @@ public sealed class UsageService : IUsageService
         var nextMonthStart = monthStart.AddMonths(1);
 
         var used = await _db.Scans
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .CountAsync(s => s.UserId == userId && s.CreatedAt >= monthStart && s.CreatedAt < nextMonthStart, ct);
 

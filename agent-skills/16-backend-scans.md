@@ -14,7 +14,7 @@ description: Build the scans API: create/list/get/clear endpoints, the scan gene
 | `GET /api/scans` | `scan:read` | The caller's scans, newest first, as `ScanDto[]`. |
 | `GET /api/scans/{id}` | `scan:read` | One scan; 404 if it does not exist OR belongs to someone else (never 403, never leak existence). |
 | `POST /api/scans` | `scan:create` | Body `{ url }`. Validate, enforce quota, generate, save, return `201` with the `ScanDto` and a `Location` header. |
-| `DELETE /api/scans` | `history:clear` | Delete all of the caller's scans, `204`. |
+| `DELETE /api/scans` | `history:clear` | Soft-delete all of the caller's scans (sets `DeletedAt`; hidden everywhere but still counted for the monthly quota, so clearing never refunds it), `204`. |
 
 All queries are filtered by the caller's `AppUser.Id` (resolved via `IUserSync`). Use `AsNoTracking` for reads. Accept a `CancellationToken` everywhere.
 

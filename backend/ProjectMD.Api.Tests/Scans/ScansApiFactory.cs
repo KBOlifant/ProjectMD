@@ -160,8 +160,9 @@ public class ScansApiFactory : WebApplicationFactory<Program>
         CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
     // Writes a scan straight into the database for the person with that Firebase uid (creating the
-    // person if needed) and returns the scan's id.
-    public async Task<Guid> SeedScanAsync(string uid, DateTime createdAtUtc, string host = "example.com")
+    // person if needed) and returns the scan's id. Pass deletedAtUtc to seed a scan the person has
+    // already cleared from their history (soft deleted).
+    public async Task<Guid> SeedScanAsync(string uid, DateTime createdAtUtc, string host = "example.com", DateTime? deletedAtUtc = null)
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -180,18 +181,41 @@ public class ScansApiFactory : WebApplicationFactory<Program>
             db.AppUsers.Add(user);
         }
 
-        var scan = TestDatabase.NewScan(user.Id, createdAtUtc, host);
+        var scan = TestDatabase.NewScan(user.Id, createdAtUtc, host, deletedAtUtc);
         db.Scans.Add(scan);
         await db.SaveChangesAsync();
         return scan.Id;
     }
 
-    // How many scans the person with that Firebase uid has in the database right now.
+    // How many VISIBLE scans (not cleared from history) the person with that Firebase uid has in
+    // the database right now. The global query filter hides soft-deleted rows from this count.
     public async Task<int> CountScansAsync(string uid)
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await db.Scans.CountAsync(s => s.User!.FirebaseUid == uid);
+    }
+
+    // How many scan ROWS the person has, including ones cleared from history (soft deleted).
+    public async Task<int> CountAllScansAsync(string uid)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.Scans.IgnoreQueryFilters().CountAsync(s => s.User!.FirebaseUid == uid);
+    }
+
+    // The DeletedAt value of every scan row the person has (null for scans still visible), including
+    // cleared ones.
+    public async Task<List<DateTime?>> GetDeletedAtValuesAsync(string uid)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.Scans
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(s => s.User!.FirebaseUid == uid)
+            .Select(s => s.DeletedAt)
+            .ToListAsync();
     }
 
     // Closes the database with the host.

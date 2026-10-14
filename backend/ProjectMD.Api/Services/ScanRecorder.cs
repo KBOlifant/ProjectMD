@@ -34,6 +34,10 @@ public sealed class ScanRecorder : IScanRecorder
     // counts a table that already contains the first scan. Other users are not blocked. This
     // works on PostgreSQL's default isolation level and also on SQLite (used in tests), unlike
     // SELECT ... FOR UPDATE or a serializable transaction that would need retries on conflict.
+    // The count comes from IUsageService, which also counts scans the user cleared from their
+    // history (soft deleted, DeletedAt set), so clearing history can never free up allowance. It
+    // also means a "clear history" running at the same moment cannot change the number this
+    // transaction sees: clearing only sets DeletedAt and never removes a row from the count.
     public async Task<bool> TryRecordAsync(Scan scan, CancellationToken ct)
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);

@@ -85,8 +85,8 @@ dotnet ef migrations script --project ProjectMD.Api
 dotnet ef database update --project ProjectMD.Api
 ```
 
-`InitialCreate` creates the `AppUsers` and `Scans` tables. It has to be reviewed and applied
-deliberately; the API never migrates the database on startup.
+`InitialCreate` creates the `AppUsers` and `Scans` tables (including `Scans.DeletedAt`). It has to
+be reviewed and applied deliberately; the API never migrates the database on startup.
 
 ### Generating a migration without a database
 
@@ -107,9 +107,29 @@ $env:ConnectionStrings__Default = $null
   is the source of truth.
 - `Scans`: `Id`, `UserId` (FK to `AppUsers`, cascade delete), `Url` (max 2048), `Host` (max 255),
   `CreatedAt`, `DurationMs`, `Confidence` (0-100), `Pages`, `Tech` (`jsonb` array of
-  `{ Name, Highlighted }`), `Markdown` (`text`). Index on `(UserId, CreatedAt DESC)`.
+  `{ Name, Highlighted }`), `Markdown` (`text`), `DeletedAt` (`timestamptz`, nullable, UTC; null
+  while the scan is visible). Index on `(UserId, CreatedAt DESC)`.
 
 All timestamps are UTC: always write `DateTime.UtcNow`.
+
+### Clearing history is a soft delete
+
+`DELETE /api/scans` does not remove rows. It sets `DeletedAt` to the current UTC time on the
+caller's scans that are not cleared yet (a scan that was already cleared keeps its original
+`DeletedAt`). The monthly allowance is computed by counting `Scans` rows, so a hard delete would
+refund it and "create, clear, repeat" would get around the limit (only the rate limit would slow it
+down). With a soft delete, a cleared scan still counts for the UTC month it was created in.
+
+- `AppDbContext` has a global query filter on `Scan` (`DeletedAt == null`), so the list
+  (`GET /api/scans`), get by id (`GET /api/scans/{id}`, a cleared scan is a `404`), and any other
+  query never see cleared scans.
+- `UsageService` is the only reader that calls `IgnoreQueryFilters()`, so `usage.used` (and the
+  `429` quota check in `ScanRecorder`, which runs inside the row-locked transaction) includes
+  cleared scans created in the current month. Keep it that way: do not add a `DeletedAt` condition to
+  the usage count, and use `IgnoreQueryFilters()` only where cleared rows are meant to be seen.
+- Cleared rows are kept (they hold the scan's Markdown). Removing them for good, for example for
+  account deletion or a retention job, is a separate task: deleting the `AppUsers` row cascades to
+  all of its `Scans` rows, cleared ones included.
 
 ## API contract
 
