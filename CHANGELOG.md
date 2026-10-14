@@ -6,8 +6,11 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 - **Fix for the monthly limit.** Right now, clearing history also gives scans back, so someone could create and clear over and over. The server will keep deleted scans out of sight but still count them.
 - **Creating the database tables.** The tables are written but not created in your database yet.
-- **Website connected to the server.** The website will talk to the server using the person's Firebase sign-in, and show friendly messages if something goes wrong.
 - **Later, not started:** writing the documentation with the Groq AI model (the API key will live only on the server), and a way to give people the admin or viewer role.
+
+## Website and server connected
+
+- **Connected the website to the server.** The website can now run in two modes. In the default mode it works on its own with sample data stored in the browser, exactly as before. In "server mode" (turn it on with `NEXT_PUBLIC_SCAN_PROVIDER=api` in `frontend/.env.local`, and start the backend) scans, history and the monthly allowance come from the server and follow the person to any device. The website sends the person's Firebase sign-in with each request and shows plain messages when something goes wrong ("Verify your email to continue", "You've used this month's scans", "Can't reach the server"). The History page shows a Retry button if loading fails, and no longer flashes "No scans yet" while loading. *Why:* so scans belong to the person, not the browser. Tested against a stand-in server, not the real one yet.
 
 ## Backend server
 

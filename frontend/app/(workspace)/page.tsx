@@ -12,7 +12,7 @@ import { HistoryRow } from "@/components/ui/history-row";
 import { StatStrip } from "@/components/ui/stat-tile";
 import { UrlInput } from "@/components/ui/url-input";
 import { formatSeconds } from "@/lib/format";
-import { useHistory, useIsHydrated } from "@/lib/history-store";
+import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { parseUrl } from "@/lib/url";
 
 // Home page (/): URL box, summary stats and the 3 latest scans. Stats are calculated from the saved
@@ -23,6 +23,7 @@ export default function GeneratePage() {
   const { startScan } = useScan();
   const history = useHistory();
   const hydrated = useIsHydrated();
+  const { error: loadError } = useHistoryStatus();
   const canCreate = useCan("scan:create");
   const denyReason = useDenyReason("scan:create");
   const [value, setValue] = useState("");
@@ -96,7 +97,7 @@ export default function GeneratePage() {
           )}
         </div>
         {!hydrated ? null : n === 0 ? (
-          <EmptyState>No scans yet. Generate your first .md file above to see it here.</EmptyState>
+          <EmptyState>{loadError ?? "No scans yet. Generate your first .md file above to see it here."}</EmptyState>
         ) : (
           <div className="space-y-3">
             {history.slice(0, 3).map((scan) => (

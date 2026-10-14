@@ -1,13 +1,14 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { isApiMode } from "@/app/functions/data/mode";
 import { useCan } from "@/app/functions/rbac/useCan";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, CopyIcon, DownloadIcon } from "@/components/ui/icons";
 import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
 import { formatDate, formatSeconds, initials } from "@/lib/format";
-import { useHistory, useIsHydrated } from "@/lib/history-store";
+import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { MarkdownPreview } from "./markdown-preview";
 
 type Tab = "preview" | "raw";
@@ -20,6 +21,7 @@ type Format = "md" | "txt";
 export function ResultsView({ id }: { id?: string }) {
   const history = useHistory();
   const hydrated = useIsHydrated();
+  const { error: loadError } = useHistoryStatus();
   const canExport = useCan("scan:export");
   const exportBlocked = "Your account cannot export scans.";
   const [tab, setTab] = useState<Tab>("preview");
@@ -34,7 +36,12 @@ export function ResultsView({ id }: { id?: string }) {
   if (!scan) {
     return (
       <EmptyState action={<ButtonLink href="/history" variant="secondary">Open History</ButtonLink>}>
-        {id ? "That scan was not found in this browser." : "No results yet. Generate a scan to see its documentation here."}
+        {loadError ??
+          (id
+            ? isApiMode
+              ? "That scan was not found."
+              : "That scan was not found in this browser."
+            : "No results yet. Generate a scan to see its documentation here.")}
       </EmptyState>
     );
   }

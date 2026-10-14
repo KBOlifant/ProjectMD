@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getIdToken } from "@/app/functions/auth/auth-service";
 import { useAuth } from "@/app/functions/auth/useAuth";
 import { scanProvider } from "@/app/functions/data/scan-provider";
+import { refreshUsage } from "@/app/functions/data/usage";
 import { assertCan } from "@/app/functions/rbac/errors";
 import { addScan, getHistoryOwner } from "@/lib/history-store";
 import { TOTAL_MS } from "@/lib/scan";
@@ -32,9 +33,10 @@ const Ctx = createContext<ScanContextValue | null>(null);
 // Holds the in-progress scan ("session": url, elapsed ms, finished scan id, optional error) and
 // shares it with all pages. While a scan runs, a timer updates `elapsed` every 100ms (the
 // progress animation). When TOTAL_MS is reached it asks `scanProvider.generate()` for the Scan,
-// SAVES it to the signed-in user's history (localStorage via addScan) and records its id; if
-// generating fails it records an error instead. The session itself is only in memory and is
-// lost on refresh, and it is reset whenever the signed-in user changes.
+// SAVES it to the signed-in user's history (addScan: localStorage in static mode, in-memory copy
+// of the backend's list in api mode), refreshes the usage numbers and records its id; if
+// generating fails it records the provider's message as the error instead. The session itself is
+// only in memory and is lost on refresh, and it is reset whenever the signed-in user changes.
 export function ScanProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
@@ -94,12 +96,15 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
             // Ignore the result if the scan was cancelled/replaced or the user changed meanwhile.
             if (runRef.current !== run || getHistoryOwner() !== owner) return;
             addScan(scan);
+            void refreshUsage();
             setSession({ url: next, elapsed: TOTAL_MS, scanId: scan.id });
           },
           (err: unknown) => {
             if (runRef.current !== run) return;
             // The provider is responsible for a user-safe message; never log tokens or raw errors here.
             const error = err instanceof Error && err.message ? err.message : "Could not generate documentation. Try again.";
+            // A refused scan (for example the monthly quota) may mean the usage numbers are out of date.
+            void refreshUsage();
             setSession({ url: next, elapsed: TOTAL_MS - 1, scanId: null, error });
           },
         );

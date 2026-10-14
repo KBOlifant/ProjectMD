@@ -93,12 +93,57 @@ flowchart LR
   N --> R["useHistory() consumers re-render"]
 ```
 
-## 6. Planned: replacing the mock with a real backend
+## 6. Replacing the mock with the backend (`NEXT_PUBLIC_SCAN_PROVIDER=api`)
+
+The switch is one variable, read once at build/dev-server start. Unset or `static` is everything
+described above (mock scan, history in localStorage, no network). `api` talks to the ASP.NET Core
+backend at `NEXT_PUBLIC_API_URL` (default `http://localhost:5080`) with the Firebase ID token as a
+Bearer header. The backend re-checks the token, role, `email_verified` and the monthly quota; the
+frontend checks are only for a friendlier UI. The backend's scan generator is still a mock; the
+real fetch/render/fingerprint/LLM pipeline is a later backend job, and no API key ever reaches the
+frontend.
+
+```mermaid
+sequenceDiagram
+  participant S as ScanProvider (memory)
+  participant P as apiScanProvider
+  participant C as apiFetch (api-client.ts)
+  participant F as Firebase Auth
+  participant B as Backend /api
+  participant H as history-store (cache only)
+  S->>P: generate(url) when the 3s timer ends
+  P->>C: POST /api/scans { url }
+  C->>F: getIdToken()
+  C->>B: Authorization: Bearer token
+  B-->>C: 201 Scan, or ProblemDetails (400, 403 reason, 429 reason)
+  Note over C,B: on 401 it retries once with getIdToken(true)
+  C-->>P: Scan, or ApiError (status 0 = server unreachable)
+  P-->>S: Scan, or Error with a ready-to-show message
+  S->>H: addScan(scan) updates the cache only (server already saved it)
+  S->>B: refreshUsage(): GET /api/me
+```
 
 ```mermaid
 flowchart LR
-  I["ScanProvider"] -->|await| API["POST /api/scan (to build)"]
-  API --> F["Fetch URL"] --> R["Render JS"] --> T["Fingerprint stack"] --> M["LLM writes Markdown"]
-  M --> API -->|Scan JSON| I
-  I --> H["addScan (unchanged)"]
+  subgraph Server["Backend (source of truth)"]
+    DB["Scans table + monthly usage"]
+  end
+  subgraph Memory["In memory (lost on refresh)"]
+    CACHE["history-store cache"]
+    USE["usage-store: used / limit"]
+  end
+  AUTH["setHistoryOwner(uid) after sign-in"] -->|GET /api/scans| DB
+  AUTH -->|GET /api/me| DB
+  DB --> CACHE
+  DB --> USE
+  CLR["clearHistory()"] -->|DELETE /api/scans, then empty the cache| DB
+  CACHE -->|useHistory / useIsHydrated| VIEWS["History, Results, Generate stats, NavCount"]
+  USE -->|useUsage| UM["UsageMeter"]
 ```
+
+Notes:
+- `useIsHydrated()` stays false while the first list is loading, so pages never flash "No scans yet".
+  If loading fails, `useHistoryStatus().error` holds the message and History offers a Retry button.
+- Errors are mapped once in `apiErrorMessage` (`app/functions/data/api-client.ts`): 403 `unverified`,
+  403 `role`, 429 `quota`, other 429, 400 (the server's own text) and "Can't reach the server".
+- The first `GET /api/me` after sign-in also makes the backend create the user's row.

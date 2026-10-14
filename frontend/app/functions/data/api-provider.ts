@@ -1,13 +1,21 @@
+import type { Scan } from "@/lib/types";
+import { apiErrorMessage, apiFetch } from "./api-client";
 import type { ScanProvider } from "./scan-provider";
 
-// STUB: the future API provider. When built, it will call the Project MD backend with
-// `Authorization: Bearer <Firebase ID token>` (from ctx.getToken()). The backend runs the Groq
-// LLM generation and MUST re-verify the ID token, the role and `email_verified` itself; client
-// checks are only a convenience. API keys live server-side only and never in this frontend.
-// Nothing here makes a request or touches a key yet.
+// API provider (used when NEXT_PUBLIC_SCAN_PROVIDER=api): asks the backend to create the scan. The
+// backend validates the Firebase ID token, the role and `email_verified`, enforces the monthly
+// quota, generates the docs and saves the scan; this file only sends the URL and returns the Scan
+// it gets back (same shape as lib/types.ts). No API keys of any kind live in the frontend.
 export const apiScanProvider: ScanProvider = {
-  // Not built yet: always rejects so a misconfigured NEXT_PUBLIC_SCAN_PROVIDER fails loudly.
-  async generate() {
-    throw new Error("API provider not implemented");
+  // POST /api/scans { url } -> Scan. On failure it rejects with an Error whose message is ready to
+  // show: 403 unverified -> "Verify your email to continue.", 403 role -> "Your account is
+  // read-only.", 429 quota -> "You've used this month's scans.", other 429 -> "Too many requests.
+  // Try again shortly.", 400 -> the server's own message, unreachable server -> "Can't reach the server".
+  async generate(url) {
+    try {
+      return await apiFetch<Scan>("/api/scans", { method: "POST", body: JSON.stringify({ url }) });
+    } catch (err) {
+      throw new Error(apiErrorMessage(err, "Could not generate documentation. Try again."));
+    }
   },
 };
