@@ -61,8 +61,11 @@ ProjectMD.Api.Auth.AuthServiceCollectionExtensions.AddFirebaseAuth(builder.Servi
 // ===== END AUTH SERVICES =====
 
 // ===== BEGIN SCAN SERVICES (owned by skill 16; edit only inside this block) =====
-// Skill 16 registers here: IScanGenerator -> StaticScanGenerator, IUsageService, the URL
-// validator and AddRateLimiter(...) with the per-user policy for POST /api/scans.
+// Registers the clock, the URL validator, IScanGenerator -> StaticScanGenerator (MOCK data),
+// IUsageService (monthly quota), the quota-checked scan recorder, their settings
+// (Usage:MonthlyLimit, RateLimiting:ScanCreate:PermitsPerMinute) and the per-user rate limit
+// policy for POST /api/scans. See Services/ScanServiceCollectionExtensions.cs.
+ProjectMD.Api.Services.ScanServiceCollectionExtensions.AddScanServices(builder.Services, builder.Configuration);
 // ===== END SCAN SERVICES =====
 
 var app = builder.Build();
@@ -106,7 +109,9 @@ app.UseAuthorization();
 // ===== END AUTH MIDDLEWARE =====
 
 // ===== BEGIN SCAN MIDDLEWARE (owned by skill 16; edit only inside this block) =====
-// Skill 16 adds here: app.UseRateLimiter(); (must run after authentication so it can use the uid)
+// Applies the per-user rate limit to POST /api/scans. It runs after authentication and
+// authorization so it can key on the signed-in user's uid, and so rejected sign-ins use no permits.
+app.UseRateLimiter();
 // ===== END SCAN MIDDLEWARE =====
 
 app.MapControllers();
