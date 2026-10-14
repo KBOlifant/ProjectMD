@@ -122,6 +122,30 @@ ProblemDetails JSON.
 Request logging records method, path (no query string), status code and duration only. Headers
 are never logged, so the `Authorization` header cannot leak into logs.
 
-## Roles (planned)
+## Authentication and roles
 
-Assigning the `role` custom claim to users needs a Firebase service account and is a later task.
+Every `/api/*` route except `/api/health` needs `Authorization: Bearer <Firebase ID token>`.
+The token is validated with no service account: issuer `https://securetoken.google.com/<Firebase:ProjectId>`,
+audience `<Firebase:ProjectId>`, RS256 only, lifetime checked with at most 60 s of clock skew.
+Firebase's public keys are downloaded from the issuer's OIDC metadata. A missing or invalid token
+is `401`; a valid token that lacks the permission is `403` ProblemDetails. For `scan:create` the
+403 body has a `reason` field: `"unverified"` (verify the email) or `"role"` (the role cannot do
+it). The same `reason` is sent for every refused permission. Tokens are never logged.
+
+The role comes from the Firebase custom claim `role` (never from the database): no claim means
+`member`, `viewer`/`member`/`admin` are used as is, and any other value is `viewer` (fail closed).
+This is the same matrix as `frontend/app/functions/rbac`:
+
+| Role | Permissions (policy names) |
+|---|---|
+| viewer | `scan:read`, `scan:export` |
+| member | viewer + `scan:create`, `history:clear` |
+| admin | member + `admin:access` |
+
+`scan:create` also needs `email_verified == true` for every role. Controllers use
+`[Authorize(Policy = Permissions.ScanCreate)]` (constants in `Auth/Permissions.cs`) and get the
+caller from `ICurrentUser`; `IUserSync.GetOrCreateAsync` returns the caller's `AppUsers` row.
+`GET /api/me` returns `{ uid, email, emailVerified, role, usage }`.
+
+TODO(roles): assigning the `role` custom claim to users needs a Firebase service account (Admin
+SDK) and is a later task. Until then every account has no claim and is therefore a `member`.

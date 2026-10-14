@@ -4,7 +4,6 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
-- **Sign-in checks on the server.** The server will check that a request really comes from a signed-in person, and apply the same role rules as the website (viewer, member, admin), so the rules cannot be skipped by tampering with a web page.
 - **Saved scans on the server.** Creating, listing and clearing scans will go through the server and be stored in your PostgreSQL database instead of the browser, so history follows the person, not the device.
 - **Safe web address checks.** The server will refuse addresses that point at private or internal machines, so nobody can use the app to poke around inside a network.
 - **Monthly scan limit.** The server will count each person's scans per month and stop at the limit (10 for now).
@@ -13,6 +12,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Backend server
 
+- **Added sign-in checks and role rules to the server.** The server now checks that every request comes from someone signed in with Firebase, and applies the same viewer / member / admin rules as the website (starting a scan needs a verified email). A request with no valid sign-in is turned away, and a refused request says why (for example "verify your email"). There is also a "who am I" address (`/api/me`) that returns your email, role and scan usage. *Why:* the website's rules can be bypassed by anyone with browser tools, so the server has to enforce them too. About 130 automatic tests check the rules. Giving people the admin or viewer role is not possible yet.
 - **Created the backend server project and database layout.** A C# server (ASP.NET Core) now exists in the `backend` folder. It describes two database tables, users and scans, and has a health-check address (`/api/health`). The database address and password are kept in a private setting on your computer, never in the code. The first database setup script is written but has not been run yet. *Why:* the website needs a real place to store accounts and scans.
 - **Added instruction files for the backend server work.** Documents that tell the helper agents what to build on the server and how the website will talk to it. No app code.
 

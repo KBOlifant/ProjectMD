@@ -54,10 +54,10 @@ builder.Services.AddCors(options =>
 });
 
 // ===== BEGIN AUTH SERVICES (owned by skill 15; edit only inside this block) =====
-// Skill 15 registers here: AddAuthentication().AddJwtBearer(...) for Firebase ID tokens,
-// AddAuthorization(...) with one policy per permission and a fallback policy that requires a
-// signed-in user, the authorization result handler (401/403 ProblemDetails with `reason`),
-// ICurrentUser and IUserSync.
+// Registers Firebase ID token validation (JWT bearer), one authorization policy per permission
+// plus a fallback policy that requires a signed-in user, the 401/403 ProblemDetails handling
+// (403 carries `reason`), ICurrentUser and IUserSync. See Auth/AuthServiceCollectionExtensions.cs.
+ProjectMD.Api.Auth.AuthServiceCollectionExtensions.AddFirebaseAuth(builder.Services);
 // ===== END AUTH SERVICES =====
 
 // ===== BEGIN SCAN SERVICES (owned by skill 16; edit only inside this block) =====
@@ -99,7 +99,10 @@ app.UseRouting();
 app.UseCors("Frontend");
 
 // ===== BEGIN AUTH MIDDLEWARE (owned by skill 15; edit only inside this block) =====
-// Skill 15 adds here: app.UseAuthentication(); app.UseAuthorization();
+// Reads the bearer token first, then enforces the policies. Both must come after UseRouting
+// and UseCors, and before anything that needs to know who the caller is.
+app.UseAuthentication();
+app.UseAuthorization();
 // ===== END AUTH MIDDLEWARE =====
 
 // ===== BEGIN SCAN MIDDLEWARE (owned by skill 16; edit only inside this block) =====
