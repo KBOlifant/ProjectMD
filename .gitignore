@@ -1,0 +1,11 @@
+# Installed packages (re-created by npm install)
+node_modules/
+
+# Private settings
+.env
+.env.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*

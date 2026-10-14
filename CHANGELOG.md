@@ -26,6 +26,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Sign-in and accounts
 
+- **Stopped installed packages (node_modules) from showing up as changes.** A root `.gitignore` now tells git to ignore `node_modules` (and `.env` files), and the 182 package files that had been committed by mistake were removed from git's tracking. Nothing was deleted from your computer; running `npm install` recreates the folder. The packages stay in git's older history.
 - **Show who is signed in and limit actions by role.** A menu shows your email, role and a sign-out button. People who have not verified their email see a banner and cannot start scans. Read-only users cannot start scans or clear history. A failed scan now shows what went wrong and a Try again button.
 - **Added login, sign-up, forgot-password and verify-email pages.** New people can create an account, get a verification email, and reset a forgotten password. The pages never reveal whether an email already has an account. *Why:* scans should belong to a person.
 - **Fixed a build error in the scraping test file.** The app failed to build because of one setting; raising it fixed the build. Nothing changed for users.
