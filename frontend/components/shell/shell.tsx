@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { VerifyBanner } from "@/components/auth-status/verify-banner";
 import { UserMenu, UserMenuCompact } from "@/components/auth-status/user-menu";
 import { MainNav } from "./main-nav";
+import { ServerNotice } from "./server-notice";
 import { UsageMeter } from "./usage-meter";
 
 // The "Project.MD" logo link back to the home page. Stores nothing.
@@ -15,7 +16,8 @@ function Brand() {
 }
 
 // Page frame: desktop sidebar (logo, nav, user menu, usage meter), mobile top bar (logo, compact
-// user menu, nav), and the content area with the verify-email banner above the page. Stores nothing.
+// user menu, nav), and the content area with the "can't reach the server" notice (server mode only)
+// and the verify-email banner above the page. The nav shows an Admin link to admins only. Stores nothing.
 export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen md:flex">
@@ -40,6 +42,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="min-w-0 flex-1">
+        <ServerNotice />
         <VerifyBanner />
         <div className="mx-auto w-full max-w-[1040px] px-4 py-8 md:px-8">{children}</div>
       </main>

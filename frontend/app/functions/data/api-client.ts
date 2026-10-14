@@ -11,8 +11,10 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080").rep
 const NETWORK_MESSAGE = "Can't reach the server. Check your connection and try again.";
 const SESSION_MESSAGE = "Your session has expired. Sign in again.";
 
-// The machine-readable `reason` extension the backend adds to some 403 and 429 responses.
-export type ApiErrorReason = "unverified" | "role" | "quota";
+// The machine-readable `reason` extension the backend adds to some 400, 403, 409 and 429 responses.
+// `self` and `last-admin` come from the admin role endpoint (changing your own role, removing the
+// last admin).
+export type ApiErrorReason = "unverified" | "role" | "quota" | "self" | "last-admin";
 
 // A failed API call. `status` is the HTTP status (0 when the server could not be reached), `title`
 // and `detail` come from the ProblemDetails body, and `reason` from its `reason` extension.
@@ -40,7 +42,13 @@ function text(value: unknown): string | undefined {
 
 // Returns the value when it is one of the reasons the backend uses, otherwise undefined.
 function toReason(value: unknown): ApiErrorReason | undefined {
-  return value === "unverified" || value === "role" || value === "quota" ? value : undefined;
+  return value === "unverified" ||
+    value === "role" ||
+    value === "quota" ||
+    value === "self" ||
+    value === "last-admin"
+    ? value
+    : undefined;
 }
 
 // Reads the ProblemDetails fields (title, detail, reason) out of an error response. A body that is

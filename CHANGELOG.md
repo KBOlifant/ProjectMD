@@ -10,6 +10,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Website and server connected
 
+- **Website takes your role from the server and has an Admin page.** In server mode the website now asks the server who you are and what your role is, instead of trusting the sign-in token, and never gives more than read-only access if the server cannot be reached (it shows a notice with a Retry button). Admins get an Admin link and a Users page where they can change other people's roles, with clear messages for the safeguards (you cannot change your own role, and there must always be one admin). The server side of this is still to come, so it was tested against a stand-in server.
 - **Connected the website to the server.** The website can now run in two modes. In the default mode it works on its own with sample data stored in the browser, exactly as before. In "server mode" (turn it on with `NEXT_PUBLIC_SCAN_PROVIDER=api` in `frontend/.env.local`, and start the backend) scans, history and the monthly allowance come from the server and follow the person to any device. The website sends the person's Firebase sign-in with each request and shows plain messages when something goes wrong ("Verify your email to continue", "You've used this month's scans", "Can't reach the server"). The History page shows a Retry button if loading fails, and no longer flashes "No scans yet" while loading. *Why:* so scans belong to the person, not the browser. Tested against a stand-in server, not the real one yet.
 
 ## Backend server
