@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { signOutUser } from "@/app/functions/auth/auth-service";
+import { getIdToken, signOutUser } from "@/app/functions/auth/auth-service";
 import { useAuth } from "@/app/functions/auth/useAuth";
 import type { Role } from "@/app/functions/rbac/roles";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,32 @@ function RoleBadge({ role }: { role: Role }) {
         ? "border-border-strong bg-bg-raised text-warning"
         : "border-border-strong bg-bg-raised text-ink-muted";
   return <span className={`ts-label inline-block rounded-sm border px-1.5 py-0.5 ${tone}`}>{role}</span>;
+}
+
+// Development-only helper: copies a fresh Firebase ID token to the clipboard so it can be pasted into
+// the backend's Swagger page (Authorize). The token is never shown, stored or logged here. Only
+// "idle / copied / failed" is temporary state. It is not rendered in production builds.
+function CopyTokenButton() {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+
+  // Gets a fresh token and puts it on the clipboard; shows the result for two seconds.
+  async function copyToken() {
+    try {
+      const token = await getIdToken(true);
+      if (!token) throw new Error("no token");
+      await navigator.clipboard.writeText(token);
+      setState("copied");
+    } catch {
+      setState("failed");
+    }
+    setTimeout(() => setState("idle"), 2000);
+  }
+
+  return (
+    <Button variant="ghost" className="mt-2 w-full" onClick={copyToken} title="Dev only: paste into Swagger > Authorize">
+      {state === "copied" ? "Token copied" : state === "failed" ? "Copy failed" : "Copy API token"}
+    </Button>
+  );
 }
 
 // Account card: avatar, truncated email, role chip and a "Sign out" button. Signing out calls
@@ -76,6 +102,7 @@ function AccountCard() {
       <Button variant="ghost" className="mt-3 w-full" onClick={signOut} disabled={pending}>
         Sign out
       </Button>
+      {process.env.NODE_ENV === "development" && <CopyTokenButton />}
       {failed && (
         <p role="alert" className="ts-small mt-2 text-danger">
           Could not sign out. Try again.
