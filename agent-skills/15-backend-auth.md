@@ -5,6 +5,9 @@ description: Validate Firebase ID tokens in ASP.NET Core and enforce the same RB
 
 # Backend auth and RBAC
 
+> **Update:** the role is now stored in the database and set by the server (see [20-backend-roles.md](20-backend-roles.md)). The Firebase `role` claim is ignored by the server; in server mode the website takes the role from `/api/me` ([21](21-frontend-roles-admin.md)). The matrix below is unchanged.
+
+
 **Owns:** `backend/ProjectMD.Api/Auth/*`, `Controllers/MeController.cs`, and the marked authentication/authorization block in `Program.cs`.
 **Depends on:** 14. **Mirrors:** [10-rbac.md](10-rbac.md) (the frontend matrix). The backend is the real enforcement; the frontend is UX only.
 

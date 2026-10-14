@@ -5,6 +5,9 @@ description: Own Project MD's frontend role-based access control: roles, permiss
 
 # RBAC
 
+> **Update:** the role is now stored in the database and set by the server (see [20-backend-roles.md](20-backend-roles.md)). The Firebase `role` claim is ignored by the server; in server mode the website takes the role from `/api/me` ([21](21-frontend-roles-admin.md)). The matrix below is unchanged.
+
+
 **Owns:** `frontend/app/functions/rbac/*`.
 **Depends on:** `useAuth` from `app/functions/auth/useAuth.ts` (written by 09 in parallel; code against the contract below, do not edit auth files).
 

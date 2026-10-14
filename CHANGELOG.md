@@ -4,8 +4,9 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+- **Roles stored in your own database.** Who is a viewer, member or admin will be decided by the server and saved in your database instead of in Firebase. Your email goes in a private admin list, so you become admin when you sign in with it (after verifying it). An Admin page will let admins change other people's roles, and the server will make sure there is always at least one admin.
 - **Fetching real web pages and keeping AI cost low.** The server will open any public page with Playwright (a real browser), strip it down to the useful text, headings, links and tech clues, and only then hand a small summary to the AI. The tech list and page outline come from plain code, so the AI is only used for the written overview. Repeated pages are remembered so they cost nothing, each scan and each person has a daily AI limit, and the server falls back to a free basic document if the AI is off or the limit is reached.
-- **Later, not started:** writing the documentation with the Groq AI model (the API key will live only on the server), and a way to give people the admin or viewer role.
+- **Later, not started:** writing the documentation with the Groq AI model (the API key will live only on the server).
 
 ## Website and server connected
 

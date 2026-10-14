@@ -33,6 +33,8 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 | 17 | [17-frontend-api-connect.md](17-frontend-api-connect.md) | frontend api client, api provider, remote history, usage | contract from 14-16 |
 | 18 | [18-backend-extraction.md](18-backend-extraction.md) | `Services/Extraction/*` (Playwright fetch, HTML reduction, tech fingerprint) | 14, 16 |
 | 19 | [19-backend-ai-budget.md](19-backend-ai-budget.md) | `Services/Ai/*`, `Services/Pipeline/*`, cache and usage tables | 18 contract |
+| 20 | [20-backend-roles.md](20-backend-roles.md) | roles stored in the database, admin-email bootstrap, admin endpoints | after 18, 19 |
+| 21 | [21-frontend-roles-admin.md](21-frontend-roles-admin.md) | role from the server, admin Users page | contract from 20 |
 
 Extraction waves: 18 and 19 in parallel (19 codes to 18's contract).
 
