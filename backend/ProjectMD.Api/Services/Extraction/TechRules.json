@@ -1,0 +1,355 @@
+{
+  "_about": "Fingerprint rules. Each signal is a case-insensitive regular expression (or an exact marker) checked against one part of the page: script and stylesheet addresses (asset = either), response headers, cookie NAMES, the meta generator, markers read from the markup, link addresses, or the page text. A technology is reported only when at least one STRONG signal matches; weak signals only add to its score. 'implies' adds technologies that always come with this one (reported with a low score).",
+  "technologies": [
+    {
+      "name": "WordPress", "category": "platform",
+      "signals": [
+        { "type": "asset", "pattern": "/wp-(content|includes)/", "strong": true },
+        { "type": "generator", "pattern": "^WordPress", "strong": true },
+        { "type": "marker", "value": "class:wp-block-", "strong": true },
+        { "type": "link", "pattern": "/wp-json/|/wp-login\\.php", "strong": false },
+        { "type": "text", "pattern": "Proudly powered by WordPress", "strong": false }
+      ]
+    },
+    {
+      "name": "Shopify", "category": "platform",
+      "signals": [
+        { "type": "asset", "pattern": "cdn\\.shopify\\.com|shopifycdn\\.", "strong": true },
+        { "type": "marker", "value": "js:Shopify.", "strong": true },
+        { "type": "header", "header": "x-shopify-stage", "strong": true },
+        { "type": "text", "pattern": "Powered by Shopify", "strong": false }
+      ]
+    },
+    {
+      "name": "Webflow", "category": "platform",
+      "signals": [
+        { "type": "generator", "pattern": "^Webflow", "strong": true },
+        { "type": "asset", "pattern": "website-files\\.com|assets\\.webflow\\.com|webflow\\.(com|io)/", "strong": true },
+        { "type": "marker", "value": "attr:data-wf-", "strong": true },
+        { "type": "marker", "value": "js:Webflow", "strong": false }
+      ]
+    },
+    {
+      "name": "Wix", "category": "platform",
+      "signals": [
+        { "type": "asset", "pattern": "static\\.parastorage\\.com|static\\.wixstatic\\.com", "strong": true },
+        { "type": "generator", "pattern": "^Wix\\.com", "strong": true },
+        { "type": "header", "header": "x-wix-request-id", "strong": true },
+        { "type": "marker", "value": "js:wixBiSession", "strong": true }
+      ]
+    },
+    {
+      "name": "Squarespace", "category": "platform",
+      "signals": [
+        { "type": "generator", "pattern": "Squarespace", "strong": true },
+        { "type": "asset", "pattern": "static1\\.squarespace\\.com|assets\\.squarespace\\.com|sqspcdn\\.com|squarespace-cdn\\.com", "strong": true },
+        { "type": "marker", "value": "js:SQUARESPACE_CONTEXT", "strong": true }
+      ]
+    },
+    {
+      "name": "Framer", "category": "platform",
+      "signals": [
+        { "type": "generator", "pattern": "^Framer", "strong": true },
+        { "type": "asset", "pattern": "framerusercontent\\.com|framer\\.com/m/", "strong": true },
+        { "type": "marker", "value": "attr:data-framer", "strong": true }
+      ]
+    },
+    {
+      "name": "Ghost", "category": "platform",
+      "signals": [
+        { "type": "generator", "pattern": "^Ghost", "strong": true },
+        { "type": "asset", "pattern": "/ghost/(portal|sodo-search|comments-ui)/", "strong": true }
+      ]
+    },
+    {
+      "name": "Drupal", "category": "platform",
+      "signals": [
+        { "type": "generator", "pattern": "^Drupal", "strong": true },
+        { "type": "header", "header": "x-generator", "pattern": "Drupal", "strong": true },
+        { "type": "asset", "pattern": "/sites/(default|all)/(files|modules|themes)/|/core/(misc|assets)/|/misc/drupal\\.js", "strong": true }
+      ]
+    },
+    {
+      "name": "Hugo", "category": "framework",
+      "signals": [
+        { "type": "generator", "pattern": "^Hugo", "strong": true }
+      ]
+    },
+    {
+      "name": "Jekyll", "category": "framework",
+      "signals": [
+        { "type": "generator", "pattern": "^Jekyll", "strong": true }
+      ]
+    },
+    {
+      "name": "Docusaurus", "category": "framework", "implies": ["React"],
+      "signals": [
+        { "type": "generator", "pattern": "^Docusaurus", "strong": true }
+      ]
+    },
+    {
+      "name": "Gatsby", "category": "framework", "implies": ["React"],
+      "signals": [
+        { "type": "generator", "pattern": "^Gatsby", "strong": true },
+        { "type": "marker", "value": "id:___gatsby", "strong": true }
+      ]
+    },
+    {
+      "name": "Astro", "category": "framework",
+      "signals": [
+        { "type": "generator", "pattern": "^Astro", "strong": true },
+        { "type": "marker", "value": "attr:data-astro-cid", "strong": true },
+        { "type": "asset", "pattern": "/_astro/", "strong": true }
+      ]
+    },
+    {
+      "name": "Remix", "category": "framework", "implies": ["React"],
+      "signals": [
+        { "type": "marker", "value": "js:__remixContext", "strong": true }
+      ]
+    },
+    {
+      "name": "React", "category": "framework",
+      "signals": [
+        { "type": "script", "pattern": "/react(-dom)?(\\.production|\\.development)?(\\.min)?\\.js|/react(-dom)?@\\d|unpkg\\.com/react|ajax/libs/react/", "strong": true },
+        { "type": "marker", "value": "attr:data-reactroot", "strong": true },
+        { "type": "marker", "value": "attr:data-reactid", "strong": true },
+        { "type": "marker", "value": "id:root", "strong": false }
+      ]
+    },
+    {
+      "name": "Next.js", "category": "framework", "implies": ["React"],
+      "signals": [
+        { "type": "script", "pattern": "/_next/static/", "strong": true },
+        { "type": "marker", "value": "js:__NEXT_DATA__", "strong": true },
+        { "type": "marker", "value": "js:__next_f", "strong": true },
+        { "type": "marker", "value": "id:__next", "strong": true },
+        { "type": "header", "header": "x-powered-by", "pattern": "Next\\.js", "strong": true }
+      ]
+    },
+    {
+      "name": "Vue.js", "category": "framework",
+      "signals": [
+        { "type": "script", "pattern": "/vue(\\.runtime)?(\\.global)?(\\.esm-browser)?(\\.prod)?(\\.min)?\\.js|/vue@\\d|cdn\\.jsdelivr\\.net/npm/vue|unpkg\\.com/vue", "strong": true },
+        { "type": "marker", "value": "attr:data-v-", "strong": true },
+        { "type": "marker", "value": "attr:data-server-rendered", "strong": true },
+        { "type": "marker", "value": "id:app", "strong": false }
+      ]
+    },
+    {
+      "name": "Nuxt", "category": "framework", "implies": ["Vue.js"],
+      "signals": [
+        { "type": "script", "pattern": "/_nuxt/", "strong": true },
+        { "type": "marker", "value": "js:__NUXT__", "strong": true },
+        { "type": "marker", "value": "id:__nuxt", "strong": true },
+        { "type": "header", "header": "x-powered-by", "pattern": "Nuxt", "strong": true }
+      ]
+    },
+    {
+      "name": "Angular", "category": "framework",
+      "signals": [
+        { "type": "marker", "value": "attr:ng-version", "strong": true },
+        { "type": "marker", "value": "attr:_ngcontent", "strong": true },
+        { "type": "marker", "value": "attr:_nghost", "strong": true },
+        { "type": "script", "pattern": "@angular/", "strong": false }
+      ]
+    },
+    {
+      "name": "Svelte", "category": "framework",
+      "signals": [
+        { "type": "marker", "value": "class:svelte-", "strong": true },
+        { "type": "marker", "value": "attr:data-sveltekit", "strong": true },
+        { "type": "marker", "value": "js:__sveltekit", "strong": true },
+        { "type": "script", "pattern": "/_app/immutable/", "strong": true }
+      ]
+    },
+    {
+      "name": "jQuery", "category": "library",
+      "signals": [
+        { "type": "script", "pattern": "jquery([.\\-]\\d[\\w.\\-]*)?(\\.slim)?(\\.min)?\\.js|/jquery/|code\\.jquery\\.com|ajax/libs/jquery/", "strong": true }
+      ]
+    },
+    {
+      "name": "Material UI", "category": "library", "implies": ["React"],
+      "signals": [
+        { "type": "marker", "value": "class:Mui", "strong": true }
+      ]
+    },
+    {
+      "name": "Tailwind CSS", "category": "css",
+      "signals": [
+        { "type": "marker", "value": "class:tailwind", "strong": true },
+        { "type": "asset", "pattern": "cdn\\.tailwindcss\\.com|tailwind(css)?([.\\-][\\w]+)*\\.(css|js)", "strong": true }
+      ]
+    },
+    {
+      "name": "Bootstrap", "category": "css",
+      "signals": [
+        { "type": "asset", "pattern": "bootstrap([.\\-@/][\\w.\\-]*)?\\.(min\\.)?(css|js)|/bootstrap@|bootstrapcdn\\.com|/bootstrap/", "strong": true },
+        { "type": "marker", "value": "class:bootstrap", "strong": true }
+      ]
+    },
+    {
+      "name": "Font Awesome", "category": "font",
+      "signals": [
+        { "type": "asset", "pattern": "font-?awesome|kit\\.fontawesome\\.com|use\\.fontawesome\\.com", "strong": true }
+      ]
+    },
+    {
+      "name": "Google Fonts", "category": "font",
+      "signals": [
+        { "type": "stylesheet", "pattern": "fonts\\.googleapis\\.com", "strong": true },
+        { "type": "asset", "pattern": "fonts\\.gstatic\\.com", "strong": false }
+      ]
+    },
+    {
+      "name": "GitHub Pages", "category": "host",
+      "signals": [
+        { "type": "header", "header": "server", "pattern": "^GitHub\\.com$", "strong": true },
+        { "type": "header", "header": "x-github-request-id", "strong": true }
+      ]
+    },
+    {
+      "name": "Vercel", "category": "host",
+      "signals": [
+        { "type": "header", "header": "x-vercel-id", "strong": true },
+        { "type": "header", "header": "server", "pattern": "^Vercel$", "strong": true },
+        { "type": "asset", "pattern": "/_vercel/|vercel-scripts\\.com", "strong": true },
+        { "type": "asset", "pattern": "\\.vercel\\.app/", "strong": false }
+      ]
+    },
+    {
+      "name": "Netlify", "category": "host",
+      "signals": [
+        { "type": "header", "header": "x-nf-request-id", "strong": true },
+        { "type": "header", "header": "server", "pattern": "^Netlify$", "strong": true },
+        { "type": "cookie", "pattern": "^nf_", "strong": true },
+        { "type": "asset", "pattern": "netlify", "strong": false }
+      ]
+    },
+    {
+      "name": "Cloudflare", "category": "cdn",
+      "signals": [
+        { "type": "header", "header": "cf-ray", "strong": true },
+        { "type": "header", "header": "server", "pattern": "^cloudflare", "strong": true },
+        { "type": "cookie", "pattern": "^(__cf_bm|cf_clearance|__cfduid|__cflb)$", "strong": true },
+        { "type": "asset", "pattern": "/cdn-cgi/|static\\.cloudflareinsights\\.com", "strong": true },
+        { "type": "asset", "pattern": "cdnjs\\.cloudflare\\.com", "strong": false }
+      ]
+    },
+    {
+      "name": "Fastly", "category": "cdn",
+      "signals": [
+        { "type": "header", "header": "x-fastly-request-id", "strong": true },
+        { "type": "header", "header": "x-served-by", "pattern": "^cache-", "strong": true },
+        { "type": "header", "header": "via", "pattern": "varnish", "strong": false }
+      ]
+    },
+    {
+      "name": "AWS CloudFront", "category": "cdn",
+      "signals": [
+        { "type": "header", "header": "x-amz-cf-id", "strong": true },
+        { "type": "header", "header": "via", "pattern": "CloudFront", "strong": true },
+        { "type": "header", "header": "server", "pattern": "^CloudFront", "strong": true },
+        { "type": "header", "header": "x-cache", "pattern": "cloudfront", "strong": true },
+        { "type": "asset", "pattern": "\\.cloudfront\\.net/", "strong": false }
+      ]
+    },
+    {
+      "name": "Google Analytics", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "google-analytics\\.com/(analytics|ga)\\.js|googletagmanager\\.com/gtag/js|google-analytics\\.com/g/collect", "strong": true },
+        { "type": "marker", "value": "js:GoogleAnalyticsObject", "strong": true },
+        { "type": "cookie", "pattern": "^_ga(_|$)", "strong": true },
+        { "type": "marker", "value": "js:gtag(", "strong": false }
+      ]
+    },
+    {
+      "name": "Google Tag Manager", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "googletagmanager\\.com/gtm\\.js", "strong": true },
+        { "type": "marker", "value": "js:dataLayer", "strong": false }
+      ]
+    },
+    {
+      "name": "Segment", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "cdn\\.segment\\.(com|io)|segment\\.io/analytics", "strong": true },
+        { "type": "marker", "value": "js:analytics.load", "strong": true }
+      ]
+    },
+    {
+      "name": "PostHog", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "posthog", "strong": true },
+        { "type": "marker", "value": "js:posthog", "strong": true }
+      ]
+    },
+    {
+      "name": "Hotjar", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "static\\.hotjar\\.com|script\\.hotjar\\.com|hotjar-\\d+\\.js", "strong": true },
+        { "type": "marker", "value": "js:_hjSettings", "strong": true },
+        { "type": "cookie", "pattern": "^_hj", "strong": true }
+      ]
+    },
+    {
+      "name": "Facebook Pixel", "category": "analytics",
+      "signals": [
+        { "type": "script", "pattern": "connect\\.facebook\\.net/[^\"]*/fbevents\\.js", "strong": true },
+        { "type": "marker", "value": "js:fbq(", "strong": true }
+      ]
+    },
+    {
+      "name": "HubSpot", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "js\\.hs-scripts\\.com|js\\.hsforms\\.net|js\\.hs-analytics\\.net|js\\.hubspot\\.com|js\\.hs-banner\\.com|hs-sites\\.com", "strong": true },
+        { "type": "marker", "value": "js:_hsq", "strong": true },
+        { "type": "cookie", "pattern": "^(hubspotutk|__hstc|__hssc|__hssrc)$", "strong": true }
+      ]
+    },
+    {
+      "name": "Stripe", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "js\\.stripe\\.com", "strong": true },
+        { "type": "marker", "value": "js:Stripe(", "strong": false }
+      ]
+    },
+    {
+      "name": "Intercom", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "widget\\.intercom\\.io|js\\.intercomcdn\\.com", "strong": true },
+        { "type": "marker", "value": "js:Intercom", "strong": true },
+        { "type": "cookie", "pattern": "^intercom-", "strong": true }
+      ]
+    },
+    {
+      "name": "Algolia", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "algoliasearch|instantsearch|\\.algolianet\\.com|docsearch", "strong": true },
+        { "type": "marker", "value": "js:algoliasearch", "strong": true }
+      ]
+    },
+    {
+      "name": "Clerk", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "clerk\\.browser\\.js|@clerk/|\\.clerk\\.accounts\\.dev|clerk-js|clerk\\.[\\w.\\-]+/npm", "strong": true },
+        { "type": "cookie", "pattern": "^(__clerk_db_jwt|__client_uat|__refresh_\\w+)$", "strong": true }
+      ]
+    },
+    {
+      "name": "Firebase", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "gstatic\\.com/firebasejs|firebase(-app|-auth|-analytics|-firestore)?(\\.min)?\\.js|firebaseapp\\.com|firebaseio\\.com|/__/firebase/", "strong": true },
+        { "type": "marker", "value": "js:firebase", "strong": true }
+      ]
+    },
+    {
+      "name": "Sentry", "category": "service",
+      "signals": [
+        { "type": "script", "pattern": "browser\\.sentry-cdn\\.com|js\\.sentry-cdn\\.com|sentry\\.io|/@sentry/", "strong": true },
+        { "type": "marker", "value": "js:Sentry.", "strong": true }
+      ]
+    }
+  ]
+}
