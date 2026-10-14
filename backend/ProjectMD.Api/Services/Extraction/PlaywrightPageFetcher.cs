@@ -71,6 +71,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
         public readonly object Gate = new();
         public readonly List<string> Scripts = [];
         public readonly List<string> Styles = [];
+        public readonly Design.StyleSheetTexts StyleTexts = new();
         public ProxyOutcome.Fulfil? Main;
         public Uri? PendingNavigation;
         public ExtractionException? MainError;
@@ -203,7 +204,9 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
                 styles = [.. state.Styles];
             }
 
-            return new RawPage(finalUrl, main.Status, html, FetchSupport.FilterHeaders(main.UpstreamHeaders), scripts, styles, Api: apiRecorder.Build());
+            var design = await Design.DesignCapture.TryCaptureAsync(page, state.StyleTexts.Snapshot(), html, _logger, token);
+
+            return new RawPage(finalUrl, main.Status, html, FetchSupport.FilterHeaders(main.UpstreamHeaders), scripts, styles, Api: apiRecorder.Build(), Design: design);
         }
         finally
         {
@@ -293,6 +296,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
             {
                 case ProxyOutcome.Fulfil fulfil:
                     Record(state, request.ResourceType, request.Url);
+                    state.StyleTexts.Add(request.ResourceType, fulfil.Body);
                     if (isMain)
                     {
                         lock (state.Gate)
