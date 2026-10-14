@@ -70,28 +70,30 @@ public sealed class PipelineScanGenerator : IScanGenerator
         var digest = await _extraction.ExtractAsync(url, ct);
         var tech = _fingerprinter.Detect(digest);
 
-        var (prose, basis) = await WriteProseAsync(digest, tech, ct);
+        var (notes, basis) = await WriteNotesAsync(digest, tech, ct);
 
         var confidence = ConfidenceEstimator.Estimate(digest, tech);
         const int pages = 1;
-        var markdown = DeterministicMarkdownBuilder.Build(new MarkdownInput(
-            UrlValidator.DisplayHost(url),
-            url,
-            _clock.GetUtcNow().UtcDateTime,
-            digest,
-            tech,
-            confidence,
-            pages,
-            prose,
-            basis));
-
         var durationMs = (int)Math.Min(int.MaxValue, _clock.GetElapsedTime(started).TotalMilliseconds);
+        var markdown = MarkdownDocumentBuilder.Build(
+            new ScanFacts(
+                UrlValidator.DisplayHost(url),
+                url,
+                _clock.GetUtcNow().UtcDateTime,
+                digest,
+                tech,
+                confidence,
+                durationMs,
+                basis),
+            notes);
+
         return new GeneratedScan(durationMs, confidence, pages, tech, markdown);
     }
 
-    // The AI stage. Returns the AI prose (or null) and how the document was produced. Never throws
-    // for AI trouble; only a budget stop with FallbackOnBudget=false and a cancelled request escape.
-    private async Task<(string? Prose, ScanBasis Basis)> WriteProseAsync(
+    // The AI stage. Returns the validated AI notes (or null) and how the document was produced.
+    // Never throws for AI trouble; only a budget stop with FallbackOnBudget=false and a cancelled
+    // request escape. The cache holds the validated AI JSON, never Markdown.
+    private async Task<(AiDocument? Notes, ScanBasis Basis)> WriteNotesAsync(
         PageDigest digest,
         IReadOnlyList<ScanTech> tech,
         CancellationToken ct)
@@ -122,9 +124,11 @@ public sealed class PipelineScanGenerator : IScanGenerator
         }
 
         var userId = await _owner.GetUserIdAsync(ct);
+        var knownIds = EndpointRanking.KnownIds(digest.Api);
 
-        // 1. Cache: an identical page, prompt and model costs nothing.
-        var cached = await TryCacheAsync(digest.ContentHash, request.Model, ct);
+        // 1. Cache: an identical page, prompt and model costs nothing. The stored JSON is validated
+        // again, so a damaged or old row is simply a miss.
+        var cached = AiDocumentParser.Parse(await TryCacheAsync(digest.ContentHash, request.Model, ct), knownIds);
         if (cached is not null)
         {
             await RecordAsync(userId, new LlmResult(string.Empty, 0, 0, request.Model), cacheHit: true, ct);
@@ -166,15 +170,16 @@ public sealed class PipelineScanGenerator : IScanGenerator
         }
 
         // 4. Keep the answer for next time, then write the real usage to the ledger.
-        var prose = AiProseSanitizer.Clean(result.Text);
-        if (prose.Length > 0)
+        // Invalid JSON, a refusal, an empty or cut-off answer all parse to null: basic document, no retry.
+        var notes = AiDocumentParser.Parse(result.Text, knownIds);
+        if (notes is not null)
         {
-            await StoreCacheAsync(digest.ContentHash, request.Model, prose, ct);
+            await StoreCacheAsync(digest.ContentHash, request.Model, AiDocumentParser.ToJson(notes), ct);
         }
 
         await RecordAsync(userId, result, cacheHit: false, ct);
 
-        return prose.Length > 0 ? (prose, ScanBasis.Ai) : (null, ScanBasis.AiFailed);
+        return notes is not null ? (notes, ScanBasis.Ai) : (null, ScanBasis.AiFailed);
     }
 
     // Calls the model. If the provider says 429/5xx (a transient LlmProviderException) it waits
@@ -212,11 +217,11 @@ public sealed class PipelineScanGenerator : IScanGenerator
     }
 
     // Cache write that can never fail the scan.
-    private async Task StoreCacheAsync(string contentHash, string model, string prose, CancellationToken ct)
+    private async Task StoreCacheAsync(string contentHash, string model, string aiJson, CancellationToken ct)
     {
         try
         {
-            await _cache.StoreAsync(contentHash, PromptBuilder.PromptVersion, model, prose, ct);
+            await _cache.StoreAsync(contentHash, PromptBuilder.PromptVersion, model, aiJson, ct);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

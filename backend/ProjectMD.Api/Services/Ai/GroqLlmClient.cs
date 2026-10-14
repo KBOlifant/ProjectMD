@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -11,7 +11,9 @@ namespace ProjectMD.Api.Services.Ai;
 // The real ILlmClient: one call to Groq's OpenAI-compatible chat completions endpoint
 // (POST {Ai:BaseUrl}/chat/completions, bearer key). Fields confirmed from Groq's docs:
 // request model, messages, max_completion_tokens, temperature, reasoning_effort (low|medium|high
-// for openai/gpt-oss-20b), include_reasoning; response choices[0].message.content,
+// for openai/gpt-oss-20b), include_reasoning, and for structured output response_format =
+// {type: json_schema, json_schema: {name, strict, schema}} (strict mode is supported by
+// openai/gpt-oss-20b, see https://console.groq.com/docs/structured-outputs); response choices[0].message.content,
 // choices[0].finish_reason, usage.prompt_tokens and usage.completion_tokens.
 //
 // Credit rules: temperature 0, low reasoning effort by default, reasoning text switched off
@@ -123,6 +125,23 @@ public sealed class GroqLlmClient : ILlmClient
             ["include_reasoning"] = false,
             ["stream"] = false,
         };
+        if (request.JsonSchema is not null)
+        {
+            // Strict structured output: constrained decoding makes the answer match the schema.
+            using var schemaDoc = JsonDocument.Parse(request.JsonSchema);
+            payload["response_format"] = new Dictionary<string, object>
+            {
+                ["type"] = "json_schema",
+                ["json_schema"] = new Dictionary<string, object>
+                {
+                    ["name"] = "scan_notes",
+                    ["strict"] = true,
+                    ["schema"] = schemaDoc.RootElement,
+                },
+            };
+            return JsonSerializer.Serialize(payload);
+        }
+
         return JsonSerializer.Serialize(payload);
     }
 
@@ -239,3 +258,4 @@ public sealed class GroqLlmClient : ILlmClient
         return TimeSpan.FromMilliseconds(Math.Max(0, backoffMs));
     }
 }
+

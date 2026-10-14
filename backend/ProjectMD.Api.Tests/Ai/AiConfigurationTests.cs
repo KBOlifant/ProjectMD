@@ -34,7 +34,7 @@ public class AiConfigurationTests
         var ai = provider.GetRequiredService<IOptions<AiOptions>>().Value;
 
         Assert.Equal(3000, ai.MaxInputTokens);
-        Assert.Equal(700, ai.MaxOutputTokens);
+        Assert.Equal(800, ai.MaxOutputTokens);
         Assert.Equal(7, ai.CacheDays);
         Assert.Equal(20_000, ai.DailyTokenCapPerUser);
         Assert.Equal(200_000, ai.DailyTokenCapGlobal);

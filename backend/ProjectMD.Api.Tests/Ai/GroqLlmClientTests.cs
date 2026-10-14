@@ -154,6 +154,29 @@ public class GroqLlmClientTests
         Assert.Equal("USER PAGE FACTS", messages[1].GetProperty("content").GetString());
     }
 
+    // With a schema the request carries a strict json_schema response_format; without one it has none.
+    [Fact]
+    public async Task Schema_request_uses_strict_json_schema_response_format()
+    {
+        var handler = new FakeGroqHandler().Reply(HttpStatusCode.OK, Success("{}")).Reply(HttpStatusCode.OK, Success("{}"));
+        var (client, _) = Create(handler);
+
+        await client.CompleteAsync(Request() with { JsonSchema = AiDocumentSchema.Json }, CancellationToken.None);
+        await client.CompleteAsync(Request(), CancellationToken.None);
+
+        using var withSchema = JsonDocument.Parse(handler.Seen[0].Body);
+        var format = withSchema.RootElement.GetProperty("response_format");
+        Assert.Equal("json_schema", format.GetProperty("type").GetString());
+        var inner = format.GetProperty("json_schema");
+        Assert.True(inner.GetProperty("strict").GetBoolean());
+        Assert.False(string.IsNullOrWhiteSpace(inner.GetProperty("name").GetString()));
+        var schema = inner.GetProperty("schema");
+        Assert.Equal("object", schema.GetProperty("type").GetString());
+        Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
+
+        using var without = JsonDocument.Parse(handler.Seen[1].Body);
+        Assert.False(without.RootElement.TryGetProperty("response_format", out _));
+    }
     // Text and the provider's real token counts are returned.
     [Fact]
     public async Task Text_and_usage_are_parsed()
@@ -323,12 +346,14 @@ public class GroqLlmClientTests
     public async Task Budget_reservation_includes_the_headroom()
     {
         var ai = new AiOptions { FastModel = "m" };
-        Assert.Equal(1100, ai.OutputTokenCap(true));
-        Assert.Equal(700, ai.OutputTokenCap(false));
+        Assert.Equal(1200, ai.OutputTokenCap(true));
+        Assert.Equal(800, ai.OutputTokenCap(false));
 
         // A user cap that fits prompt + answer allowance (+100) but not prompt + allowance +
         // headroom: only the headroom-adding client is stopped by the budget guard.
-        var request = new PromptBuilder().Build(Digests.Simple(), [], ai);
+        // Same technologies as the harness fingerprinter, so this prompt is the one the generator builds.
+        var tech = new[] { new ProjectMD.Api.Models.ScanTech { Name = "Next.js" }, new ProjectMD.Api.Models.ScanTech { Name = "Vercel" }, new ProjectMD.Api.Models.ScanTech { Name = "Tailwind CSS" } };
+        var request = new PromptBuilder().Build(Digests.Simple(), tech, ai);
         var prompt = TokenEstimator.Estimate(request.System) + TokenEstimator.Estimate(request.User);
         var cap = prompt + 800;
         var withHeadroom = new Probe(true);

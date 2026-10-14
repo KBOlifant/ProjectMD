@@ -44,6 +44,55 @@ internal static class Digests
     }
 }
 
+// Builds the JSON answers the AI is expected to give, and a rich page fixture with API and design data.
+internal static class AiJson
+{
+    // A minimal valid answer with only an overview.
+    public static string Overview(string overview) =>
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            overview,
+            architecture = Array.Empty<string>(),
+            endpoints = Array.Empty<object>(),
+            design = Array.Empty<string>(),
+            tips = Array.Empty<string>(),
+        });
+
+    // A full answer: overview, one architecture bullet, notes for the given endpoint ids, one
+    // design note and one tip.
+    public static string Full(string overview = "Acme Cloud hosts apps.", params string[] endpointIds) =>
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            overview,
+            architecture = new[] { "Next.js front end calling a JSON API." },
+            endpoints = endpointIds.Select(id => new { id, purpose = "Purpose of " + id }).ToArray(),
+            design = new[] { "Dark theme with a blue accent." },
+            tips = new[] { "Cache GET /api/users/{id}." },
+        });
+
+    // The page fixture with captured API calls and a design summary.
+    public static PageDigest Rich(string hash = "hash-rich") => Digests.Simple(hash) with
+    {
+        Markers = ["js:__NEXT_DATA__"],
+        Api = new ApiCatalog(
+            [
+                new ApiEndpoint("GET", "acme.example", "/api/users/{id}", true, 12, [200, 404], "application/json", "{id:number,name:string}", null, ["expand"]),
+                new ApiEndpoint("POST", "acme.example", "/graphql", true, 3, [200], "application/json", "{data:{user:{id:string}}}", "query GetUser", []),
+                new ApiEndpoint("GET", "api.acme.example", "/v1/items", true, 2, [200], "application/json", null, null, []),
+            ],
+            [new ThirdPartyHost("www.google-analytics.com", 4, "analytics"), new ThirdPartyHost("cdn.unknown.example", 1, null)],
+            false),
+        Design = new DesignSystem(
+            [new ColorToken("#3b82f6", 40, "accent"), new ColorToken("#111827", 90, "text")],
+            [new FontToken("Inter", [400, 600], ["14px", "16px"])],
+            ["8px", "12px"],
+            ["0 1px 2px rgba(0,0,0,.2)"],
+            ["4px", "8px", "16px"],
+            [new CssVariable("--color-primary", "#3b82f6"), new CssVariable("--radius", "8px")],
+            ["640px", "768px"],
+            "Tailwind"),
+    };
+}
 // A fake AI client that counts calls and answers (or fails) as the test says.
 internal sealed class FakeLlmClient : ILlmClient
 {
@@ -62,8 +111,8 @@ internal sealed class FakeLlmClient : ILlmClient
     }
 
     // A client that always answers with the same prose and token counts.
-    public static FakeLlmClient Answering(string text = "## Summary\nAcme runs apps.\n## What the site does\n- Hosts apps", int prompt = 800, int completion = 150) =>
-        new((_, request) => new LlmResult(text, prompt, completion, request.Model));
+    public static FakeLlmClient Answering(string? text = null, int prompt = 800, int completion = 150) =>
+        new((_, request) => new LlmResult(text ?? AiJson.Overview("Acme runs apps."), prompt, completion, request.Model));
 
     // A client that always throws the given exception.
     public static FakeLlmClient Throwing(Exception exception) =>

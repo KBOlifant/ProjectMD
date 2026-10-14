@@ -3,110 +3,70 @@ using System.Text.RegularExpressions;
 
 namespace ProjectMD.Api.Services.Ai;
 
-// Cleans the model's answer before it is cached or put into a scan document. The answer is built
-// from untrusted page text, so it is treated as untrusted too: raw HTML, scripts and unsafe links
-// are removed, headings are pushed down so they cannot break the document structure, and the
-// length is capped.
+// Cleans one string from the model's answer before it is cached. The answer is built from untrusted
+// page text, so it is treated as untrusted too: raw HTML is removed, images are dropped, links are
+// reduced to their text, control characters and newlines become single spaces and the length is
+// capped. The result is plain text; the document renderer escapes it again (MarkdownText.Inline)
+// when it writes it into the Markdown, so nothing can add headings, lists, table cells, links or
+// HTML.
 public static partial class AiProseSanitizer
 {
-    // The most characters of prose kept (the output token cap already keeps answers well below this).
-    public const int MaxChars = 6000;
-
-    // The heading under which the prose appears in the scan document.
-    private const int ProseHeadingLevel = 3;
-
     // Anything that looks like an HTML tag or comment.
     [GeneratedRegex(@"<!--.*?-->|</?[a-zA-Z][^>]*>", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex HtmlTagRegex();
 
-    // A Markdown link or image: [text](target) / ![alt](target).
-    [GeneratedRegex(@"!?\[(?<text>[^\]]*)\]\((?<target>(?:[^()]|\([^()]*\))*)\)", RegexOptions.CultureInvariant)]
+    // A Markdown image: ![alt](target). Dropped completely.
+    [GeneratedRegex(@"!\[[^\]]*\]\((?:[^()]|\([^()]*\))*\)", RegexOptions.CultureInvariant)]
+    private static partial Regex ImageRegex();
+
+    // A Markdown link: [text](target). Only the text is kept.
+    [GeneratedRegex(@"\[(?<text>[^\]]*)\]\((?:[^()]|\([^()]*\))*\)", RegexOptions.CultureInvariant)]
     private static partial Regex LinkRegex();
 
-    // A leading run of # characters at the start of a line (a heading).
-    [GeneratedRegex(@"^(?<hashes>#{1,6})(?=\s)", RegexOptions.CultureInvariant)]
-    private static partial Regex HeadingRegex();
-
-    // Returns clean Markdown prose, or an empty string when nothing usable is left. Steps: strip a
-    // wrapping code fence, remove HTML, replace every link by its plain text (links are not wanted
-    // and could point anywhere), drop control characters, demote headings to level 3 or deeper,
-    // trim blank lines and cap the length at a whole line.
-    public static string Clean(string? answer)
+    // Returns one line of plain text, cut to `maxChars` characters, or an empty string when nothing
+    // usable is left. Cleaning the result again changes nothing.
+    public static string Clean(string? text, int maxChars)
     {
-        if (string.IsNullOrWhiteSpace(answer))
+        if (string.IsNullOrWhiteSpace(text))
         {
             return string.Empty;
         }
 
-        var text = answer.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Trim();
-        text = StripOuterFence(text);
-        text = HtmlTagRegex().Replace(text, string.Empty);
-        text = LinkRegex().Replace(text, m => m.Value.StartsWith('!') ? string.Empty : m.Groups["text"].Value);
+        var clean = HtmlTagRegex().Replace(text, " ");
+        clean = ImageRegex().Replace(clean, " ");
+        clean = LinkRegex().Replace(clean, m => m.Groups["text"].Value);
 
-        var lines = new List<string>();
-        var blank = true;
-        foreach (var raw in text.Split('\n'))
+        var sb = new StringBuilder(clean.Length);
+        var lastWasSpace = true;
+        foreach (var c in clean)
         {
-            var line = StripControl(raw).TrimEnd();
-            line = HeadingRegex().Replace(line, m => new string('#', Math.Max(ProseHeadingLevel, m.Groups["hashes"].Length)));
-            if (line.Length == 0)
+            if (char.IsWhiteSpace(c) || char.IsControl(c))
             {
-                if (!blank)
+                if (!lastWasSpace)
                 {
-                    lines.Add(string.Empty);
+                    sb.Append(' ');
                 }
 
-                blank = true;
+                lastWasSpace = true;
                 continue;
             }
 
-            blank = false;
-            lines.Add(line);
+            lastWasSpace = false;
+            sb.Append(c);
         }
 
-        var cleaned = string.Join("\n", lines).Trim();
-        if (cleaned.Length <= MaxChars)
+        var flat = sb.ToString().TrimEnd();
+        if (flat.Length > maxChars)
         {
-            return cleaned;
-        }
-
-        var cut = cleaned.LastIndexOf('\n', MaxChars - 1);
-        return cut > 0 ? cleaned[..cut].TrimEnd() : cleaned[..MaxChars].TrimEnd();
-    }
-
-    // If the whole answer is wrapped in one ``` fence, returns what is inside it.
-    private static string StripOuterFence(string text)
-    {
-        if (!text.StartsWith("```", StringComparison.Ordinal) || !text.EndsWith("```", StringComparison.Ordinal) || text.Length < 6)
-        {
-            return text;
-        }
-
-        var firstBreak = text.IndexOf('\n');
-        if (firstBreak < 0)
-        {
-            return text;
-        }
-
-        return text[(firstBreak + 1)..^3].Trim();
-    }
-
-    // Removes control characters (tabs become spaces) from one line.
-    private static string StripControl(string line)
-    {
-        var sb = new StringBuilder(line.Length);
-        foreach (var c in line)
-        {
-            if (c == '\t')
+            var end = maxChars;
+            if (end > 0 && char.IsHighSurrogate(flat[end - 1]))
             {
-                sb.Append(' ');
+                end--;
             }
-            else if (!char.IsControl(c))
-            {
-                sb.Append(c);
-            }
+
+            flat = flat[..end].TrimEnd();
         }
 
-        return sb.ToString();
+        return flat;
     }
 }

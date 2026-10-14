@@ -18,6 +18,10 @@ internal sealed class FixedTimeProvider : TimeProvider
 
     // Always returns the fixed time.
     public override DateTimeOffset GetUtcNow() => _now;
+
+    // A frozen stopwatch: elapsed time measured with this clock is always zero, so documents that
+    // show a duration are identical for identical inputs.
+    public override long GetTimestamp() => 0;
 }
 
 // An in-memory SQLite database with the real AppDbContext model, for tests that need a database

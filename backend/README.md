@@ -48,7 +48,7 @@ Check it is up: `GET http://localhost:5080/api/health` returns `{ "status": "ok"
 | `Usage:MonthlyLimit` | `10` | Scans per user per UTC calendar month |
 | `Scanner:Mode` | `static` | `static` (mock), `extract` (real fetch, no AI) or `ai` (see [Scanner modes](#scanner-modes-and-ai-credits)) |
 | `Ai:MaxInputTokens` | `3000` | Hard ceiling for the prompt sent to the model (estimated tokens) |
-| `Ai:MaxOutputTokens` | `700` | Hard `max_tokens` for the answer |
+| `Ai:MaxOutputTokens` | `800` | Hard cap for the structured JSON answer |
 | `Ai:FastModel` | empty | Cheap model used for everything. Required only once a real AI client exists |
 | `Ai:QualityModel` | empty | Dearer model, only for a future option that asks for it |
 | `Ai:CacheDays` | `7` | How long an AI answer is reused for identical page content (`0` = cache off) |
@@ -140,7 +140,7 @@ $env:ConnectionStrings__Default = $null
   `{ Name, Highlighted }`), `Markdown` (`text`), `DeletedAt` (`timestamptz`, nullable, UTC; null
   while the scan is visible). Index on `(UserId, CreatedAt DESC)`.
 - `ExtractionCache`: composite primary key `(ContentHash varchar(64), PromptVersion int, Model
-  varchar(100))`, `Markdown` (`text`, the AI-written prose only), `CreatedAt`, `ExpiresAt`,
+  varchar(100))`, `Markdown` (`text`; it holds the validated AI notes as JSON, not Markdown, and the column keeps its old name), `CreatedAt`, `ExpiresAt`,
   `HitCount`. Public page-derived text only: no page HTML and no user data, so one entry serves any
   user. Expired rows are ignored and overwritten on the next store (no purge job yet).
 - `LlmUsage`: `Id`, `UserId` (FK to `AppUsers`, cascade delete), `ScanId` (nullable, no FK; usually
@@ -186,8 +186,8 @@ and `"budget"` (429, the daily AI budget is used up and `Ai:FallbackOnBudget` is
 | Mode | What happens |
 |---|---|
 | `static` (default) | The MOCK generator. No network, no AI. |
-| `extract` | Real fetch (Playwright), reduce and tech fingerprint, then the Markdown is built **without any AI** by `DeterministicMarkdownBuilder`. |
-| `ai` | Everything in `extract`, plus one AI call that writes only the short prose (summary, what the site does, notable sections). If the AI is not configured, over budget or fails, the scan still succeeds with the `extract` document and a footer starting with "Basic scan". |
+| `extract` | Real fetch (Playwright), reduce and tech fingerprint, then the Markdown is built **without any AI** by `MarkdownDocumentBuilder` (explanation cells show `-`). |
+| `ai` | Everything in `extract`, plus one AI call that writes only short explanations as a small JSON object (overview, architecture bullets, a purpose per API endpoint id, design notes, developer tips). If the AI is not configured, over budget or fails, the scan still succeeds with the `extract` document and a footer starting with "Basic scan". |
 
 The real client is `GroqLlmClient` (Groq's OpenAI-compatible `POST {Ai:BaseUrl}/chat/completions`).
 It is registered only when `Scanner:Mode` is `ai` AND `Ai:ApiKey` is non-empty; otherwise
@@ -217,19 +217,25 @@ environment) makes one tiny real call.
 
 How credits are saved, in order of effect:
 
-1. **Free work stays free.** Tech list, outline, headings, links, meta, page count and structure come
-   from deterministic code. The AI only writes the prose, and the document around it is always built
-   locally.
-2. **Small ranked prompt.** `PromptBuilder` sends title, description, JSON-LD, outline, tech names,
-   main text and top links, in that priority, stopping at `Ai:MaxInputTokens` (estimated at about 4
+1. **Free work stays free.** Tech table, API endpoints, response shapes, colours, fonts, CSS
+   variables, outline and meta come from deterministic code and are rendered by
+   `MarkdownDocumentBuilder`. The AI only writes short explanations; endpoints are sent as ids
+   (`E1 GET /api/users/{id} -> {id:number}`) and answered as `{"id":"E1","purpose":"..."}`, which
+   saves output tokens and makes an invented endpoint impossible (unknown ids are dropped).
+2. **Small ranked prompt.** `PromptBuilder` sends title and description, tech names, rendering hints,
+   API endpoints (first 15), third-party categories, a design summary, the outline and a short text
+   excerpt, in that priority, stopping at `Ai:MaxInputTokens` (estimated at about 4
    ASCII characters per token, each other character counted as one token, so it over-counts). No
-   raw HTML, scripts, CSS, screenshots or full link list.
+   raw HTML, scripts, CSS, screenshots or full link list. The facts sit between `<<<FACTS` and
+   `FACTS>>>` markers that page text cannot forge.
 3. **One call per scan.** No chunk-and-summarise. A too-large page is truncated by priority.
-4. **Capped output.** `Ai:MaxOutputTokens` is the hard `max_tokens`; the template asks for about 180
-   words; temperature 0 is for the real client to apply.
+4. **Capped output.** `Ai:MaxOutputTokens` (default 800) is the hard cap; the JSON schema limits
+   every field (overview 400 characters, up to 6/5/5 bullets of 140/120/140 characters, purposes
+   100 characters); temperature 0.
 5. **Cache.** Identical page content (`ContentHash`) + `PromptBuilder.PromptVersion` + model is
    served from `ExtractionCache` for `Ai:CacheDays` for any user: zero credits, recorded in
-   `LlmUsage` as a cache hit. Bump `PromptVersion` whenever the prompt changes.
+   `LlmUsage` as a cache hit. The cache stores the validated AI JSON; the Markdown is rebuilt from
+   fresh facts every time. Bump `PromptVersion` (now 2) whenever the prompt or schema changes.
 6. **Cheap model first.** `Ai:FastModel` is used for everything; `Ai:QualityModel` is reserved. Model
    names are configuration only; with a real client and no `Ai:FastModel` the app stops at startup
    with a clear message.
@@ -243,8 +249,26 @@ How credits are saved, in order of effect:
 9. **No payment for failures.** A failed extraction makes no AI call. A failed AI call is not retried
    automatically (beyond the one transient retry) and the scan falls back to the basic document.
 
-The AI answer is untrusted (it is built from untrusted page text): `AiProseSanitizer` strips HTML and
-links, demotes headings and caps the length before it is cached or stored.
+### Structured output and the document
+
+The request uses Groq structured outputs (`response_format` = `json_schema`, `strict: true`, schema
+name `scan_notes`; `openai/gpt-oss-20b` supports strict mode, see
+https://console.groq.com/docs/structured-outputs), so the answer is constrained to the schema in
+`AiDocumentSchema`. Groq does not document `maxLength`/`maxItems` for strict mode, so the limits are
+stated in the prompt and descriptions and enforced again by `AiDocumentParser` (cut, never failed).
+
+The AI answer is untrusted (it is built from untrusted page text): wrong shapes are rejected,
+`AiProseSanitizer` strips HTML, images and link targets and flattens newlines, unknown or repeated
+endpoint ids are dropped, and `MarkdownText` escapes every string (headings, lists, table pipes,
+backticks, brackets, `<`/`>`, `://`, `www.`, `@`) when it is written into the document. Invalid
+JSON, a refusal, an empty or cut-off answer gives the basic document (no retry; tokens still recorded).
+
+The document layout is fixed: YAML front matter, `# host`, an italic summary line, Overview, Tech
+stack, Architecture, API endpoints (table, response shapes, third-party services), Design system
+(colours, typography, radii/shadows/spacing, CSS variables, breakpoints, notes), Page structure,
+Developer tips and a footer. Sections whose data was not captured are left out. Endpoint ids are
+assigned in a fixed order (first-party first, then path, method, host) that does not depend on request
+counts, because the cache key ignores counts.
 
 The `Confidence` number is a heuristic (how much usable information the page gave us), not a measured
 accuracy, and the document says so. `Pages` is 1 because only the one page is fetched.
@@ -370,6 +394,44 @@ Errors reach the user as `ExtractionException` with a safe message (no URL, addr
 Known limits: `robots.txt` is not read yet (`TODO(robots)`); the guard cannot replace network egress
 rules, so also deny the server access to private ranges and the cloud metadata address at the
 firewall; some sites block headless browsers, which shows up as an HTTP error or a thin page.
+
+### Design-system capture
+
+After the page has loaded, `DesignCapture` (`Services/Extraction/Design/`) runs one read-only script in the
+page (5 second cap) that samples up to 800 visible elements with `getComputedStyle`. It never reads text,
+cookies, storage or form values and makes no requests. The raw counts are turned into `RawPage.Design`
+(a `DesignSystem`, normally under 1.5 KB of JSON; extra CSS variables are dropped above that, never below 20):
+the top 12 colours as `#rrggbb` (shades within about 4 per channel are merged) with a guessed role
+(`text`, `background`, `accent`, `border`), up to 4 font families with weights and sizes, 5 radii, 4 shadows,
+the 8 most used spacing steps, up to 40 `:root`/`html` CSS variables, up to 8 `@media` pixel breakpoints, and
+`"Tailwind"` when more than 40% of the sampled elements carry 3+ Tailwind-style classes. Variables and
+breakpoints come from the stylesheet text that the request proxy already fetched (each sheet cut to 256 KB,
+parsed, then discarded) plus `<style>` blocks of the rendered page. The order is fixed (most used first, ties by
+value), so the content hash stays stable. Any failure gives `Design = null`; a scan never fails because of it.
+Values are logged only at Debug level, and not at all by default.
+
+### API capture
+
+While the page loads, `PageRequestProxy` (which already performs every request through the SSRF-guarded
+client) tells an `ApiRecorder` about each answered request; no new network path is added. The result is
+`RawPage.Api` / `PageDigest.Api` (an `ApiCatalog`), built in `Services/Extraction/Api`:
+
+- First-party `xhr`/`fetch` calls (same registrable domain as the page, simple last-two-labels rule plus
+  a list of suffixes such as `co.uk`, `co.za`) are grouped by method + host + path template. Numbers,
+  UUIDs, hex and token-looking segments become `{id}` (`/api/users/42` -> `/api/users/{id}`).
+- Each endpoint keeps: count, distinct statuses, media type, sorted query parameter **names** (max 10), the
+  JSON response layout (types only, depth 3, 20 keys, first array element, only for JSON up to 64 KB) and,
+  for GraphQL (POST to a `graphql` path, or a JSON body with a GraphQL `query`), one endpoint per operation
+  such as `query GetUser` or `anonymous query` (batched bodies give one each).
+- Other hosts are summarised as `ThirdPartyHost` (request count + category: analytics, ads, fonts, cdn,
+  payments, auth, chat, monitoring, maps, video, or unknown) and are not listed as endpoints.
+- Limits: 40 first-party endpoints (busiest first, then alphabetical; `Truncated` is set when more
+  exist). Any capture error makes `Api` null; the scan carries on.
+- Never stored: request or response bodies, header values, cookies, query-string values, URL fragments,
+  user info, GraphQL variables or query text, any value from a JSON response. Nothing captured is logged.
+- `PageDigest.ContentHash` includes a canonical, order-independent list of endpoints (method, template,
+  first-party flag, GraphQL operation) and the design system, but not counts, statuses or response
+  shapes, so the cache only invalidates when the API surface or the design really changes (`CaptureHash`).
 
 ### Tests
 

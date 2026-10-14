@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace ProjectMD.Api.Services.Ai;
 
@@ -11,8 +11,9 @@ public sealed class AiOptions
     // (Ai:MaxInputTokens, default 3000). PromptBuilder truncates by priority to stay under it.
     public int MaxInputTokens { get; set; } = 3000;
 
-    // Hard cap on the answer length, sent as the provider's max_tokens (Ai:MaxOutputTokens, default 700).
-    public int MaxOutputTokens { get; set; } = 700;
+    // Hard cap on the answer length (Ai:MaxOutputTokens, default 800). The structured JSON answer
+    // needs a little more room than the earlier plain prose did.
+    public int MaxOutputTokens { get; set; } = 800;
 
     // The cheap model used for everything (Ai:FastModel). Empty until configured.
     public string FastModel { get; set; } = string.Empty;
@@ -164,3 +165,4 @@ public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
     }
 }
+

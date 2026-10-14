@@ -1,8 +1,9 @@
-namespace ProjectMD.Api.Services.Ai;
+﻿namespace ProjectMD.Api.Services.Ai;
 
 // One question for the language model: fixed instructions (System), the page facts (User), the
-// model name and the hard cap on the answer length.
-public sealed record LlmRequest(string System, string User, string Model, int MaxOutputTokens);
+// model name and the hard cap on the answer length. JsonSchema, when set, asks the provider for JSON
+// that follows that schema (structured output); null keeps the plain-text behaviour.
+public sealed record LlmRequest(string System, string User, string Model, int MaxOutputTokens, string? JsonSchema = null);
 
 // The model's answer plus the REAL token counts reported by the provider (recorded in the usage
 // ledger), and the model that actually answered.
@@ -60,3 +61,4 @@ public sealed class LlmProviderException : Exception
         IsTransient = isTransient;
     }
 }
+

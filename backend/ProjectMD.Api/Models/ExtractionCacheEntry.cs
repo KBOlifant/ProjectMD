@@ -16,8 +16,9 @@ public class ExtractionCacheEntry
     // The model name the text was written by (max 100 characters).
     public string Model { get; set; } = string.Empty;
 
-    // The cached AI prose (Markdown). This is the writing only, not the whole scan document: the
-    // document is rebuilt for every scan around it (URL, date, tech list, outline).
+    // The cached AI notes as validated JSON (see AiDocument). This is the writing only, not the
+    // Markdown: the document is rebuilt from fresh facts for every scan. (The column keeps its old
+    // name, Markdown, to avoid a migration.)
     public string Markdown { get; set; } = string.Empty;
 
     // When the entry was written or last refreshed (UTC).

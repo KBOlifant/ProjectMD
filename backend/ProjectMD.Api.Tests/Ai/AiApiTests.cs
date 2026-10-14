@@ -170,8 +170,8 @@ public class AiApiTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var scan = (await response.Content.ReadFromJsonAsync<ScanDto>())!;
         Assert.Equal(1, scan.Pages);
-        Assert.Contains("# example.com Documentation", scan.Markdown);
-        Assert.Contains(DeterministicMarkdownBuilder.FooterExtract, scan.Markdown);
+        Assert.Contains("# example.com", scan.Markdown);
+        Assert.Contains(MarkdownDocumentBuilder.FooterExtract, scan.Markdown);
         Assert.Contains(scan.Tech, t => t.Name == "Next.js");
     }
 
@@ -192,7 +192,7 @@ public class AiApiTests
     [Fact]
     public async Task Ai_mode_with_a_client_writes_prose_and_records_usage()
     {
-        var llm = FakeLlmClient.Answering("## Summary\nAcme runs apps.", prompt: 700, completion: 90);
+        var llm = FakeLlmClient.Answering(AiJson.Overview("Acme runs apps."), prompt: 700, completion: 90);
         using var factory = new ScannerModeApiFactory(
             new() { ["Scanner:Mode"] = "ai", ["Ai:FastModel"] = "test-fast" },
             Fakes(llm));
