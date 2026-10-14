@@ -56,13 +56,17 @@ public sealed class PageRequestProxy
     private readonly ExtractionOptions _options;
     private int _requests;
     private long _totalBytes;
+    private readonly ApiRecorder? _recorder;
 
-    // Creates a proxy for one page fetch.
-    public PageRequestProxy(GuardedHttpClient client, RequestGuard guard, ExtractionOptions options)
+    // Creates a proxy for one page fetch. The optional recorder is told about every answered
+    // request (it only notes method, host, path template, status and JSON layout; see ApiRecorder).
+    // It adds no network path: it only looks at what this proxy already fetched.
+    public PageRequestProxy(GuardedHttpClient client, RequestGuard guard, ExtractionOptions options, ApiRecorder? recorder = null)
     {
         _client = client;
         _guard = guard;
         _options = options;
+        _recorder = recorder;
     }
 
     // Decides and performs one request. Only the caller's cancellation is thrown; everything else
@@ -117,7 +121,9 @@ public sealed class PageRequestProxy
                     continue;
                 }
 
-                return await FinishAsync(request, current, response, status, timeout.Token);
+                var finished = await FinishAsync(request, current, response, status, timeout.Token);
+                NoteForApiCapture(request, method, body, finished);
+                return finished;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -132,6 +138,25 @@ public sealed class PageRequestProxy
                 return new ProxyOutcome.Abort("send failed", MapSendError(ex));
             }
         }
+    }
+
+    // Tells the API recorder about an answered request: the page itself sets which site is being
+    // scanned; every other answered request is a candidate API call or third-party request.
+    private void NoteForApiCapture(ProxyRequest request, HttpMethod method, byte[]? body, ProxyOutcome outcome)
+    {
+        if (_recorder is null || outcome is not ProxyOutcome.Fulfil fulfil)
+        {
+            return;
+        }
+
+        if (request.IsMainNavigation)
+        {
+            _recorder.SetPage(fulfil.FinalUrl);
+            return;
+        }
+
+        _recorder.Record(new ApiObservation(
+            method.Method, fulfil.FinalUrl, request.ResourceType, fulfil.Status, fulfil.ContentType, body ?? [], fulfil.Body));
     }
 
     // Reads the body (within the limits) and builds the response for the browser.

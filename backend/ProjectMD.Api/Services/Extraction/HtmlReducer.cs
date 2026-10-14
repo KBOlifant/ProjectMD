@@ -160,7 +160,10 @@ public sealed partial class HtmlReducer : IHtmlReducer
         // The hash covers only the stable human-facing content, scrubbed of volatile bits.
         var hashInput = string.Join(
             "\n", "title:" + title, "meta:" + description, "outline:", outlineText, "text:", text);
-        var contentHash = TextTools.Sha256Hex(TextTools.ScrubVolatile(hashInput));
+        // Captured API calls and design system (see CaptureHash): empty when nothing was captured, so
+        // such pages keep the hash they always had. Added after scrubbing so templates stay intact.
+        var captureForm = CaptureHash.Canonical(page.Api, page.Design);
+        var contentHash = TextTools.Sha256Hex(TextTools.ScrubVolatile(hashInput) + (captureForm.Length == 0 ? string.Empty : "\ncapture:\n" + captureForm));
 
         // A case-insensitive copy of the headers (written one by one so two spellings of the same
         // name cannot throw).
@@ -187,7 +190,9 @@ public sealed partial class HtmlReducer : IHtmlReducer
             reducedChars,
             TextTools.EstimateTokens(reducedChars),
             contentHash,
-            markers);
+            markers,
+            page.Api,
+            page.Design);
     }
 
     // ---- Metadata ---------------------------------------------------------------------------------

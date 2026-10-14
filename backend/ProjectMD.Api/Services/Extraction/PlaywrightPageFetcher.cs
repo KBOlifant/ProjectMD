@@ -137,7 +137,8 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
         var state = new FetchState();
         var guard = _guardFactory();
         using var client = new GuardedHttpClient(guard);
-        var proxy = new PageRequestProxy(client, guard, _options);
+        var apiRecorder = new ApiRecorder();
+        var proxy = new PageRequestProxy(client, guard, _options, apiRecorder);
         var navigationMs = _options.NavigationTimeoutSeconds * 1000f;
 
         IBrowserContext? context = null;
@@ -202,7 +203,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
                 styles = [.. state.Styles];
             }
 
-            return new RawPage(finalUrl, main.Status, html, FetchSupport.FilterHeaders(main.UpstreamHeaders), scripts, styles);
+            return new RawPage(finalUrl, main.Status, html, FetchSupport.FilterHeaders(main.UpstreamHeaders), scripts, styles, Api: apiRecorder.Build());
         }
         finally
         {

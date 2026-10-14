@@ -4,7 +4,6 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
-- **Capturing the site's API calls and design system, and a structured Markdown document.** Scans will record which API calls the page makes (method, path pattern, status, and the shape of the JSON, never any real data or secrets), and summarise the design (main colours, fonts, corner radii, shadows, spacing, CSS variables, breakpoints). Groq will then be asked for a small structured answer (overview, architecture notes, a one-line purpose for each endpoint, design notes, tips) and the server will lay it out in a fixed Markdown format with tables, so every document looks the same and costs few credits.
 
 ## Working with Claude
 
@@ -18,6 +17,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Backend server
 
+- **Scans now record the API calls a page makes.** While the page loads, the server notes each data request (method, path pattern such as `/api/users/{id}`, status codes, and the layout of the JSON as field names and types), lists GraphQL calls by operation name, and groups third-party services (analytics, fonts, payments...) separately. It never keeps response bodies, cookies, header values, query values or any real data; tests plant marker strings and check none leak. Changes in the API change the page's cache fingerprint.
 - **Added a Swagger page for testing the server by hand.** With the server running in Development, open http://localhost:5080/swagger to see every endpoint (health, me, scans, admin users) and try them from the browser. It is switched off in Production. Protected endpoints still need a sign-in: the page has an Authorize button where you paste your Firebase token. Three new tests check the page loads, lists the endpoints and does not weaken the sign-in rules.
 - **Connected the server to Groq (model `openai/gpt-oss-20b`).** With `Scanner__Mode=ai` and a Groq key in `backend/.env`, each scan now makes one request to Groq and uses the answer for the written overview. To keep costs down, the model is told to think briefly (its hidden thinking is billed too), the answer length is capped with a little extra room for that thinking, and the daily limits count the same total. A cut-off or empty answer, or a refused or failed request, falls back to the free document instead of retrying in a loop. Without a key, scans still work and carry a note that AI writing is not configured. The key is never logged or written to git. Tested with a pretend Groq server only; no real call has been made yet.
 - **The backend now starts with just `dotnet run`.** Typing `dotnet run` in the `backend` folder works: a small launcher project there forwards to the real server, which starts on http://localhost:5080. (Before, you had to add `--project ProjectMD.Api`.) To build or test, use `dotnet build ProjectMD.sln` / `dotnet test ProjectMD.sln`. The README also explains the "file is locked by ProjectMD.Api.exe" build error: it means an older copy of the server is still running and needs to be stopped.
