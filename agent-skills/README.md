@@ -27,6 +27,12 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 | 11 | [11-data-provider.md](11-data-provider.md) | `app/functions/data/*`, `lib/scan.ts`, `lib/history-store.ts`, `components/scan-provider.tsx` | contract with 09, 10 |
 | 12 | [12-screen-auth.md](12-screen-auth.md) | `app/(auth)/*`, `components/auth/*` | 09, 10 |
 | 13 | [13-workspace-auth-integration.md](13-workspace-auth-integration.md) | shell user menu, banner, permission gating on screens | 09, 10, 11, 12 |
+| 14 | [14-backend-foundation.md](14-backend-foundation.md) | `backend/` scaffold, models, DbContext, DTOs, migration | none |
+| 15 | [15-backend-auth.md](15-backend-auth.md) | `backend/.../Auth/*`, `MeController` | 14 |
+| 16 | [16-backend-scans.md](16-backend-scans.md) | `ScansController`, `Services/*`, backend tests | 14, 15 |
+| 17 | [17-frontend-api-connect.md](17-frontend-api-connect.md) | frontend api client, api provider, remote history, usage | contract from 14-16 |
+
+Backend waves: **A**: 14. **B** (parallel): 15, 16, 17. Then migrate, smoke-test and 08.
 
 Auth waves: **A** (parallel): 09, 10, 11. **B** (parallel): 12, 13. Then 08 again. 09 takes over the `<body>` of `app/layout.tsx` and moves the screens into `app/(workspace)/` (this supersedes the layout ownership in 01).
 
