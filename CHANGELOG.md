@@ -4,6 +4,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+- **Capturing the site's API calls and design system, and a structured Markdown document.** Scans will record which API calls the page makes (method, path pattern, status, and the shape of the JSON, never any real data or secrets), and summarise the design (main colours, fonts, corner radii, shadows, spacing, CSS variables, breakpoints). Groq will then be asked for a small structured answer (overview, architecture notes, a one-line purpose for each endpoint, design notes, tips) and the server will lay it out in a fixed Markdown format with tables, so every document looks the same and costs few credits.
 
 ## Working with Claude
 

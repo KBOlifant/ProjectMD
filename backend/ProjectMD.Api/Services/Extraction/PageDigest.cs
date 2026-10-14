@@ -33,7 +33,9 @@ public sealed record PageDigest(
     int ReducedChars,
     int EstimatedTokens,
     string ContentHash,
-    IReadOnlyList<string>? Markers = null);
+    IReadOnlyList<string>? Markers = null,
+    ApiCatalog? Api = null,
+    DesignSystem? Design = null);
 
 // Size limits for the reduced page. The text is cut by priority, never in the middle of a word.
 public sealed record ReduceOptions(int MaxTextChars = 12000, int MaxLinks = 40, int MaxHeadings = 60);

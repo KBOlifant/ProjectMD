@@ -9,7 +9,9 @@ public sealed record RawPage(
     string Html,
     IReadOnlyDictionary<string, string> Headers,
     IReadOnlyList<string> ScriptUrls,
-    IReadOnlyList<string> StylesheetUrls);
+    IReadOnlyList<string> StylesheetUrls,
+    ApiCatalog? Api = null,
+    DesignSystem? Design = null);
 
 // Loads a public web page and returns what the browser rendered. The only implementation is
 // PlaywrightPageFetcher. Every request it makes is checked against the SSRF rules first.
