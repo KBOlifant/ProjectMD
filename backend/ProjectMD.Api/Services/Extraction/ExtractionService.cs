@@ -25,6 +25,12 @@ public sealed class ExtractionService : IExtractionService
     {
         var raw = await _fetcher.FetchAsync(url, ct);
 
+        // A bot-check page is never documented, whatever its status code.
+        if (BlockDetector.LooksBlocked(raw.StatusCode, raw.Headers, raw.Html))
+        {
+            throw new ExtractionException(ExtractionFailure.BlockedBySite, FetchSupport.BlockedBySiteMessage);
+        }
+
         if (_options.RejectHttpErrors && raw.StatusCode >= 400)
         {
             throw new ExtractionException(

@@ -26,6 +26,9 @@ public enum ExtractionFailure
 
     // All render slots stayed busy for too long.
     Busy,
+
+    // The site answered with a bot-protection page (Cloudflare and similar) instead of its content.
+    BlockedBySite,
 }
 
 // The one exception the extraction code throws for expected failures. Its Message is always safe to

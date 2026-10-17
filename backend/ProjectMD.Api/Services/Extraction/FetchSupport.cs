@@ -17,6 +17,7 @@ public static class FetchSupport
     public const string NotHtmlMessage = "That address is not a web page (it did not return HTML).";
     public const string TooLargeMessage = "That page is too large to scan.";
     public const string BusyMessage = "The scanner is busy right now. Try again in a minute.";
+    public const string BlockedBySiteMessage = "This site blocks automated scanners (it showed a bot check instead of its content), so it can't be documented.";
 
     // Response headers that help identify technologies. Everything else is dropped.
     // set-cookie is special: only the cookie NAMES are kept, never values.
@@ -25,6 +26,9 @@ public static class FetchSupport
         "server", "x-powered-by", "via", "x-vercel-id", "cf-ray", "x-generator", "content-type", "set-cookie",
         "x-amz-cf-id", "x-cache", "x-served-by", "x-fastly-request-id", "x-nf-request-id",
         "x-github-request-id", "x-wix-request-id", "x-shopify-stage",
+
+        // Set by Cloudflare on its bot-check pages; read by BlockDetector.
+        "cf-mitigated",
     };
 
     // The most characters kept from one header value.

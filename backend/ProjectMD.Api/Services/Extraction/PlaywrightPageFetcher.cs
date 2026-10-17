@@ -22,7 +22,9 @@ namespace ProjectMD.Api.Services.Extraction;
 //     connects only to the exact addresses that were checked (no DNS rebinding). Redirects are
 //     followed one hop at a time with a check on each hop; when the page itself redirects, the
 //     fetcher navigates again to the target so that this code sees it too.
-// Images, fonts and media are never fetched. Downloads and dialogs are refused. The browser is
+// Media is never fetched. Images and fonts are fetched only when Motion:Enabled and
+// Motion:LoadImagesAndFonts are on (through the same checks, within their own budget), so the scroll
+// screenshots look like the real page. Downloads and dialogs are refused. The browser is
 // never downloaded by this code: install it as described in backend/README.md. If it is missing,
 // FetchAsync throws ExtractionException with the message "The page renderer is not installed on
 // the server".
@@ -34,6 +36,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
     private readonly IUrlValidator _validator;
     private readonly Func<RequestGuard> _guardFactory;
     private readonly ExtractionOptions _options;
+    private readonly Visual.MotionOptions _motion;
     private readonly ILogger<PlaywrightPageFetcher> _logger;
     private readonly SemaphoreSlim _slots;
     private readonly SemaphoreSlim _launchLock = new(1, 1);
@@ -41,13 +44,15 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
     private IBrowser? _browser;
     private bool _disposed;
 
-    // Creates the fetcher. The browser is not started until the first fetch.
+    // Creates the fetcher. The browser is not started until the first fetch. `motion` is optional:
+    // without it (or with Motion:Enabled off) no screenshots are taken and no images are loaded.
     public PlaywrightPageFetcher(
         IUrlValidator validator,
         IDnsResolver dns,
         IOptions<ExtractionOptions> options,
-        ILogger<PlaywrightPageFetcher> logger)
-        : this(validator, () => new RequestGuard(dns, options.Value.MaxRedirects), options, logger)
+        ILogger<PlaywrightPageFetcher> logger,
+        IOptions<Visual.MotionOptions>? motion = null)
+        : this(validator, () => new RequestGuard(dns, options.Value.MaxRedirects), options, logger, motion)
     {
     }
 
@@ -56,11 +61,13 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
         IUrlValidator validator,
         Func<RequestGuard> guardFactory,
         IOptions<ExtractionOptions> options,
-        ILogger<PlaywrightPageFetcher> logger)
+        ILogger<PlaywrightPageFetcher> logger,
+        IOptions<Visual.MotionOptions>? motion = null)
     {
         _validator = validator;
         _guardFactory = guardFactory;
         _options = options.Value;
+        _motion = motion?.Value ?? new Visual.MotionOptions();
         _logger = logger;
         _slots = new SemaphoreSlim(Math.Max(1, _options.MaxConcurrentFetches));
     }
@@ -139,7 +146,14 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
         var guard = _guardFactory();
         using var client = new GuardedHttpClient(guard);
         var apiRecorder = new ApiRecorder();
-        var proxy = new PageRequestProxy(client, guard, _options, apiRecorder);
+        var loadVisualAssets = _motion.Enabled && _motion.LoadImagesAndFonts;
+        var proxy = new PageRequestProxy(
+            client,
+            guard,
+            _options,
+            apiRecorder,
+            loadVisualAssets ? _motion.MaxImageAndFontBytes : 0,
+            loadVisualAssets ? _motion.MaxImageAndFontRequests : 0);
         var navigationMs = _options.NavigationTimeoutSeconds * 1000f;
 
         IBrowserContext? context = null;
@@ -151,7 +165,9 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
                 JavaScriptEnabled = true,
                 AcceptDownloads = false,
                 ServiceWorkers = ServiceWorkerPolicy.Block,
-                ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
+                ViewportSize = _motion.Enabled
+                    ? new ViewportSize { Width = _motion.ViewportWidth, Height = _motion.ViewportHeight }
+                    : new ViewportSize { Width = 1280, Height = 800 },
                 Locale = "en-US",
             }).WaitAsync(token);
 
@@ -204,9 +220,19 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
                 styles = [.. state.Styles];
             }
 
-            var design = await Design.DesignCapture.TryCaptureAsync(page, state.StyleTexts.Snapshot(), html, _logger, token);
+            var styleTexts = state.StyleTexts.Snapshot();
+            var design = await Design.DesignCapture.TryCaptureAsync(page, styleTexts, html, _logger, token);
+            var headers = FetchSupport.FilterHeaders(main.UpstreamHeaders);
 
-            return new RawPage(finalUrl, main.Status, html, FetchSupport.FilterHeaders(main.UpstreamHeaders), scripts, styles, Api: apiRecorder.Build(), Design: design);
+            // Screenshots and animation evidence (last, because scrolling changes the page). Skipped
+            // for a bot-check page, which ExtractionService refuses anyway.
+            VisualCapture? visual = null;
+            if (_motion.Enabled && !BlockDetector.LooksBlocked(main.Status, headers, html))
+            {
+                visual = await Visual.VisualCapturer.TryCaptureAsync(page, _motion, scripts, styleTexts, _logger, token);
+            }
+
+            return new RawPage(finalUrl, main.Status, html, headers, scripts, styles, Api: apiRecorder.Build(), Design: design, Visual: visual);
         }
         finally
         {

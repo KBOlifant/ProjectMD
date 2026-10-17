@@ -39,7 +39,8 @@ public abstract record ProxyOutcome
 
 // Answers every request the browser makes, so the browser itself never touches the network (it is
 // started with host name resolution switched off). For each request: skip what a scan does not
-// need (images, fonts, media, live connections); check the address with the RequestGuard; fetch it
+// need (media, live connections, and images and fonts unless a visual-asset budget was given, see
+// Motion:LoadImagesAndFonts); check the address with the RequestGuard; fetch it
 // through the GuardedHttpClient (which connects only to the checked public addresses); follow
 // redirects one hop at a time, checking every hop (for the page itself, hand the redirect back so
 // the browser re-navigates and we see it again); and enforce size limits (the page is cut at
@@ -57,28 +58,59 @@ public sealed class PageRequestProxy
     private int _requests;
     private long _totalBytes;
     private readonly ApiRecorder? _recorder;
+    private readonly long _visualAssetBytes;
+    private readonly int _visualAssetRequests;
+    private long _visualBytes;
+    private int _visualRequests;
 
     // Creates a proxy for one page fetch. The optional recorder is told about every answered
     // request (it only notes method, host, path template, status and JSON layout; see ApiRecorder).
     // It adds no network path: it only looks at what this proxy already fetched.
-    public PageRequestProxy(GuardedHttpClient client, RequestGuard guard, ExtractionOptions options, ApiRecorder? recorder = null)
+    // visualAssetBytes / visualAssetRequests: when above 0, images and fonts are fetched too (so
+    // screenshots look right), within their own byte and request budget that is counted apart from
+    // Scanner:MaxTotalBytes and Scanner:MaxRequestsPerPage. They pass the same address checks.
+    public PageRequestProxy(
+        GuardedHttpClient client,
+        RequestGuard guard,
+        ExtractionOptions options,
+        ApiRecorder? recorder = null,
+        long visualAssetBytes = 0,
+        int visualAssetRequests = 0)
     {
         _client = client;
         _guard = guard;
         _options = options;
         _recorder = recorder;
+        _visualAssetBytes = Math.Max(0, visualAssetBytes);
+        _visualAssetRequests = Math.Max(0, visualAssetRequests);
     }
+
+    // True for the kinds of request that only matter for how the page looks.
+    private static bool IsVisualAsset(string resourceType) =>
+        resourceType.Equals("image", StringComparison.OrdinalIgnoreCase) ||
+        resourceType.Equals("font", StringComparison.OrdinalIgnoreCase);
+
+    // True when images and fonts are being loaded for this page.
+    private bool LoadsVisualAssets => _visualAssetBytes > 0 && _visualAssetRequests > 0;
 
     // Decides and performs one request. Only the caller's cancellation is thrown; everything else
     // becomes an outcome.
     public async Task<ProxyOutcome> HandleAsync(ProxyRequest request, CancellationToken ct)
     {
-        if (SkippedTypes.Contains(request.ResourceType))
+        var visual = IsVisualAsset(request.ResourceType) && LoadsVisualAssets;
+        if (SkippedTypes.Contains(request.ResourceType) && !visual)
         {
             return new ProxyOutcome.Abort("skipped type " + request.ResourceType, null);
         }
 
-        if (Interlocked.Increment(ref _requests) > _options.MaxRequestsPerPage)
+        if (visual)
+        {
+            if (Interlocked.Increment(ref _visualRequests) > _visualAssetRequests)
+            {
+                return new ProxyOutcome.Abort("too many images or fonts", null);
+            }
+        }
+        else if (Interlocked.Increment(ref _requests) > _options.MaxRequestsPerPage)
         {
             return new ProxyOutcome.Abort("too many requests", null);
         }
@@ -121,8 +153,15 @@ public sealed class PageRequestProxy
                     continue;
                 }
 
-                var finished = await FinishAsync(request, current, response, status, timeout.Token);
-                NoteForApiCapture(request, method, body, finished);
+                var finished = await FinishAsync(request, current, response, status, visual, timeout.Token);
+
+                // Images and fonts are not API calls; leaving them out keeps the API catalog (and
+                // the page's cache fingerprint) exactly as it was before images were loaded.
+                if (!visual)
+                {
+                    NoteForApiCapture(request, method, body, finished);
+                }
+
                 return finished;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -159,14 +198,23 @@ public sealed class PageRequestProxy
             method.Method, fulfil.FinalUrl, request.ResourceType, fulfil.Status, fulfil.ContentType, body ?? [], fulfil.Body));
     }
 
-    // Reads the body (within the limits) and builds the response for the browser.
-    private async Task<ProxyOutcome> FinishAsync(ProxyRequest request, Uri url, HttpResponseMessage response, int status, CancellationToken ct)
+    // Reads the body (within the limits) and builds the response for the browser. `visual` marks an
+    // image or font, which is counted against the visual-asset budget instead of the main one.
+    private async Task<ProxyOutcome> FinishAsync(ProxyRequest request, Uri url, HttpResponseMessage response, int status, bool visual, CancellationToken ct)
     {
         var upstream = GuardedHttpClient.AllHeaders(response);
         var declared = GuardedHttpClient.DeclaredLength(response);
         long cap;
 
-        if (request.IsMainNavigation)
+        if (visual)
+        {
+            cap = Math.Min(_options.MaxResourceBytes, Math.Max(0, _visualAssetBytes - Interlocked.Read(ref _visualBytes)));
+            if (declared > cap)
+            {
+                return new ProxyOutcome.Abort("image or font too large", null);
+            }
+        }
+        else if (request.IsMainNavigation)
         {
             if (!FetchSupport.IsHtmlContentType(response.Content.Headers.ContentType?.ToString()))
             {
@@ -196,7 +244,14 @@ public sealed class PageRequestProxy
             return new ProxyOutcome.Abort("resource too large", null);
         }
 
-        Interlocked.Add(ref _totalBytes, bytes.Length);
+        if (visual)
+        {
+            Interlocked.Add(ref _visualBytes, bytes.Length);
+        }
+        else
+        {
+            Interlocked.Add(ref _totalBytes, bytes.Length);
+        }
 
         var headers = new List<KeyValuePair<string, string>>();
         foreach (var header in upstream)

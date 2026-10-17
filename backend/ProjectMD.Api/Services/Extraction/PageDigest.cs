@@ -15,7 +15,8 @@ public sealed record LinkRef(string Text, string Href);
 // Markers is an additive extra (it has a default, so code written against the 16 contract members
 // still compiles): short tokens such as "generator:WordPress 6.4", "id:__next" or "js:__NEXT_DATA__"
 // that the reducer saw in the page markup and that the tech fingerprinter reads, because the
-// markup itself is not kept.
+// markup itself is not kept. Visual (screenshots and animation evidence) is passed through from the
+// RawPage unchanged; it is not part of ContentHash.
 public sealed record PageDigest(
     Uri FinalUrl,
     int StatusCode,
@@ -35,7 +36,8 @@ public sealed record PageDigest(
     string ContentHash,
     IReadOnlyList<string>? Markers = null,
     ApiCatalog? Api = null,
-    DesignSystem? Design = null);
+    DesignSystem? Design = null,
+    VisualCapture? Visual = null);
 
 // Size limits for the reduced page. The text is cut by priority, never in the middle of a word.
 public sealed record ReduceOptions(int MaxTextChars = 12000, int MaxLinks = 40, int MaxHeadings = 60);

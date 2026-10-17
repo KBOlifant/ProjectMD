@@ -2,7 +2,8 @@ namespace ProjectMD.Api.Services.Extraction;
 
 // What the browser saw for one page: the rendered HTML (after JavaScript ran, cut to the size
 // limit), the status and a few useful response headers, and the addresses of the scripts and
-// stylesheets the page loaded (the addresses only, never their contents).
+// stylesheets the page loaded (the addresses only, never their contents). Visual holds the scroll
+// screenshots and animation evidence when Motion:Enabled is on (null otherwise).
 public sealed record RawPage(
     Uri FinalUrl,
     int StatusCode,
@@ -11,7 +12,8 @@ public sealed record RawPage(
     IReadOnlyList<string> ScriptUrls,
     IReadOnlyList<string> StylesheetUrls,
     ApiCatalog? Api = null,
-    DesignSystem? Design = null);
+    DesignSystem? Design = null,
+    VisualCapture? Visual = null);
 
 // Loads a public web page and returns what the browser rendered. The only implementation is
 // PlaywrightPageFetcher. Every request it makes is checked against the SSRF rules first.
