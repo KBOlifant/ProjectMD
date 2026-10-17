@@ -22,7 +22,10 @@ If a value is out of range, the scanner refuses to start a scan and the log says
 5. It reads the animations again (scroll animations only exist once you reach them).
 6. The screenshots are laid out in grids ("contact sheets") of `SheetColumns` x `SheetRows`.
 7. In `ai` mode, the first screenshot and the contact sheets go to the vision model
-   (`VisionModel`), which lists the animations it can see.
+   (`VisionModel`), together with the measured animation and design facts. It writes a description
+   of each animation and a design breakdown (overall style, how each font is used, what each colour
+   is for, and the components on the page). Both go into the .md file; the website shows the design
+   parts on the results page's **Design** tab.
 
 The screenshots are kept in memory for that one scan only. They are never saved in the database.
 
@@ -69,7 +72,9 @@ The screenshots are kept in memory for that one scan only. They are never saved 
 | `VisionModel` | `qwen/qwen3.8-27b` | The Groq model that reads the screenshots. It must accept images. The text notes still use `Ai:FastModel`. |
 | `MaxImagesPerRequest` | `3` | Most images per request. Groq's `qwen/qwen3.8-27b` accepts 3. Image 1 is the first screen; the rest are contact sheets. |
 | `TokensPerImage` | `2048` | What Groq charges per image, in input tokens. Only used to check the daily budget before the call. |
-| `MaxOutputTokens` | `900` | Longest answer the model may give. |
+| `MaxOutputTokens` | `1800` | Longest answer the model may give. It holds the animation descriptions and the design breakdown. |
+| `ResponseFormat` | `json_object` | `json_object` asks for any valid JSON and describes the shape in the prompt (Groq's vision docs show this working with images). `json_schema` uses strict schema decoding instead; try it only if answers come back badly shaped. |
+| `TimeoutSeconds` | `60` | How long to wait for the vision model. Reading images is slower than the text call. |
 | `ReasoningEffort` | `none` | How much the model thinks first: `none` (fastest, cheapest), `low`, `medium`, `high` or `default`. |
 
 ## Other settings changed for this
@@ -78,6 +83,19 @@ The screenshots are kept in memory for that one scan only. They are never saved 
 | --- | --- | --- | --- |
 | `Scanner:OverallTimeoutSeconds` | `45` | `75` | Screenshots add up to 20 seconds to a scan. |
 | `Ai:DailyTokenCapPerUser` | `20000` | `60000` | A scan in `ai` mode now makes two AI calls; the vision one counts about 5,000 to 7,000 tokens (each image counts 2,048). At the old limit a person could only do about two scans a day. |
+
+## When the animation descriptions are missing
+
+The backend terminal says why. Look for one of these lines after a scan:
+
+- `Visual capture for <site>: 6 screenshots, 1 contact sheets, ...` means the screenshots worked.
+- `Vision AI skipped: <reason>` means the vision call was not made (for example Motion:AiEnabled is
+  false, no AI key is set, or no screenshots were taken).
+- `AI provider refused the request (status 400, ... param response_format)` means Groq refused the
+  request; the `type`, `code` and `param` say which part. Try `"ResponseFormat": "json_schema"` or
+  a different `VisionModel`.
+- `Vision AI call failed (..., status ...)` or `Vision AI answer was empty or not usable JSON` means
+  the call was made but gave nothing usable.
 
 ## Cost
 

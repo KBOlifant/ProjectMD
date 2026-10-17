@@ -3,10 +3,13 @@
 // One question for the language model: fixed instructions (System), the page facts (User), the
 // model name and the hard cap on the answer length. JsonSchema, when set, asks the provider for JSON
 // that follows that schema (structured output); null keeps the plain-text behaviour.
-// The last three are for vision requests and keep the old behaviour when left out: Images are sent
+// The rest are for vision requests and keep the old behaviour when left out: Images are sent
 // with the user message (the model must accept images); ReasoningEffort, when set, replaces
 // Ai:ReasoningEffort for this request (for example "none" for a vision model); SchemaName is the
-// name given to the JSON schema.
+// name given to the JSON schema; JsonObjectMode asks for any valid JSON object (response_format
+// json_object) instead of strict schema decoding, for models or inputs where strict mode is
+// refused (the prompt must then describe the JSON itself); TimeoutSeconds, when set, replaces
+// Ai:TimeoutSeconds for this request.
 public sealed record LlmRequest(
     string System,
     string User,
@@ -15,7 +18,9 @@ public sealed record LlmRequest(
     string? JsonSchema = null,
     IReadOnlyList<LlmImage>? Images = null,
     string? ReasoningEffort = null,
-    string SchemaName = "scan_notes");
+    string SchemaName = "scan_notes",
+    bool JsonObjectMode = false,
+    int? TimeoutSeconds = null);
 
 // One image sent to a vision model: its media type (for example "image/jpeg") and its bytes. The
 // bytes are never logged.

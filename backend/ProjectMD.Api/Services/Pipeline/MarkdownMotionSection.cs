@@ -40,18 +40,14 @@ internal static class MarkdownMotionSection
             sb.AppendLine(MarkdownText.Inline(notes.Summary, MotionNotesLimits.SummaryChars)).AppendLine();
         }
 
+        if (hasNotes && notes!.Animations.Count > 0)
+        {
+            AppendDescribed(sb, notes.Animations);
+        }
+
         if (hasFacts)
         {
             AppendLibrariesAndSignals(sb, motion!);
-        }
-
-        if (hasNotes && notes!.Animations.Count > 0)
-        {
-            AppendDetected(sb, notes.Animations);
-        }
-
-        if (hasFacts)
-        {
             AppendMeasured(sb, motion!.Animations);
             AppendTriggers(sb, motion.ScrollTriggers);
         }
@@ -59,6 +55,7 @@ internal static class MarkdownMotionSection
 
     private static void AppendLibrariesAndSignals(StringBuilder sb, MotionEvidence motion)
     {
+        sb.AppendLine("### Measured by the browser").AppendLine();
         sb.Append("**Animation libraries:** ")
             .AppendLine(motion.Libraries.Count == 0
                 ? "none detected"
@@ -76,40 +73,55 @@ internal static class MarkdownMotionSection
         }
     }
 
-    // The AI's list: Section | Effect | Trigger | Evidence | Library, then the rebuild hints.
-    private static void AppendDetected(StringBuilder sb, IReadOnlyList<DetectedAnimation> animations)
+    // The AI's descriptions: one heading per animation, its description, then its details.
+    private static void AppendDescribed(StringBuilder sb, IReadOnlyList<DetectedAnimation> animations)
     {
-        sb.AppendLine("### Detected animations").AppendLine();
-        sb.AppendLine("| Section | Effect | Trigger | Evidence | Library |");
-        sb.AppendLine("| --- | --- | --- | --- | --- |");
+        var number = 0;
         foreach (var a in animations)
         {
-            sb.Append("| ").Append(Cell(a.Section, MotionNotesLimits.SectionChars))
-                .Append(" | ").Append(Cell(a.Effect, MotionNotesLimits.EffectChars))
-                .Append(" | ").Append(Cell(a.Trigger, 30))
-                .Append(" | ").Append(Cell(a.Evidence, 20))
-                .Append(" | ").Append(Cell(a.Library, MotionNotesLimits.LibraryChars))
-                .AppendLine(" |");
-        }
-
-        sb.AppendLine();
-
-        var hints = animations.Where(a => a.Recreate.Length > 0).ToList();
-        if (hints.Count > 0)
-        {
-            sb.AppendLine("**How to rebuild them:**").AppendLine();
-            foreach (var a in hints)
+            number++;
+            var title = a.Name.Length > 0 ? a.Name : "Animation " + Num(number);
+            sb.Append("### ").Append(Num(number)).Append(". ").Append(MarkdownText.Inline(title, MotionNotesLimits.NameChars));
+            if (a.Section.Length > 0)
             {
-                var label = a.Section.Length > 0 ? a.Section : "Animation";
-                sb.Append("- **").Append(MarkdownText.Inline(label, MotionNotesLimits.SectionChars)).Append(":** ")
-                    .AppendLine(MarkdownText.Inline(a.Recreate, MotionNotesLimits.RecreateChars));
+                sb.Append(" (").Append(MarkdownText.Inline(a.Section, MotionNotesLimits.SectionChars)).Append(')');
+            }
+
+            sb.AppendLine().AppendLine();
+            if (a.Description.Length > 0)
+            {
+                sb.AppendLine(MarkdownText.Inline(a.Description, MotionNotesLimits.DescriptionChars)).AppendLine();
+            }
+
+            sb.Append("- **Runs on:** ").AppendLine(MarkdownText.Inline(TriggerName(a.Trigger), 40));
+            if (a.Library.Length > 0)
+            {
+                sb.Append("- **Likely library:** ").AppendLine(MarkdownText.Inline(a.Library, MotionNotesLimits.LibraryChars));
+            }
+
+            sb.Append("- **Evidence:** ").AppendLine(a.Evidence == "measured"
+                ? "measured (matches timing data from the browser)"
+                : "inferred (read from the screenshots, may be wrong)");
+            if (a.Recreate.Length > 0)
+            {
+                sb.Append("- **How to rebuild:** ").AppendLine(MarkdownText.Inline(a.Recreate, MotionNotesLimits.RecreateChars));
             }
 
             sb.AppendLine();
         }
-
-        sb.AppendLine("*Evidence: \"measured\" matches timing data the browser reported; \"inferred\" was read from the screenshots and may be wrong.*").AppendLine();
     }
+
+    private static string TriggerName(string trigger) => trigger switch
+    {
+        "load" => "page load",
+        "scroll" => "scrolling into view",
+        "scroll-scrub" => "scrolling (follows the scrollbar)",
+        "hover" => "hover",
+        "click" => "click",
+        "loop" => "a continuous loop",
+        "page-transition" => "page change",
+        _ => "unknown",
+    };
 
     // What the browser reported: Element | Kind | Animates | Duration | Easing | Repeat.
     private static void AppendMeasured(StringBuilder sb, IReadOnlyList<MeasuredAnimation> animations)

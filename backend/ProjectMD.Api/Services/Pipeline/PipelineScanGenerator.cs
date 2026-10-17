@@ -191,9 +191,10 @@ public sealed class PipelineScanGenerator : IScanGenerator
     }
 
     // The vision stage: only in `ai` mode with a real client, and never allowed to fail the scan.
+    // MotionAnalyzer logs why it skips (for example when no screenshots were taken).
     private async Task<MotionNotes?> WriteMotionNotesAsync(PageDigest digest, CancellationToken ct)
     {
-        if (_motion is null || digest.Visual is null || _scanner.Value.Resolve() != ScannerMode.Ai || _llm is NotConfiguredLlmClient)
+        if (_motion is null || _scanner.Value.Resolve() != ScannerMode.Ai || _llm is NotConfiguredLlmClient)
         {
             return null;
         }

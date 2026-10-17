@@ -230,6 +230,12 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
             if (_motion.Enabled && !BlockDetector.LooksBlocked(main.Status, headers, html))
             {
                 visual = await Visual.VisualCapturer.TryCaptureAsync(page, _motion, scripts, styleTexts, _logger, token);
+                _logger.LogInformation(
+                    "Visual capture for {Host}: {Frames} screenshots, {Sheets} contact sheets, {Animations} measured animations",
+                    UrlValidator.DisplayHost(target),
+                    visual?.Frames.Count ?? 0,
+                    visual?.Sheets.Count ?? 0,
+                    visual?.Motion?.Animations.Count ?? 0);
             }
 
             return new RawPage(finalUrl, main.Status, html, headers, scripts, styles, Api: apiRecorder.Build(), Design: design, Visual: visual);

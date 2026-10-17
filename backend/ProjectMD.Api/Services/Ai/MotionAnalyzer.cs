@@ -5,8 +5,8 @@ using ProjectMD.Api.Services.Pipeline;
 
 namespace ProjectMD.Api.Services.Ai;
 
-// Asks the vision model which animations a scanned page has. Called by PipelineScanGenerator in
-// `ai` mode, after the main AI call.
+// Asks the vision model to describe a scanned page's animations and break down its visual design.
+// Called by PipelineScanGenerator in `ai` mode, after the main AI call.
 public interface IMotionAnalyzer
 {
     // Returns the validated notes, or null when motion AI is off, there is nothing to send, or the
@@ -56,15 +56,22 @@ public sealed class MotionAnalyzer : IMotionAnalyzer
     {
         ArgumentNullException.ThrowIfNull(digest);
         var options = _motion.Value;
-        if (!options.Enabled || !options.AiEnabled || digest.Visual is null || _llm is NotConfiguredLlmClient)
+        var skipReason =
+            !options.Enabled ? "Motion:Enabled is false"
+            : !options.AiEnabled ? "Motion:AiEnabled is false"
+            : _llm is NotConfiguredLlmClient ? "no AI client is configured"
+            : digest.Visual is null ? "no screenshots were taken for this page"
+            : null;
+        if (skipReason is not null)
         {
+            _logger.LogInformation("Vision AI skipped: {Reason}", skipReason);
             return null;
         }
 
         LlmRequest? request;
         try
         {
-            request = _prompts.Build(digest.Visual, options);
+            request = _prompts.Build(digest.Visual!, digest.Design, options);
         }
         catch (InvalidOperationException ex)
         {
@@ -74,6 +81,7 @@ public sealed class MotionAnalyzer : IMotionAnalyzer
 
         if (request is null)
         {
+            _logger.LogInformation("Vision AI skipped: no screenshots and no motion facts to send");
             return null;
         }
 
@@ -109,12 +117,20 @@ public sealed class MotionAnalyzer : IMotionAnalyzer
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             // Only the exception type is logged: never the prompt, the images or provider text.
-            _logger.LogWarning("Motion AI call failed ({ErrorType}); the document has no motion notes", ex.GetType().Name);
+            _logger.LogWarning(
+                "Vision AI call failed ({ErrorType}, status {Status}); the document has no animation descriptions or design breakdown",
+                ex.GetType().Name, (ex as LlmProviderException)?.StatusCode);
             return null;
         }
 
         // 4. Cache the validated answer, then record the real usage.
         var notes = MotionNotesParser.Parse(result.Text);
+        if (notes is null)
+        {
+            _logger.LogWarning(
+                "Vision AI answer was empty or not usable JSON ({CompletionTokens} completion tokens); the document has no animation descriptions or design breakdown",
+                result.CompletionTokens);
+        }
         if (notes is not null)
         {
             await StoreCacheAsync(digest.ContentHash, request.Model, MotionNotesParser.ToJson(notes), ct);

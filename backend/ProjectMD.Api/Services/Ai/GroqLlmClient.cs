@@ -69,7 +69,8 @@ public sealed class GroqLlmClient : ILlmClient
         for (var attempt = 0; ; attempt++)
         {
             var started = Stopwatch.GetTimestamp();
-            var (status, text, retryAfter) = await SendOnceAsync(url, body, options, ct);
+            var timeoutSeconds = request.TimeoutSeconds is > 0 ? request.TimeoutSeconds.Value : options.TimeoutSeconds;
+            var (status, text, retryAfter) = await SendOnceAsync(url, body, options, timeoutSeconds, ct);
             var elapsedMs = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 
             if (status is >= 200 and < 300)
@@ -102,7 +103,13 @@ public sealed class GroqLlmClient : ILlmClient
                     $"The AI service is busy or unavailable (status {status})", status, isTransient: false);
             }
 
-            _logger.LogWarning("AI provider refused the request (status {Status}, model {Model})", status, request.Model);
+            // Groq's error code, type and parameter name are fixed identifiers (for example
+            // "invalid_request_error" / "response_format"), never page content or the prompt, so they
+            // are logged to make a refused request diagnosable. The error message text is not.
+            var (errorType, errorCode, errorParam) = ProviderErrorIds(text);
+            _logger.LogWarning(
+                "AI provider refused the request (status {Status}, model {Model}, error type {ErrorType}, code {ErrorCode}, param {ErrorParam})",
+                status, request.Model, errorType, errorCode, errorParam);
             throw new LlmProviderException($"The AI service rejected the request (status {status})", status, isTransient: false);
         }
     }
@@ -141,6 +148,14 @@ public sealed class GroqLlmClient : ILlmClient
             payload["reasoning_effort"] = options.ReasoningEffort;
             payload["include_reasoning"] = false;
         }
+        if (request.JsonObjectMode)
+        {
+            // Any valid JSON object; the prompt itself describes the shape. Groq's vision docs show
+            // this mode working together with image input.
+            payload["response_format"] = new Dictionary<string, object> { ["type"] = "json_object" };
+            return JsonSerializer.Serialize(payload);
+        }
+
         if (request.JsonSchema is not null)
         {
             // Strict structured output: constrained decoding makes the answer match the schema.
@@ -191,10 +206,10 @@ public sealed class GroqLlmClient : ILlmClient
     // One HTTP exchange with the timeout applied. Returns status, body text and Retry-After. Throws
     // LlmProviderException (not transient) for a timeout or a network failure.
     private async Task<(int Status, string Text, TimeSpan? RetryAfter)> SendOnceAsync(
-        string url, string body, AiOptions options, CancellationToken ct)
+        string url, string body, AiOptions options, int timeoutSeconds, CancellationToken ct)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, options.TimeoutSeconds)));
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds)));
         try
         {
             using var message = new HttpRequestMessage(HttpMethod.Post, url)
@@ -219,7 +234,7 @@ public sealed class GroqLlmClient : ILlmClient
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            _logger.LogWarning("AI provider call timed out after {Seconds} s", options.TimeoutSeconds);
+            _logger.LogWarning("AI provider call timed out after {Seconds} s", timeoutSeconds);
             throw new LlmProviderException("The AI service did not answer in time", null, isTransient: false);
         }
         catch (HttpRequestException ex)
@@ -282,6 +297,58 @@ public sealed class GroqLlmClient : ILlmClient
         }
 
         return new LlmResult(content, promptTokens, completionTokens, model);
+    }
+
+    // Groq's error type, code and param from an error body, each kept only when it looks like an
+    // identifier (letters, digits, '_', '.', '-', at most 60 characters); "-" otherwise. Never the
+    // message text.
+    internal static (string Type, string Code, string Param) ProviderErrorIds(string? json)
+    {
+        const string none = "-";
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return (none, none, none);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object)
+            {
+                return (none, none, none);
+            }
+
+            return (Identifier(error, "type") ?? none, Identifier(error, "code") ?? none, Identifier(error, "param") ?? none);
+        }
+        catch (JsonException)
+        {
+            return (none, none, none);
+        }
+    }
+
+    // One identifier-like string property, or null.
+    private static string? Identifier(JsonElement element, string name)
+    {
+        if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var text = value.GetString();
+        if (string.IsNullOrEmpty(text) || text.Length > 60)
+        {
+            return null;
+        }
+
+        foreach (var c in text)
+        {
+            if (!(char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-'))
+            {
+                return null;
+            }
+        }
+
+        return text;
     }
 
     // Reads a non-negative integer property, or 0 when missing.

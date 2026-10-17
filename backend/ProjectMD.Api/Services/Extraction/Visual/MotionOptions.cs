@@ -75,8 +75,18 @@ public sealed class MotionOptions
     // (Motion:TokensPerImage). 2048 for qwen/qwen3.8-27b.
     public int TokensPerImage { get; set; } = 2048;
 
-    // Hard cap on the answer length in tokens (Motion:MaxOutputTokens).
-    public int MaxOutputTokens { get; set; } = 900;
+    // Hard cap on the answer length in tokens (Motion:MaxOutputTokens). The answer holds the
+    // animation descriptions and the design breakdown, so it needs more room than the text notes.
+    public int MaxOutputTokens { get; set; } = 1800;
+
+    // How the answer's JSON is requested (Motion:ResponseFormat): "json_object" (default; any valid
+    // JSON, the prompt describes the shape; Groq's vision docs show it working with images) or
+    // "json_schema" (strict schema decoding; stricter, but a provider may refuse it with images).
+    public string ResponseFormat { get; set; } = "json_object";
+
+    // Seconds to wait for the vision model (Motion:TimeoutSeconds). Reading images takes longer
+    // than the text call, so this replaces Ai:TimeoutSeconds for the vision call only.
+    public int TimeoutSeconds { get; set; } = 60;
 
     // How much the vision model thinks before answering (Motion:ReasoningEffort): "none" (fastest
     // and cheapest), "low", "medium", "high" or "default".
@@ -98,6 +108,8 @@ public sealed class MotionOptions
         o.MaxImagesPerRequest is >= 1 and <= 10 &&
         o.TokensPerImage is >= 0 and <= 20_000 &&
         o.MaxOutputTokens is >= 100 and <= 16_000 &&
+        o.ResponseFormat is "json_object" or "json_schema" &&
+        o.TimeoutSeconds is >= 5 and <= 300 &&
         o.VisionModel.Length <= 100 &&
         o.ReasoningEffort is "none" or "low" or "medium" or "high" or "default";
 

@@ -1,20 +1,26 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { isApiMode } from "@/app/functions/data/mode";
 import { useCan } from "@/app/functions/rbac/useCan";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, CopyIcon, DownloadIcon } from "@/components/ui/icons";
 import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
+import { splitDesignSections } from "@/lib/design-sections";
 import { formatDate, formatSeconds, initials } from "@/lib/format";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { MarkdownPreview } from "./markdown-preview";
 
-type Tab = "preview" | "raw";
+type Tab = "preview" | "design" | "raw";
+
+const TABS: readonly Tab[] = ["preview", "design", "raw"];
+const TAB_LABELS: Record<Tab, string> = { preview: "Preview", design: "Design", raw: "Raw" };
 type Format = "md" | "txt";
 
-// Shows one scan's documentation: header, copy/download buttons, tech chips and Preview/Raw tabs.
+// Shows one scan's documentation: header, copy/download buttons, tech chips and Preview/Design/Raw
+// tabs. The Design tab shows the "Design system" and "Design breakdown" sections of the document
+// (fonts, colours, components); Preview shows the rest; Raw and Copy/Download use the whole document.
 // Finds the scan in saved history by `id` (or the newest scan if no id). Only reads history;
 // the tab, format and copy status are temporary UI state and are not stored. Copy and Download
 // are disabled (with an explanation) for accounts without the "scan:export" permission.
@@ -27,12 +33,14 @@ export function ResultsView({ id }: { id?: string }) {
   const [tab, setTab] = useState<Tab>("preview");
   const [format, setFormat] = useState<Format>("md");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, raw: null });
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, design: null, raw: null });
   const panelId = useId();
+
+  const scan = hydrated ? (id ? history.find((s) => s.id === id) : history[0]) : undefined;
+  const sections = useMemo(() => splitDesignSections(scan?.markdown ?? ""), [scan?.markdown]);
 
   if (!hydrated) return null;
 
-  const scan = id ? history.find((s) => s.id === id) : history[0];
   if (!scan) {
     return (
       <EmptyState action={<ButtonLink href="/history" variant="secondary">Open History</ButtonLink>}>
@@ -70,10 +78,11 @@ export function ResultsView({ id }: { id?: string }) {
     URL.revokeObjectURL(href);
   }
 
-  // Lets the left/right arrow keys switch between the Preview and Raw tabs. Stores nothing.
+  // Lets the left/right arrow keys move between the tabs (wrapping round). Stores nothing.
   function onTabKey(e: React.KeyboardEvent) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    const next: Tab = tab === "preview" ? "raw" : "preview";
+    const step = e.key === "ArrowRight" ? 1 : -1;
+    const next = TABS[(TABS.indexOf(tab) + step + TABS.length) % TABS.length];
     setTab(next);
     tabRefs.current[next]?.focus();
   }
@@ -137,7 +146,7 @@ export function ResultsView({ id }: { id?: string }) {
 
       <div>
         <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 border-b border-border-subtle">
-          {(["preview", "raw"] as const).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t}
               ref={(el) => {
@@ -153,7 +162,7 @@ export function ResultsView({ id }: { id?: string }) {
                 tab === t ? "border-violet-500 text-ink" : "border-transparent text-ink-muted hover:text-ink"
               }`}
             >
-              {t === "preview" ? "Preview" : "Raw"}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -163,11 +172,17 @@ export function ResultsView({ id }: { id?: string }) {
           aria-labelledby={`${panelId}-${tab}`}
           className="rounded-b-lg border border-t-0 border-border-subtle bg-bg-surface p-6"
         >
-          {tab === "preview" ? (
-            <MarkdownPreview source={scan.markdown} />
-          ) : (
-            <pre className="ts-code overflow-x-auto text-ink-body">{scan.markdown}</pre>
-          )}
+          {tab === "preview" && <MarkdownPreview source={sections.document} />}
+          {tab === "design" &&
+            (sections.design ? (
+              <MarkdownPreview source={sections.design} />
+            ) : (
+              <p className="ts-body text-ink-muted">
+                No design details were captured for this scan. Scans made in AI mode with screenshots switched on
+                include the fonts, colours and components here.
+              </p>
+            ))}
+          {tab === "raw" && <pre className="ts-code overflow-x-auto text-ink-body">{scan.markdown}</pre>}
         </div>
       </div>
     </div>
