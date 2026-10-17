@@ -109,22 +109,38 @@ public sealed class GroqLlmClient : ILlmClient
 
     // The JSON sent to Groq. Temperature is always 0; reasoning text is switched off; the output cap
     // is the request's cap plus the reasoning headroom (the same total the budget reserves).
-    private static string BuildBody(LlmRequest request, AiOptions options)
+    // A request with images sends the user message as a list of parts (text, then one image_url
+    // part per image as a base64 data URL), the shape Groq's vision docs show
+    // (https://console.groq.com/docs/vision). A request with its own ReasoningEffort uses it and asks
+    // for hidden reasoning with reasoning_format (the include_reasoning flag is a gpt-oss setting).
+    internal static string BuildBody(LlmRequest request, AiOptions options)
     {
         var payload = new Dictionary<string, object>
         {
             ["model"] = request.Model,
             ["messages"] = new object[]
             {
-                new Dictionary<string, string> { ["role"] = "system", ["content"] = request.System },
-                new Dictionary<string, string> { ["role"] = "user", ["content"] = request.User },
+                new Dictionary<string, object> { ["role"] = "system", ["content"] = request.System },
+                new Dictionary<string, object> { ["role"] = "user", ["content"] = UserContent(request) },
             },
             ["max_completion_tokens"] = request.MaxOutputTokens + Math.Max(0, options.ReasoningTokenHeadroom),
             ["temperature"] = 0,
-            ["reasoning_effort"] = options.ReasoningEffort,
-            ["include_reasoning"] = false,
             ["stream"] = false,
         };
+
+        if (request.ReasoningEffort is { Length: > 0 } effort)
+        {
+            payload["reasoning_effort"] = effort;
+            if (!string.Equals(effort, "none", StringComparison.Ordinal))
+            {
+                payload["reasoning_format"] = "hidden";
+            }
+        }
+        else
+        {
+            payload["reasoning_effort"] = options.ReasoningEffort;
+            payload["include_reasoning"] = false;
+        }
         if (request.JsonSchema is not null)
         {
             // Strict structured output: constrained decoding makes the answer match the schema.
@@ -134,7 +150,7 @@ public sealed class GroqLlmClient : ILlmClient
                 ["type"] = "json_schema",
                 ["json_schema"] = new Dictionary<string, object>
                 {
-                    ["name"] = "scan_notes",
+                    ["name"] = request.SchemaName,
                     ["strict"] = true,
                     ["schema"] = schemaDoc.RootElement,
                 },
@@ -143,6 +159,33 @@ public sealed class GroqLlmClient : ILlmClient
         }
 
         return JsonSerializer.Serialize(payload);
+    }
+
+    // The user message: plain text, or (with images) a text part followed by the image parts.
+    private static object UserContent(LlmRequest request)
+    {
+        if (request.Images is not { Count: > 0 } images)
+        {
+            return request.User;
+        }
+
+        var parts = new List<object>(images.Count + 1)
+        {
+            new Dictionary<string, object> { ["type"] = "text", ["text"] = request.User },
+        };
+        foreach (var image in images)
+        {
+            parts.Add(new Dictionary<string, object>
+            {
+                ["type"] = "image_url",
+                ["image_url"] = new Dictionary<string, object>
+                {
+                    ["url"] = "data:" + image.MediaType + ";base64," + Convert.ToBase64String(image.Data),
+                },
+            });
+        }
+
+        return parts;
     }
 
     // One HTTP exchange with the timeout applied. Returns status, body text and Retry-After. Throws

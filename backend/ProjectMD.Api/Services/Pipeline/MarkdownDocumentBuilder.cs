@@ -59,8 +59,9 @@ public static class MarkdownDocumentBuilder
     private const int MaxTechItems = 12;
     private const int MaxAiChars = 500;
 
-    // Builds the Markdown document. `ai` is null for a basic scan.
-    public static string Build(ScanFacts facts, AiDocument? ai)
+    // Builds the Markdown document. `ai` is null for a basic scan. `motion` holds the vision model's
+    // animation notes (null when motion AI did not run); the measured motion facts come from the digest.
+    public static string Build(ScanFacts facts, AiDocument? ai, MotionNotes? motion = null)
     {
         ArgumentNullException.ThrowIfNull(facts);
         var digest = facts.Digest;
@@ -86,6 +87,7 @@ public static class MarkdownDocumentBuilder
 
         MarkdownApiSection.Append(sb, digest, ai);
         MarkdownDesignSection.Append(sb, digest.Design, ai);
+        MarkdownMotionSection.Append(sb, digest.Visual, motion);
         AppendPageStructure(sb, digest.Outline);
 
         if (ai is { Tips.Count: > 0 })

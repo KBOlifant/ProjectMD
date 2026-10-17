@@ -3,7 +3,23 @@
 // One question for the language model: fixed instructions (System), the page facts (User), the
 // model name and the hard cap on the answer length. JsonSchema, when set, asks the provider for JSON
 // that follows that schema (structured output); null keeps the plain-text behaviour.
-public sealed record LlmRequest(string System, string User, string Model, int MaxOutputTokens, string? JsonSchema = null);
+// The last three are for vision requests and keep the old behaviour when left out: Images are sent
+// with the user message (the model must accept images); ReasoningEffort, when set, replaces
+// Ai:ReasoningEffort for this request (for example "none" for a vision model); SchemaName is the
+// name given to the JSON schema.
+public sealed record LlmRequest(
+    string System,
+    string User,
+    string Model,
+    int MaxOutputTokens,
+    string? JsonSchema = null,
+    IReadOnlyList<LlmImage>? Images = null,
+    string? ReasoningEffort = null,
+    string SchemaName = "scan_notes");
+
+// One image sent to a vision model: its media type (for example "image/jpeg") and its bytes. The
+// bytes are never logged.
+public sealed record LlmImage(string MediaType, byte[] Data);
 
 // The model's answer plus the REAL token counts reported by the provider (recorded in the usage
 // ledger), and the model that actually answered.

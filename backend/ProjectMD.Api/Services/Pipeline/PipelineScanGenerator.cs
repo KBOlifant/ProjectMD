@@ -10,6 +10,9 @@ namespace ProjectMD.Api.Services.Pipeline;
 //   extract mode:  fetch + reduce + fingerprint (all free)  ->  deterministic Markdown. No AI.
 //   ai mode:       the same free work, then ONE AI call for the short prose parts:
 //                  cache lookup -> budget check -> model call -> store cache -> record usage.
+//                  When Motion:Enabled and Motion:AiEnabled are on and screenshots were taken, a
+//                  SECOND call (to the vision model, see MotionAnalyzer) lists the page's animations,
+//                  with the same cache, budget and fallback rules.
 //
 // Credit-saving rules in play here: the free work is never repeated by the AI; an identical page
 // (same content hash, prompt version and model) is served from the cache for 0 credits; a daily
@@ -30,6 +33,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
     private readonly IOptions<AiOptions> _ai;
     private readonly TimeProvider _clock;
     private readonly ILogger<PipelineScanGenerator> _logger;
+    private readonly IMotionAnalyzer? _motion;
 
     // Receives the free extraction pieces, the AI pieces, the settings and the clock.
     public PipelineScanGenerator(
@@ -43,7 +47,8 @@ public sealed class PipelineScanGenerator : IScanGenerator
         IOptions<ScannerModeOptions> scanner,
         IOptions<AiOptions> ai,
         TimeProvider clock,
-        ILogger<PipelineScanGenerator> logger)
+        ILogger<PipelineScanGenerator> logger,
+        IMotionAnalyzer? motion = null)
     {
         _extraction = extraction;
         _fingerprinter = fingerprinter;
@@ -56,6 +61,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
         _ai = ai;
         _clock = clock;
         _logger = logger;
+        _motion = motion;
     }
 
     // Produces the scan for an already-validated public URL. An ExtractionException from the free
@@ -71,6 +77,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
         var tech = _fingerprinter.Detect(digest);
 
         var (notes, basis) = await WriteNotesAsync(digest, tech, ct);
+        var motionNotes = await WriteMotionNotesAsync(digest, ct);
 
         var confidence = ConfidenceEstimator.Estimate(digest, tech);
         const int pages = 1;
@@ -85,7 +92,8 @@ public sealed class PipelineScanGenerator : IScanGenerator
                 confidence,
                 durationMs,
                 basis),
-            notes);
+            notes,
+            motionNotes);
 
         return new GeneratedScan(durationMs, confidence, pages, tech, markdown);
     }
@@ -180,6 +188,25 @@ public sealed class PipelineScanGenerator : IScanGenerator
         await RecordAsync(userId, result, cacheHit: false, ct);
 
         return notes is not null ? (notes, ScanBasis.Ai) : (null, ScanBasis.AiFailed);
+    }
+
+    // The vision stage: only in `ai` mode with a real client, and never allowed to fail the scan.
+    private async Task<MotionNotes?> WriteMotionNotesAsync(PageDigest digest, CancellationToken ct)
+    {
+        if (_motion is null || digest.Visual is null || _scanner.Value.Resolve() != ScannerMode.Ai || _llm is NotConfiguredLlmClient)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _motion.AnalyzeAsync(digest, ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("Motion notes failed ({ErrorType}); the document has none", ex.GetType().Name);
+            return null;
+        }
     }
 
     // Calls the model. If the provider says 429/5xx (a transient LlmProviderException) it waits
