@@ -1,6 +1,10 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using ProjectMD.Api.Services.Ai;
+using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Components;
+using ProjectMD.Api.Services.Pipeline;
 
 namespace ProjectMD.Api.Tests.Ai;
 
@@ -157,6 +161,80 @@ public class ComponentPreviewTests
     public void Sample_returns_null_for_unusable_input(string? json)
     {
         Assert.Null(ComponentSample.TryParse(json));
+    }
+
+    // ---- Analyzer retry ---------------------------------------------------------------------------
+
+    private const string GoodAnswer =
+        "{\"components\":[{\"kind\":\"button\",\"name\":\"Button\",\"html\":\"<button class='b'>Go</button>\",\"css\":\".b{color:#fff;background:#111;}\"}]}";
+
+    private static readonly PageDigest DigestWithStyles = Digests.Simple("hash-components") with
+    {
+        Components = new ComponentStyles([
+            new ComponentStyle("button", "button", new Dictionary<string, string> { ["color"] = "#ffffff" }),
+        ]),
+    };
+
+    private static async Task<(ComponentPreviews? Result, FakeLlmClient Client, int UsageRows)> RunAsync(Func<int, LlmRequest, LlmResult> respond)
+    {
+        using var harness = new PipelineHarness(ScannerMode.Ai, null);
+        var client = new FakeLlmClient(respond);
+        var db = harness.Db.CreateContext();
+        var ai = Options.Create(harness.Ai);
+        var analyzer = new ComponentAnalyzer(
+            client,
+            new DbExtractionCache(db, ai, harness.Clock),
+            new LlmBudgetGuard(db, ai, harness.Clock),
+            new FakeOwner(harness.User.Id),
+            ai,
+            NullLogger<ComponentAnalyzer>.Instance);
+
+        var result = await analyzer.AnalyzeAsync(DigestWithStyles, CancellationToken.None);
+        return (result, client, harness.UsageRows().Count);
+    }
+
+    // Groq refusing the JSON (a 400) gets one more try, which can succeed.
+    [Fact]
+    public async Task Analyzer_retries_once_after_a_400()
+    {
+        var (result, client, _) = await RunAsync((call, request) => call == 1
+            ? throw new LlmProviderException("bad json", 400, false)
+            : new LlmResult(GoodAnswer, 500, 200, request.Model));
+
+        Assert.NotNull(result);
+        Assert.Equal(2, client.Calls);
+    }
+
+    // An answer that cannot be read gets one more try, and both tries are written to the usage ledger.
+    [Fact]
+    public async Task Analyzer_retries_once_after_an_unreadable_answer()
+    {
+        var (result, client, usageRows) = await RunAsync((call, request) =>
+            new LlmResult(call == 1 ? "{\"components\": [ {oops" : GoodAnswer, 500, 200, request.Model));
+
+        Assert.NotNull(result);
+        Assert.Equal(2, client.Calls);
+        Assert.Equal(2, usageRows);
+    }
+
+    // Two bad tries give up: never a third call.
+    [Fact]
+    public async Task Analyzer_gives_up_after_two_bad_tries()
+    {
+        var (result, client, _) = await RunAsync((_, request) => new LlmResult("not json", 500, 200, request.Model));
+
+        Assert.Null(result);
+        Assert.Equal(2, client.Calls);
+    }
+
+    // Other provider errors are not retried here.
+    [Fact]
+    public async Task Analyzer_does_not_retry_other_errors()
+    {
+        var (result, client, _) = await RunAsync((_, _) => throw new LlmProviderException("down", 500, false));
+
+        Assert.Null(result);
+        Assert.Equal(1, client.Calls);
     }
 
     // The prompt carries only measured styles and a value cannot forge the closing marker.

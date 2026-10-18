@@ -12,6 +12,8 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Component previews
 
+- **The component previews call now tries once more when the AI's answer is unusable.** Groq sometimes refuses or garbles the JSON it was asked for, which left a scan with no previews (seen on gsap.com). The scan now asks a second time, checking the daily limit before each try and recording the tokens of each, and never makes a third call. A live scan of gsap.com that had no previews before now shows four.
+
 - **Scans now include small HTML and CSS versions of the site's main components.** The scanner reads the real look (colours, size, padding, corners, shadow, font) of a few buttons, inputs, cards, navigation bars, headings and badges. It never reads page text. In `ai` mode a separate small Groq call turns those measurements into simple HTML and CSS for each one. The result is saved with the scan, and a repeat scan of the same page costs nothing because the answer is remembered.
 - **A new Components tab shows them.** Each component is drawn in its own locked box (no scripts, no forms, nothing loaded from outside), with buttons to copy the HTML, the CSS, or both together, and a switch between a light and a dark background. Older scans show a short note instead.
 - **What the AI writes is cleaned before anything is saved.** Only a short list of safe tags and CSS properties is kept. Scripts, inline styles, images, outside links, `url(...)` and `@` rules are removed, and the size is limited. If the AI call fails or the answer is unusable the scan still works, just without previews. If the saved data would grow too big, the previews are dropped first.

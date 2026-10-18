@@ -27,6 +27,7 @@ public sealed class ComponentAnalyzer : IComponentAnalyzer
     public const string FactsOpen = "<<<COMPONENTS";
     public const string FactsClose = "COMPONENTS>>>";
 
+    private const int MaxAttempts = 2;
     private const int MaxOutputTokens = 3000;
     private const int TimeoutSeconds = 60;
 
@@ -98,42 +99,54 @@ public sealed class ComponentAnalyzer : IComponentAnalyzer
             + TokenEstimator.Estimate(request.User)
             + request.MaxOutputTokens
             + (_llm.AddsReasoningHeadroom ? Math.Max(0, options.ReasoningTokenHeadroom) : 0);
-        try
-        {
-            await _budget.EnsureAsync(userId, estimate, ct);
-        }
-        catch (BudgetExceededException ex)
-        {
-            _logger.LogInformation("AI budget reached ({Scope}); skipping the component previews", ex.Scope);
-            return null;
-        }
 
-        LlmResult result;
-        try
+        // The model sometimes writes JSON that Groq refuses (a 400) or that cannot be read. That is
+        // random, so one more try usually works. Each try is budget-checked first; there is never a third.
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
-            result = await _llm.CompleteAsync(request, ct);
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
-        {
-            // Only the exception type is logged: never the prompt or provider text.
+            try
+            {
+                await _budget.EnsureAsync(userId, estimate, ct);
+            }
+            catch (BudgetExceededException ex)
+            {
+                _logger.LogInformation("AI budget reached ({Scope}); skipping the component previews", ex.Scope);
+                return null;
+            }
+
+            LlmResult result;
+            try
+            {
+                result = await _llm.CompleteAsync(request, ct);
+            }
+            catch (LlmProviderException ex) when (ex.StatusCode == 400 && attempt < MaxAttempts && !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning("Component preview answer was refused as invalid JSON; trying once more");
+                continue;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                // Only the exception type is logged: never the prompt or provider text.
+                _logger.LogWarning(
+                    "Component preview call failed ({ErrorType}, status {Status}); the scan has no previews",
+                    ex.GetType().Name, (ex as LlmProviderException)?.StatusCode);
+                return null;
+            }
+
+            await RecordAsync(userId, result, cacheHit: false, ct);
+            var previews = ComponentPreviewsParser.Parse(result.Text);
+            if (previews is not null)
+            {
+                await StoreCacheAsync(cacheKey, model, ComponentPreviewsParser.ToJson(previews), ct);
+                return previews;
+            }
+
             _logger.LogWarning(
-                "Component preview call failed ({ErrorType}, status {Status}); the scan has no previews",
-                ex.GetType().Name, (ex as LlmProviderException)?.StatusCode);
-            return null;
+                "Component preview answer was empty or not usable ({CompletionTokens} completion tokens){Retry}",
+                result.CompletionTokens, attempt < MaxAttempts ? "; trying once more" : string.Empty);
         }
 
-        var previews = ComponentPreviewsParser.Parse(result.Text);
-        if (previews is null)
-        {
-            _logger.LogWarning("Component preview answer was empty or not usable ({CompletionTokens} completion tokens)", result.CompletionTokens);
-        }
-        else
-        {
-            await StoreCacheAsync(cacheKey, model, ComponentPreviewsParser.ToJson(previews), ct);
-        }
-
-        await RecordAsync(userId, result, cacheHit: false, ct);
-        return previews;
+        return null;
     }
 
     // The request: fixed instructions plus one line of measured styles per component.
