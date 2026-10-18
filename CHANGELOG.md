@@ -7,6 +7,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Design tab with colour swatches and font previews
 
+- **The Design tab now shows colours and fonts visually.** The 3 to 5 main colours are large squares: click one to copy its hex code. The rest of the colours are small clickable squares with their role and how often they are used. Each font is shown in itself (loaded from Google Fonts), with its weights and sizes and copy buttons for the CSS line and the Google Fonts link; fonts that are not on Google Fonts say so and show a fallback. Corner radii and shadows are drawn as boxes, spacing as bars, CSS variables as a list with colour chips and a "copy all" button. Static (no server) mode includes sample data so the tab can be tried without a server. The old text view is still used for scans that have no structured data.
 - **Scans now keep their design and API data in a structured form.** Each scan saves the captured colours, fonts, radii, shadows, spacing, CSS variables, breakpoints and API calls as data (not just as text in the Markdown), and the server returns it with the scan, so the website can draw it. Older scans simply have none. One new nullable column was added to your database. The saved data is capped at 64 KB and any variable that looks like a secret is dropped. There is also an optional live test that scans a public site in-process and writes the result to a file, so the real pipeline can be checked without starting the server.
 
 ## Screenshots and animation detection

@@ -10,6 +10,7 @@ import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
 import { splitDesignSections } from "@/lib/design-sections";
 import { formatDate, formatSeconds, initials } from "@/lib/format";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
+import { DesignPanel, hasDesignData } from "./design-panel";
 import { MarkdownPreview } from "./markdown-preview";
 
 type Tab = "preview" | "design" | "raw";
@@ -174,12 +175,13 @@ export function ResultsView({ id }: { id?: string }) {
         >
           {tab === "preview" && <MarkdownPreview source={sections.document} />}
           {tab === "design" &&
-            (sections.design ? (
+            (hasDesignData(scan.analysis?.design) ? (
+              <DesignPanel design={scan.analysis.design} />
+            ) : sections.design ? (
               <MarkdownPreview source={sections.design} />
             ) : (
               <p className="ts-body text-ink-muted">
-                No design details were captured for this scan. Scans made in AI mode with screenshots switched on
-                include the fonts, colours and components here.
+                No design data for this scan. Scans made in AI mode include the colours, fonts and design tokens here.
               </p>
             ))}
           {tab === "raw" && <pre className="ts-code overflow-x-auto text-ink-body">{scan.markdown}</pre>}
