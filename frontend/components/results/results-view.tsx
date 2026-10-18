@@ -178,7 +178,13 @@ export function ResultsView({ id }: { id?: string }) {
             (hasDesignData(scan.analysis?.design) ? (
               <DesignPanel design={scan.analysis.design} />
             ) : sections.design ? (
-              <MarkdownPreview source={sections.design} />
+              <>
+                <p role="status" className="ts-small mb-4 rounded-md border border-border-strong bg-bg-raised p-3 text-warning">
+                  This is a text-only view. This scan has no visual design data (colour swatches, font previews),
+                  because it was made before that feature or by an older server. Run a new scan to see them.
+                </p>
+                <MarkdownPreview source={sections.design} />
+              </>
             ) : (
               <p className="ts-body text-ink-muted">
                 No design data for this scan. Scans made in AI mode include the colours, fonts and design tokens here.
