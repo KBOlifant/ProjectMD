@@ -53,9 +53,9 @@ public static partial class DesignAnalyzer
 
         var design = new DesignSystem(
             Colors(sample.Colors),
-            Fonts(sample.Fonts),
-            TopValues(sample.Radii.Select(r => (Value: CleanValue(r.Value), r.Count)), MaxRadii, v => v != "0px"),
-            TopValues(sample.Shadows.Select(s => (Value: Shorten(CleanValue(s.Value)), s.Count)), MaxShadows, v => v != "none"),
+            Fonts(sample.Fonts, sample.FontFaces),
+            TopValues(sample.Radii.Select(r => (Value: NormaliseRadius(r.Value), r.Count)), MaxRadii, v => v is not ("0px" or "")),
+            TopValues(sample.Shadows.Select(s => (Value: Shorten(CleanShadow(s.Value)), s.Count)), MaxShadows, v => v is not ("none" or "")),
             Spacing(sample.Spacing),
             CssAnalyzer.ExtractVariables(stylesheets),
             CssAnalyzer.ExtractBreakpoints(stylesheets),
@@ -177,12 +177,12 @@ public static partial class DesignAnalyzer
     };
 
     // Groups font usage by cleaned family name and keeps the top families with their weights and sizes.
-    internal static IReadOnlyList<FontToken> Fonts(IReadOnlyList<FontSample> samples)
+    internal static IReadOnlyList<FontToken> Fonts(IReadOnlyList<FontSample> samples, IReadOnlyList<string>? loadedFaces = null)
     {
         var families = new Dictionary<string, FontUsage>(StringComparer.OrdinalIgnoreCase);
         foreach (var sample in samples)
         {
-            var family = CleanFontFamily(sample.Family);
+            var family = CleanFontFamily(sample.Family, loadedFaces);
             if (family is null || sample.Count <= 0)
             {
                 continue;
@@ -218,9 +218,15 @@ public static partial class DesignAnalyzer
             .ToList();
     }
 
-    // The first real family in a font-family list: quotes removed, generic fallbacks skipped.
-    // Returns null when the list holds only generic names.
-    public static string? CleanFontFamily(string? fontFamily)
+    // The first real family in a font-family list: quotes removed, generic fallbacks skipped,
+    // framework decoration removed ("__Inter_a1b2c3" and "__Inter_Fallback_a1b2c3" become "Inter",
+    // underscores become spaces). When loadedFaces (the @font-face names the page loaded) holds a
+    // face whose compact form (lower case, no spaces, underscores or hyphens) equals the name's, or
+    // ends with / contains it (names of 6+ compact characters, and only when exactly one face
+    // matches), that real name is used ("plexMono" -> "IBM Plex Mono"). Otherwise a single
+    // all-lower-case word is capitalised ("inter" -> "Inter"). Returns null when the list holds only
+    // generic names.
+    public static string? CleanFontFamily(string? fontFamily, IReadOnlyList<string>? loadedFaces = null)
     {
         if (string.IsNullOrWhiteSpace(fontFamily))
         {
@@ -235,11 +241,70 @@ public static partial class DesignAnalyzer
                 continue;
             }
 
-            return name;
+            var cleaned = StripFrameworkDecoration(name);
+
+            // Next.js adds a generated "<Name> Fallback" copy of every font; it is not a real family.
+            if (cleaned.EndsWith(" Fallback", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^" Fallback".Length].TrimEnd();
+            }
+
+            return cleaned.Length == 0 ? null : MatchLoadedFace(cleaned, loadedFaces) ?? CapitaliseSingleWord(cleaned);
         }
 
         return null;
     }
+
+    // "__Inter_a1b2c3" / "__Inter_Fallback_a1b2c3" -> "Inter"; other underscores become spaces.
+    internal static string StripFrameworkDecoration(string name)
+    {
+        var match = FrameworkNameRegex().Match(name);
+        var core = match.Success ? match.Groups["name"].Value : name;
+        return core.Replace('_', ' ').Trim();
+    }
+
+    // The real @font-face name that the (already cleaned) name stands for, or null when none matches
+    // clearly. An exact compact match wins; otherwise exactly one face may end with or contain it.
+    private static string? MatchLoadedFace(string name, IReadOnlyList<string>? faces)
+    {
+        if (faces is null || faces.Count == 0)
+        {
+            return null;
+        }
+
+        var target = Compact(name);
+        var candidates = faces
+            .Select(StripFrameworkDecoration)
+            .Where(f => f.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .Select(f => (Face: f, Key: Compact(f)))
+            .ToList();
+
+        var exact = candidates.Where(c => c.Key == target).Select(c => c.Face).Order(StringComparer.Ordinal).ToList();
+        if (exact.Count > 0)
+        {
+            return exact[0];
+        }
+
+        if (target.Length < 6)
+        {
+            return null;
+        }
+
+        var partial = candidates.Where(c => c.Key.Contains(target, StringComparison.Ordinal)).Select(c => c.Face).ToList();
+        return partial.Count == 1 ? partial[0] : null;
+    }
+
+    // Lower case with spaces, underscores and hyphens removed, for comparing family names.
+    private static string Compact(string value) =>
+        new(value.Where(ch => ch is not (' ' or '_' or '-')).Select(char.ToLowerInvariant).ToArray());
+
+    // "inter" -> "Inter" (only a single all-lower-case word is changed).
+    private static string CapitaliseSingleWord(string name) =>
+        name.All(ch => ch is >= 'a' and <= 'z') ? char.ToUpperInvariant(name[0]) + name[1..] : name;
+
+    [GeneratedRegex(@"^__(?<name>.+?)(?:_Fallback)?(?:_[0-9a-fA-F]{5,})?$", RegexOptions.CultureInvariant)]
+    private static partial Regex FrameworkNameRegex();
 
     // Splits a font-family list on commas that are not inside quotes.
     private static IEnumerable<string> SplitFamilies(string list)
@@ -353,6 +418,92 @@ public static partial class DesignAnalyzer
 
     // Collapses whitespace so equal values compare equal.
     private static string CleanValue(string value) => WhitespaceRegex().Replace(value, " ").Trim();
+
+    // Tidies a border-radius: numbers lose exponents and extra decimals, anything above 999px (the
+    // "fully round" 33554400px of rounded-full) becomes 9999px, and four equal corners collapse to one.
+    internal static string NormaliseRadius(string value)
+    {
+        var text = NumberWithUnitRegex().Replace(CleanValue(value), m =>
+        {
+            if (!double.TryParse(m.Groups["n"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number))
+            {
+                return m.Value;
+            }
+
+            var unit = m.Groups["u"].Value;
+            if (unit is "" or "px" && number > 999)
+            {
+                return "9999px";
+            }
+
+            return number.ToString("0.##", CultureInfo.InvariantCulture) + unit;
+        });
+
+        var parts = text.Split(' ');
+        return parts.Length > 1 && !text.Contains('/') && parts.Distinct().Count() == 1 ? parts[0] : text;
+    }
+
+    // Removes see-through placeholder layers ("rgba(0, 0, 0, 0) 0px 0px 0px 0px") from a box-shadow
+    // list and returns the real layers; an empty string when nothing real is left.
+    internal static string CleanShadow(string value)
+    {
+        var text = CleanValue(value);
+        if (text == "none")
+        {
+            return text;
+        }
+
+        var kept = new List<string>();
+        var start = 0;
+        var depth = 0;
+        for (var i = 0; i <= text.Length; i++)
+        {
+            if (i < text.Length && text[i] == '(')
+            {
+                depth++;
+            }
+            else if (i < text.Length && text[i] == ')')
+            {
+                depth = Math.Max(0, depth - 1);
+            }
+            else if (i == text.Length || (text[i] == ',' && depth == 0))
+            {
+                var layer = text[start..i].Trim();
+                start = i + 1;
+                if (layer.Length > 0 && !IsTransparentLayer(layer))
+                {
+                    kept.Add(layer);
+                }
+            }
+        }
+
+        return string.Join(", ", kept);
+    }
+
+    // True when the colour in one shadow layer is fully transparent.
+    private static bool IsTransparentLayer(string layer)
+    {
+        var token = ShadowColorRegex().Match(layer);
+        if (!token.Success)
+        {
+            return false;
+        }
+
+        var color = token.Value;
+        return color.Equals("transparent", StringComparison.OrdinalIgnoreCase) ||
+            (ModernColorAlphaZeroRegex().IsMatch(color)) ||
+            ((color.StartsWith("rgb", StringComparison.OrdinalIgnoreCase) || color.StartsWith("hsl", StringComparison.OrdinalIgnoreCase) || color[0] == '#') &&
+                ColorParser.ParseRgb(color) is null);
+    }
+
+    [GeneratedRegex(@"(?<n>-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?<u>px|%|rem|em)?", RegexOptions.CultureInvariant)]
+    private static partial Regex NumberWithUnitRegex();
+
+    [GeneratedRegex(@"(?:rgba?|hsla?|oklab|oklch|lab|lch|color)\([^)]*\)|transparent|#[0-9a-fA-F]{3,8}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ShadowColorRegex();
+
+    [GeneratedRegex(@"/\s*0(?:\.0+)?%?\s*\)$", RegexOptions.CultureInvariant)]
+    private static partial Regex ModernColorAlphaZeroRegex();
 
     // Cuts a long value (a box-shadow list) to the shadow length limit.
     private static string Shorten(string value) => value.Length > MaxShadowChars ? value[..MaxShadowChars] : value;

@@ -28,7 +28,8 @@ public sealed record DesignSample(
     IReadOnlyList<ValueSample> Radii,
     IReadOnlyList<ValueSample> Shadows,
     IReadOnlyList<ValueSample> Spacing,
-    IReadOnlyList<ClassSample> Classes)
+    IReadOnlyList<ClassSample> Classes,
+    IReadOnlyList<string>? FontFaces = null)
 {
     // The most entries read from any one list, whatever the page sent.
     private const int MaxEntries = 400;
@@ -67,13 +68,33 @@ public sealed record DesignSample(
                 Rows(root, "shadows", 2, row => new ValueSample(Text(row[0]), Number(row[1]))),
                 Rows(root, "spacing", 2, row => new ValueSample(Text(row[0]), Number(row[1]))),
                 Rows(root, "classes", 2, row => new ClassSample(
-                    Text(row[0]).Split(' ', StringSplitOptions.RemoveEmptyEntries), Number(row[1]))));
+                    Text(row[0]).Split(' ', StringSplitOptions.RemoveEmptyEntries), Number(row[1]))),
+                Faces(root));
             return true;
         }
         catch (JsonException)
         {
             return false;
         }
+    }
+
+    // Reads the "faces" property: names of the font faces the page loaded (strings only).
+    private static List<string> Faces(JsonElement root)
+    {
+        var result = new List<string>();
+        if (root.TryGetProperty("faces", out var list) && list.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in list.EnumerateArray().Take(100))
+            {
+                var name = Text(item).Trim();
+                if (name.Length > 0 && name.Length <= 80)
+                {
+                    result.Add(name);
+                }
+            }
+        }
+
+        return result;
     }
 
     // Reads one property that is an array of fixed-length arrays; rows of the wrong shape are skipped.

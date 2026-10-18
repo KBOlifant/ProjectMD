@@ -21,6 +21,37 @@ public static class DesignScript
   const maps = { colors: new Map(), fonts: new Map(), radii: new Map(), shadows: new Map(), spacing: new Map(), classes: new Map() };
   const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1);
   const isClear = v => !v || v === 'transparent' || v === 'rgba(0, 0, 0, 0)';
+  // Resolves any colour the browser understands (oklch, oklab, lab, lch, color(), color-mix...) to
+  // "#rrggbb" by painting it on a 1x1 canvas; "transparent" when it is see-through. Unknown values
+  // are returned unchanged so the server-side parser can try. Painting on two different
+  // backgrounds tells a rejected value (which paints nothing) from a real black.
+  const resolved = new Map();
+  let ctx = null;
+  try { const c = document.createElement('canvas'); c.width = 1; c.height = 1; ctx = c.getContext('2d', { willReadFrequently: true }); } catch (e) { ctx = null; }
+  const paint = (value, base) => {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = base; ctx.fillStyle = value;
+    ctx.fillRect(0, 0, 1, 1);
+    return ctx.getImageData(0, 0, 1, 1).data;
+  };
+  const hex2 = n => (n < 16 ? '0' : '') + n.toString(16);
+  const colour = (v) => {
+    if (!v || !ctx || /^#[0-9a-f]{6}$/i.test(v)) { return v; }
+    if (resolved.has(v)) { return resolved.get(v); }
+    let out = v;
+    try {
+      const a = paint(v, '#000000'), b = paint(v, '#ffffff');
+      if (a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3]) {
+        out = a[3] < 6 ? 'transparent' : '#' + hex2(a[0]) + hex2(a[1]) + hex2(a[2]);
+      }
+    } catch (e) { out = v; }
+    if (resolved.size < 2000) { resolved.set(v, out); }
+    return out;
+  };
+  const faces = [];
+  try {
+    document.fonts.forEach(f => { if (f.status === 'loaded' && faces.length < 100 && f.family.length <= 80) { faces.push(f.family.replace(/^["']|["']$/g, '')); } });
+  } catch (e) { /* no font list available */ }
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'META', 'LINK', 'TITLE', 'BR', 'WBR']);
   const FORM = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
   const SPACING = ['marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'rowGap', 'columnGap'];
@@ -29,15 +60,20 @@ public static class DesignScript
     const cs = getComputedStyle(el);
     const interactive = el.tagName === 'A' || el.tagName === 'BUTTON' || el.getAttribute('role') === 'button' ||
       (el.tagName === 'INPUT' && ['submit', 'button'].includes(el.getAttribute('type')));
-    bump(maps.colors, 'text' + SEP + cs.color);
-    if (!isClear(cs.backgroundColor)) { bump(maps.colors, 'background' + SEP + cs.backgroundColor); }
-    if (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') { bump(maps.colors, 'border' + SEP + cs.borderTopColor); }
+    const fg = colour(cs.color), bg = colour(cs.backgroundColor);
+    const hasBg = !isClear(bg);
+    if (!isClear(fg)) { bump(maps.colors, 'text' + SEP + fg); }
+    if (hasBg) { bump(maps.colors, 'background' + SEP + bg); }
+    if (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') {
+      const border = colour(cs.borderTopColor);
+      if (!isClear(border)) { bump(maps.colors, 'border' + SEP + border); }
+    }
     if (interactive) {
-      bump(maps.colors, 'accent' + SEP + cs.color);
-      if (!isClear(cs.backgroundColor)) { bump(maps.colors, 'accent' + SEP + cs.backgroundColor); }
+      if (!isClear(fg)) { bump(maps.colors, 'accent' + SEP + fg); }
+      if (hasBg) { bump(maps.colors, 'accent' + SEP + bg); }
     }
     bump(maps.fonts, [cs.fontFamily, cs.fontWeight, cs.fontSize].join(SEP));
-    if (cs.borderRadius && cs.borderRadius !== '0px' && (interactive || FORM.has(el.tagName) || !isClear(cs.backgroundColor))) {
+    if (cs.borderRadius && cs.borderRadius !== '0px' && (interactive || FORM.has(el.tagName) || hasBg)) {
       bump(maps.radii, cs.borderRadius);
     }
     if (cs.boxShadow && cs.boxShadow !== 'none') { bump(maps.shadows, cs.boxShadow); }
@@ -77,7 +113,8 @@ public static class DesignScript
     radii: top(maps.radii, false),
     shadows: top(maps.shadows, false),
     spacing: top(maps.spacing, false),
-    classes: top(maps.classes, false)
+    classes: top(maps.classes, false),
+    faces
   });
 })()
 """;

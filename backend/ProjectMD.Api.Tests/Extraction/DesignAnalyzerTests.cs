@@ -96,9 +96,95 @@ public class DesignAnalyzerTests
     [InlineData("\"A, B\", serif", "A, B")]
     [InlineData("monospace", null)]
     [InlineData("", null)]
+    [InlineData("\"IBM Plex Mono Fallback\", monospace", "IBM Plex Mono")]
     public void CleanFontFamily_returns_first_real_family(string input, string? expected)
     {
         Assert.Equal(expected, DesignAnalyzer.CleanFontFamily(input));
+    }
+
+    // Huge radii become 9999px, exponents disappear, four equal corners collapse, small values stay.
+    [Theory]
+    [InlineData("3.35544e+07px", "9999px")]
+    [InlineData("33554400px", "9999px")]
+    [InlineData("33554400px 33554400px 33554400px 33554400px", "9999px")]
+    [InlineData("8px", "8px")]
+    [InlineData("8.5px", "8.5px")]
+    [InlineData("4.000px 0px 4px 4px", "4px 0px 4px 4px")]
+    [InlineData("50%", "50%")]
+    [InlineData("999px", "999px")]
+    [InlineData("1000px", "9999px")]
+    public void NormaliseRadius_caps_huge_values_and_removes_exponents(string input, string expected)
+    {
+        Assert.Equal(expected, DesignAnalyzer.NormaliseRadius(input));
+    }
+
+    // Placeholder (transparent) shadow layers are dropped, real ones kept.
+    [Theory]
+    [InlineData("rgba(0, 0, 0, 0) 0px 0px 0px 0px", "")]
+    [InlineData("rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px", "")]
+    [InlineData("rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px", "rgba(0, 0, 0, 0.1) 0px 4px 6px -1px")]
+    [InlineData("0px 1px 2px transparent", "")]
+    [InlineData("oklab(0 0 0 / 0) 0px 0px 0px 0px", "")]
+    [InlineData("rgb(0, 0, 0) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px", "rgb(0, 0, 0) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px")]
+    public void CleanShadow_drops_transparent_placeholders(string input, string expected)
+    {
+        Assert.Equal(expected, DesignAnalyzer.CleanShadow(input));
+    }
+
+    // A shadow made only of placeholders never reaches the summary.
+    [Fact]
+    public void Placeholder_only_shadows_and_huge_radii_are_cleaned_in_the_summary()
+    {
+        var design = DesignAnalyzer.Build(
+            Sample(
+                radii: [new ValueSample("3.35544e+07px", 4)],
+                shadows: [new ValueSample("rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px", 9), new ValueSample("rgba(0, 0, 0, 0.2) 0px 2px 4px 0px", 1)]),
+            [])!;
+
+        Assert.Equal(["9999px"], design.Radii);
+        Assert.Equal(["rgba(0, 0, 0, 0.2) 0px 2px 4px 0px"], design.Shadows);
+    }
+
+    // Framework hashes and fallbacks are removed, underscores become spaces, a lone lower-case word
+    // is capitalised, and loaded @font-face names win only on a clear match.
+    [Theory]
+    [InlineData("__Inter_a1b2c3, sans-serif", null, "Inter")]
+    [InlineData("__Inter_Fallback_a1b2c3", null, "Inter")]
+    [InlineData("__Roboto_Mono_9f8e7d6c, monospace", null, "Roboto Mono")]
+    [InlineData("inter, sans-serif", null, "Inter")]
+    [InlineData("Open_Sans", null, "Open Sans")]
+    [InlineData("plexMono, monospace", null, "plexMono")]
+    [InlineData("plexMono, monospace", "IBM Plex Mono", "IBM Plex Mono")]
+    [InlineData("inter", "Inter", "Inter")]
+    [InlineData("inter", "Inter Tight", "Inter")]
+    [InlineData("mono", "IBM Plex Mono", "Mono")]
+    [InlineData("geist", "__Geist_4f5e6d", "Geist")]
+    [InlineData("Helvetica Neue", "Arial", "Helvetica Neue")]
+    public void CleanFontFamily_resolves_real_names(string input, string? face, string expected)
+    {
+        var faces = face is null ? null : new[] { face };
+
+        Assert.Equal(expected, DesignAnalyzer.CleanFontFamily(input, faces));
+    }
+
+    // Two different faces that both contain the name: no guess.
+    [Fact]
+    public void CleanFontFamily_does_not_guess_between_several_faces()
+    {
+        Assert.Equal("plexMono", DesignAnalyzer.CleanFontFamily("plexMono", ["IBM Plex Mono", "Plex Mono Display"]));
+    }
+
+    // Fonts are grouped after the face names are applied, and the script's face list is parsed.
+    [Fact]
+    public void Fonts_merge_variants_of_one_loaded_face()
+    {
+        var fonts = DesignAnalyzer.Fonts(
+            [new FontSample("__Inter_a1b2c3, __Inter_Fallback_a1b2c3, sans-serif", "400", "16px", 5), new FontSample("inter", "700", "20px", 2)],
+            ["Inter"]);
+
+        Assert.Equal("Inter", Assert.Single(fonts).Family);
+        Assert.True(DesignSample.TryParse("""{"sampled":1,"faces":["IBM Plex Mono",5,""]}""", out var sample));
+        Assert.Equal(["IBM Plex Mono"], sample.FontFaces);
     }
 
     // Fonts: grouped by cleaned family, top 4 by use, sizes rounded and sorted ascending (top 6),
