@@ -1,5 +1,6 @@
 using System.Globalization;
 using ProjectMD.Api.Models;
+using ProjectMD.Api.Services.Extraction;
 
 namespace ProjectMD.Api.Services;
 
@@ -48,8 +49,27 @@ public sealed class StaticScanGenerator : IScanGenerator
         var scannedOn = _clock.GetUtcNow().UtcDateTime;
         var markdown = BuildMarkdown(host, url.AbsoluteUri, scannedOn, pages, confidence, stack);
 
-        return Task.FromResult(new GeneratedScan(MockDurationMs, confidence, pages, tech, markdown));
+        return Task.FromResult(new GeneratedScan(MockDurationMs, confidence, pages, tech, markdown, SampleAnalysis()));
     }
+
+    // MOCK: a small fixed design so static mode has something to show in the Design tab.
+    private static ScanAnalysis SampleAnalysis() => new(
+        ScanAnalysisJson.CurrentVersion,
+        new DesignSystem(
+            [
+                new ColorToken("#0f172a", 120, "background"),
+                new ColorToken("#e2e8f0", 90, "text"),
+                new ColorToken("#38bdf8", 24, "accent"),
+                new ColorToken("#334155", 18, "border"),
+            ],
+            [new FontToken("Inter", [400, 600], ["14px", "16px", "24px"])],
+            ["8px", "12px"],
+            ["0 1px 2px #0003"],
+            ["4px", "8px", "16px", "24px"],
+            [new CssVariable("--brand", "#38bdf8")],
+            ["640px", "1024px"],
+            "Tailwind"),
+        null);
 
     // Turns text into a repeatable number (32-bit FNV-1a over the UTF-16 characters, exactly like
     // the frontend's hash()) so the same host always gets the same mock data.

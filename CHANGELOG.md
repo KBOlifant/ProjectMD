@@ -5,6 +5,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 ## Coming next
 
 
+## Design tab with colour swatches and font previews
+
+- **Scans now keep their design and API data in a structured form.** Each scan saves the captured colours, fonts, radii, shadows, spacing, CSS variables, breakpoints and API calls as data (not just as text in the Markdown), and the server returns it with the scan, so the website can draw it. Older scans simply have none. One new nullable column was added to your database. The saved data is capped at 64 KB and any variable that looks like a secret is dropped. There is also an optional live test that scans a public site in-process and writes the result to a file, so the real pipeline can be checked without starting the server.
+
 ## Screenshots and animation detection
 
 - **The results page has a Design tab.** Next to Preview and Raw there is now a Design tab that shows the site's design: the measured design system (colours, fonts, radii, CSS variables) and the AI's design breakdown. Preview shows the rest of the document. Copy and Download still give the whole .md file.

@@ -95,7 +95,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
             notes,
             motionNotes);
 
-        return new GeneratedScan(durationMs, confidence, pages, tech, markdown);
+        return new GeneratedScan(durationMs, confidence, pages, tech, markdown, ScanAnalysisJson.FromDigest(digest));
     }
 
     // The AI stage. Returns the validated AI notes (or null) and how the document was produced.

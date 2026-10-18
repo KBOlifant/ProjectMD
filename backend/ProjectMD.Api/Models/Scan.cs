@@ -41,4 +41,7 @@ public class Scan
     // quota (otherwise "create, clear, repeat" would refund the allowance). AppDbContext hides rows
     // where this is set from every normal query; only usage counting looks at them.
     public DateTime? DeletedAt { get; set; }
+
+    // Captured design and API data (jsonb), or null for scans made before this existed.
+    public ScanAnalysis? Analysis { get; set; }
 }

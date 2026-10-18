@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectMD.Api.Models;
+using ProjectMD.Api.Services;
 
 namespace ProjectMD.Api.Data;
 
@@ -69,6 +70,13 @@ public class AppDbContext : DbContext
             // monthly usage count (UsageService), which uses IgnoreQueryFilters so a cleared scan
             // keeps using up the allowance for the month it was created in.
             scan.HasQueryFilter(s => s.DeletedAt == null);
+
+            // The captured design/API data is one jsonb column holding the camelCase JSON text.
+            scan.Property(s => s.Analysis)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    a => a == null ? null : ScanAnalysisJson.Serialize(a),
+                    json => ScanAnalysisJson.Deserialize(json));
 
             // Serves "my scans, newest first" and the monthly quota count.
             scan.HasIndex(s => new { s.UserId, s.CreatedAt })

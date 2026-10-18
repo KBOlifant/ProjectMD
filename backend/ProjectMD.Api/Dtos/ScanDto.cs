@@ -15,7 +15,8 @@ public record ScanDto(
     int Confidence,
     int Pages,
     IReadOnlyList<TechDto> Tech,
-    string Markdown);
+    string Markdown,
+    ScanAnalysis? Analysis = null);
 
 // Small mapping helpers from database models to DTOs.
 public static class ScanMappingExtensions
@@ -30,7 +31,8 @@ public static class ScanMappingExtensions
         scan.Confidence,
         scan.Pages,
         scan.Tech.Select(t => t.ToDto()).ToList(),
-        scan.Markdown);
+        scan.Markdown,
+        scan.Analysis);
 
     // Converts a stored ScanTech into its DTO.
     public static TechDto ToDto(this ScanTech tech) => new(tech.Name, tech.Highlighted);

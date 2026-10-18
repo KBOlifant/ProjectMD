@@ -118,7 +118,12 @@ dotnet ef database update --project ProjectMD.Api
 
 `InitialCreate` creates the `AppUsers` and `Scans` tables (including `Scans.DeletedAt`).
 `AddAiPipeline` adds the `ExtractionCache` and `LlmUsage` tables for the AI pipeline. `AddUserRole`
-adds `AppUsers.Role` (`varchar(20) NOT NULL DEFAULT 'member'`; existing users become members). Migrations
+adds `AppUsers.Role` (`varchar(20) NOT NULL DEFAULT 'member'`; existing users become members).
+`AddScanAnalysis` adds `Scans.Analysis` (`jsonb`, nullable; old scans stay null). It holds
+`{ version, design, api }` (camelCase JSON of the captured `DesignSystem` and `ApiCatalog`), is capped
+at 64 KB (response shapes are dropped first, then endpoints), has secret-looking CSS variables removed,
+and is returned as `analysis` on every scan. Later features add `components` and `animations` next to
+them; readers ignore unknown properties. Static mode attaches a small sample design. Migrations
 have to be reviewed and applied deliberately; the API never migrates the database on startup.
 
 ### Generating a migration without a database
@@ -132,6 +137,15 @@ $env:ConnectionStrings__Default = "Host=localhost;Port=1;Database=dummy;Username
 dotnet ef migrations add <Name> --project ProjectMD.Api --output-dir Data/Migrations
 $env:ConnectionStrings__Default = $null
 ```
+
+### Live scan check (opt-in)
+
+`Live_scan_of_public_site_writes_analysis` scans a real public site in-process (no server, no real
+database) and writes `scan.md` and `analysis.json`. It is skipped unless `PROJECTMD_LIVE_SCAN=1`.
+Optional settings, all from the environment: `PROJECTMD_LIVE_URL` (default `https://tailwindcss.com`),
+`PROJECTMD_LIVE_OUT` (output folder), `Scanner__BrowserChannel` (for example `chrome`), and
+`Ai__ApiKey` / `Ai__FastModel` for the AI text (without a key it runs in extract mode). The key is
+never printed or written.
 
 ## Data model
 

@@ -131,6 +131,9 @@ namespace ProjectMD.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Analysis")
+                        .HasColumnType("jsonb");
+
                     b.Property<int>("Confidence")
                         .HasColumnType("integer");
 

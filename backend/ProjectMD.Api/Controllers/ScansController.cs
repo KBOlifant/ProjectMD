@@ -169,6 +169,7 @@ public class ScansController : ControllerBase
             Pages = Math.Max(0, generated.Pages),
             Tech = generated.Tech.Select(t => new ScanTech { Name = t.Name, Highlighted = t.Highlighted }).ToList(),
             Markdown = generated.Markdown,
+            Analysis = generated.Analysis is null ? null : ScanAnalysisJson.Limit(generated.Analysis),
         };
 
         if (!await _recorder.TryRecordAsync(scan, ct))
