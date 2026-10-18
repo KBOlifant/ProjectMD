@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using ProjectMD.Api.Models;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Components;
+using ProjectMD.Api.Services.Pipeline;
 
 namespace ProjectMD.Api.Services;
 
@@ -53,14 +54,14 @@ public static class ScanAnalysisJson
 
     // Builds the analysis from a page digest and the AI-written component previews, or null when
     // none of design, API or components was captured.
-    public static ScanAnalysis? FromDigest(PageDigest digest, ComponentPreviews? components = null)
+    public static ScanAnalysis? FromDigest(PageDigest digest, ComponentPreviews? components = null, AnimationReport? animations = null)
     {
-        if (digest.Design is null && digest.Api is null && components is null)
+        if (digest.Design is null && digest.Api is null && components is null && animations is null)
         {
             return null;
         }
 
-        return Limit(new ScanAnalysis(CurrentVersion, digest.Design, digest.Api, components));
+        return Limit(new ScanAnalysis(CurrentVersion, digest.Design, digest.Api, components, animations));
     }
 
     // Removes secret-looking CSS variables, then shrinks until the JSON fits in MaxBytes: first the
@@ -75,6 +76,12 @@ public static class ScanAnalysisJson
         }
 
         current = current with { Components = null };
+        if (Fits(current))
+        {
+            return current;
+        }
+
+        current = current with { Animations = null };
         if (Fits(current))
         {
             return current;

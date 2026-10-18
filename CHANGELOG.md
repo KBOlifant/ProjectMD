@@ -4,7 +4,11 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
-- An Animations tab that estimates whether each effect looks like GSAP or Framer Motion and gives a copyable snippet.
+## Animations tab
+
+- **A new Animations tab lists the page's animations.** Each one shows its name and place on the page, what starts it (page load, scrolling, hover...), whether it was measured by the browser or only read from the screenshots, and the AI's description and rebuild hint. The libraries the browser found on the page (GSAP, Lenis...) are listed at the top.
+- **Each animation gets a guess at the library and a starter snippet.** The server guesses whether it looks like GSAP, Framer Motion or plain CSS (using the AI's hint, the libraries found on the page, and the kind of trigger), and gives copyable code for both GSAP and Framer Motion, with a switch and a Copy button. The snippets come from fixed templates and use the page's typical measured animation time, so nothing written by the AI or the page can end up inside the code. This costs no extra AI call. The guess and the code are labelled as approximate.
+- **Old scans and scans without screenshots show a short note instead.** The animation data is saved with the scan; if it ever grows too big it is dropped before the design data.
 
 ## Component previews
 

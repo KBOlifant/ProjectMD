@@ -10,14 +10,21 @@ import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
 import { splitDesignSections } from "@/lib/design-sections";
 import { formatDate, formatSeconds, initials } from "@/lib/format";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
+import { AnimationsPanel, hasAnimationData } from "./animations-panel";
 import { ComponentsPanel, hasComponentData } from "./components-panel";
 import { DesignPanel, hasDesignData } from "./design-panel";
 import { MarkdownPreview } from "./markdown-preview";
 
-type Tab = "preview" | "design" | "components" | "raw";
+type Tab = "preview" | "design" | "components" | "animations" | "raw";
 
-const TABS: readonly Tab[] = ["preview", "design", "components", "raw"];
-const TAB_LABELS: Record<Tab, string> = { preview: "Preview", design: "Design", components: "Components", raw: "Raw" };
+const TABS: readonly Tab[] = ["preview", "design", "components", "animations", "raw"];
+const TAB_LABELS: Record<Tab, string> = {
+  preview: "Preview",
+  design: "Design",
+  components: "Components",
+  animations: "Animations",
+  raw: "Raw",
+};
 type Format = "md" | "txt";
 
 // Shows one scan's documentation: header, copy/download buttons, tech chips and Preview/Design/Raw
@@ -35,7 +42,7 @@ export function ResultsView({ id }: { id?: string }) {
   const [tab, setTab] = useState<Tab>("preview");
   const [format, setFormat] = useState<Format>("md");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, design: null, components: null, raw: null });
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, design: null, components: null, animations: null, raw: null });
   const panelId = useId();
 
   const scan = hydrated ? (id ? history.find((s) => s.id === id) : history[0]) : undefined;
@@ -198,6 +205,15 @@ export function ResultsView({ id }: { id?: string }) {
               <p className="ts-body text-ink-muted">
                 No component previews for this scan. Scans made in AI mode include small HTML and CSS versions of the
                 site&apos;s buttons, inputs, cards and navigation here; older scans do not have them.
+              </p>
+            ))}
+          {tab === "animations" &&
+            (hasAnimationData(scan.analysis?.animations) ? (
+              <AnimationsPanel report={scan.analysis.animations} />
+            ) : (
+              <p className="ts-body text-ink-muted">
+                No animation data for this scan. Scans made in AI mode with screenshots turned on list the page&apos;s animations here,
+                with a GSAP or Framer Motion guess and a starter snippet; older scans do not have them.
               </p>
             ))}
           {tab === "raw" && <pre className="ts-code overflow-x-auto text-ink-body">{scan.markdown}</pre>}

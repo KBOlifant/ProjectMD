@@ -100,7 +100,8 @@ public sealed class PipelineScanGenerator : IScanGenerator
             notes,
             motionNotes);
 
-        return new GeneratedScan(durationMs, confidence, pages, tech, markdown, ScanAnalysisJson.FromDigest(digest, componentPreviews));
+        return new GeneratedScan(durationMs, confidence, pages, tech, markdown, ScanAnalysisJson.FromDigest(
+            digest, componentPreviews, AnimationReportBuilder.Build(motionNotes, digest.Visual?.Motion)));
     }
 
     // The component-preview stage: only in `ai` mode with a real client, and never allowed to fail

@@ -32,6 +32,38 @@ export const MOCK_ANALYSIS: ScanAnalysis = {
     utilityFramework: "Tailwind",
   },
   api: null,
+  animations: {
+    summary: "Sample data: a calm page with a headline reveal on load and cards that fade in as you scroll.",
+    libraries: ["GSAP", "ScrollTrigger"],
+    items: [
+      {
+        section: "Hero",
+        name: "Headline reveal",
+        description: "The headline slides up about 40 pixels while fading in as the page loads.",
+        trigger: "load",
+        evidence: "measured",
+        library: "GSAP",
+        recreate: "Tween opacity from 0 and y from 40 over about 0.6 seconds.",
+        estimate: "GSAP",
+        gsap: 'gsap.from(".target", {\n  opacity: 0,\n  y: 40,\n  duration: 0.6,\n  ease: "power2.out",\n});',
+        framerMotion:
+          '<motion.div\n  initial={{ opacity: 0, y: 40 }}\n  animate={{ opacity: 1, y: 0 }}\n  transition={{ duration: 0.6, ease: "easeOut" }}\n/>',
+      },
+      {
+        section: "Features",
+        name: "Card fade-in",
+        description: "Each card fades in and rises slightly when it scrolls into view.",
+        trigger: "scroll",
+        evidence: "inferred",
+        library: "",
+        recreate: "Animate opacity and y when the card enters the viewport.",
+        estimate: "GSAP",
+        gsap: 'gsap.registerPlugin(ScrollTrigger);\n\ngsap.from(".target", {\n  opacity: 0,\n  y: 40,\n  duration: 0.6,\n  ease: "power2.out",\n  scrollTrigger: { trigger: ".target", start: "top 80%" },\n});',
+        framerMotion:
+          '<motion.div\n  initial={{ opacity: 0, y: 40 }}\n  whileInView={{ opacity: 1, y: 0 }}\n  viewport={{ once: true, amount: 0.3 }}\n  transition={{ duration: 0.6, ease: "easeOut" }}\n/>',
+      },
+    ],
+  },
   components: {
     items: [
       {

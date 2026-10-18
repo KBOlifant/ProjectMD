@@ -12,7 +12,7 @@ Paste a public URL, get Markdown documentation plus a Design tab. Next.js websit
 
 ## Next, one feature at a time (commit each, then push)
 1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
-2. **Animations (next):** capture and AI notes already exist (see commits `f0d3f07`, `ded71e9`, `89ffe56`). Missing: a dedicated tab, and an estimate of whether each effect looks like GSAP or Framer Motion with a copyable snippet. Check what the Results page already shows before building.
+2. **Animations: DONE** (`Services/Pipeline/AnimationReport.cs`, `AnimationSnippets.cs`, `components/results/animations-panel.tsx`; deterministic estimate and templated GSAP / Framer Motion snippets, no extra AI call). Not yet checked by eye. Old notes follow: capture and AI notes already exist (see commits `f0d3f07`, `ded71e9`, `89ffe56`). Missing: a dedicated tab, and an estimate of whether each effect looks like GSAP or Framer Motion with a copyable snippet. Check what the Results page already shows before building.
 Test Groq freely (credits are not real money), but keep calls small.
 
 ## How to run and check

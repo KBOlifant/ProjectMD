@@ -45,12 +45,33 @@ export interface ComponentPreviews {
   items: ComponentPreview[];
 }
 
+// One described animation with the server's library estimate and ready-made code (mirrors the backend AnimationItem).
+export interface AnimationItem {
+  section: string;
+  name: string;
+  description: string;
+  trigger: string;
+  evidence: string;
+  library: string;
+  recreate: string;
+  estimate: string;
+  gsap: string;
+  framerMotion: string;
+}
+
+export interface AnimationReport {
+  summary: string;
+  libraries: string[];
+  items: AnimationItem[];
+}
+
 // Extra analysis stored with a scan. Later features add more keys; unknown keys are ignored. `api` is not shown yet.
 export interface ScanAnalysis {
   version?: number;
   design?: DesignSystem | null;
   api?: unknown;
   components?: ComponentPreviews | null;
+  animations?: AnimationReport | null;
 }
 
 export interface Scan {
