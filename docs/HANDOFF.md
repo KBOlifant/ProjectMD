@@ -1,0 +1,31 @@
+# Handoff note (2026-10-18)
+
+Read this first in a new session. It says where the work stands, not how the app works (see `ARCHITECTURE.md`, `SCANNER-SETTINGS.md`, `backend/README.md`, `CHANGELOG.md`).
+
+## What the app is
+Paste a public URL, get Markdown documentation plus a Design tab. Next.js website in `frontend/`, ASP.NET Core API in `backend/`, PostgreSQL (Aiven) for all data, Firebase only for sign-in, Groq (`openai/gpt-oss-20b` for text, `qwen/qwen3.8-27b` for screenshots) for the AI writing. The scanner is Playwright through a locked-down request checker (no private or internal addresses).
+
+## Where things stand
+- **Done and committed:** auth, roles in the database, scans, quota, Swagger, API-call capture, design capture, structured Groq output, animation measurement and AI animation notes (the last two came from a separate session the user ran), and feature 1 of the current plan: structured design data on every scan plus a Design tab with copyable colour swatches and Google Font previews.
+- **Latest commits (local, NOT pushed yet):** `f09b001`, `00c6de3`, `6fa2bce`, plus this note. The push failed because the shell has no GitHub login: push from GitHub Desktop, or run `git push origin main` where signed in.
+- **Verified:** 992 backend tests pass; website lints and builds; a live scan of tailwindcss.com finds 12 colours. **Not yet checked by eye:** the Design tab on a real scan (click a swatch, check fonts render).
+
+## Next, one feature at a time (commit each, then push)
+1. **Component previews:** Groq writes small HTML/CSS versions of the site's main components (button, input, card, nav...) from captured style facts; show them in a sandboxed frame (no scripts) with a copy-code button. Needs a new capture of component styles (no page text), a separate Groq call, strict server-side sanitising of the HTML, and a tab.
+2. **Animations:** capture and AI notes already exist (see commits `f0d3f07`, `ded71e9`, `89ffe56`). Missing: a dedicated tab, and an estimate of whether each effect looks like GSAP or Framer Motion with a copyable snippet. Check what the Results page already shows before building.
+Test Groq freely (credits are not real money), but keep calls small.
+
+## How to run and check
+- Backend: `dotnet run` in `backend/`. Build and test with `dotnet build ProjectMD.sln` and `dotnet test ProjectMD.sln` (output goes to `backend/artifacts`). If the user's server is running and locks it, add `-p:ArtifactsPath=<scratch folder>\art` to both.
+- Real scan without a server: `PROJECTMD_LIVE_SCAN=1` plus `PROJECTMD_LIVE_URL` and `PROJECTMD_LIVE_OUT`, load `Ai__ApiKey`, `Ai__FastModel`, `Scanner__BrowserChannel` from `backend/.env` into the process environment (never print them), then run the test `Live_scan_of_public_site_writes_analysis`.
+- Website: `npm run dev` in `frontend/`. `NEXT_PUBLIC_SCAN_PROVIDER=api` switches it to the real server.
+- Swagger: http://localhost:5080/swagger (Development only); the account menu has a dev-only "Copy API token" button.
+
+## Rules and gotchas
+- **Secrets** live in `backend/.env` and `frontend/.env.local` (both ignored by git). Never print or commit them. The Aiven password was pasted in an earlier chat; the user chose to leave it for now. The user's own password and email were also shared once; never use them to sign in.
+- **Do not start the server from the assistant's shell.** Stopping it leaves unkillable "ghost" processes that lock build files. Use tests and the live test instead.
+- **Commit style:** one commit per feature, plain-language message (what and why, little jargon), a matching entry in `CHANGELOG.md`, and end with the `Co-Authored-By` line the session asks for. Stage specific paths only (never `.claude/`, `node_modules`, `.env*`).
+- **The ECC plugin's gate hook** blocks the first attempt of an edit or git command until the assistant states the affected files, a rollback and the user's instruction, then allows the identical retry.
+- **Windows PowerShell traps:** `Rd` is an alias for delete (it once emptied files); XML comments cannot contain `--`; use absolute paths with .NET file calls; git is at `%LOCALAPPDATA%\GitHubDesktop\app-*\resources\app\git\cmd\git.exe`.
+- **Database changes:** the assistant applies migrations to Aiven after review (`dotnet ef database update`), tells the user, and never touches data. Admin email list is in `backend/.env`.
+- Agent briefs for past work are in `agent-skills/` (00 to 26).
