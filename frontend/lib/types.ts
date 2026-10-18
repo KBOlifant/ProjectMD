@@ -33,11 +33,24 @@ export interface DesignSystem {
   utilityFramework?: string | null;
 }
 
+// One AI-written, server-cleaned HTML/CSS version of a component (mirrors the backend ComponentPreview record).
+export interface ComponentPreview {
+  kind: string;
+  name: string;
+  html: string;
+  css: string;
+}
+
+export interface ComponentPreviews {
+  items: ComponentPreview[];
+}
+
 // Extra analysis stored with a scan. Later features add more keys; unknown keys are ignored. `api` is not shown yet.
 export interface ScanAnalysis {
   version?: number;
   design?: DesignSystem | null;
   api?: unknown;
+  components?: ComponentPreviews | null;
 }
 
 export interface Scan {

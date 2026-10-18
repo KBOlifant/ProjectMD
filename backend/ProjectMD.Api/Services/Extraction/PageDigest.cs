@@ -37,7 +37,8 @@ public sealed record PageDigest(
     IReadOnlyList<string>? Markers = null,
     ApiCatalog? Api = null,
     DesignSystem? Design = null,
-    VisualCapture? Visual = null);
+    VisualCapture? Visual = null,
+    Components.ComponentStyles? Components = null);
 
 // Size limits for the reduced page. The text is cut by priority, never in the middle of a word.
 public sealed record ReduceOptions(int MaxTextChars = 12000, int MaxLinks = 40, int MaxHeadings = 60);

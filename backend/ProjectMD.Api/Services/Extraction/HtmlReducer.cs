@@ -193,7 +193,8 @@ public sealed partial class HtmlReducer : IHtmlReducer
             markers,
             page.Api,
             page.Design,
-            page.Visual);
+            page.Visual,
+            page.Components);
     }
 
     // ---- Metadata ---------------------------------------------------------------------------------

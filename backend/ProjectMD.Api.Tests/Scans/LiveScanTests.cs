@@ -55,7 +55,7 @@ public class LiveScanTests
         var user = db.AddUser("live-user");
 
         var services = new ServiceCollection();
-        services.AddLogging();
+        services.AddLogging(logging => logging.AddSimpleConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddSingleton<IConfiguration>(configuration);
         services.AddSingleton(TimeProvider.System);
         services.Configure<ScannerModeOptions>(configuration.GetSection("Scanner"));
@@ -80,6 +80,7 @@ public class LiveScanTests
         services.AddScoped<ILlmBudgetGuard, LlmBudgetGuard>();
         services.AddScoped<IScanOwnerProvider>(_ => new FakeOwner(user.Id));
         services.AddScoped<IMotionAnalyzer, MotionAnalyzer>();
+        services.AddScoped<IComponentAnalyzer, ComponentAnalyzer>();
         services.AddScoped<IScanGenerator, PipelineScanGenerator>();
 
         await using var provider = services.BuildServiceProvider();

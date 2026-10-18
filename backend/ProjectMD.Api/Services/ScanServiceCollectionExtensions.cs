@@ -74,6 +74,7 @@ public static class ScanServiceCollectionExtensions
         services.AddSingleton<PromptBuilder>();
         services.AddSingleton<MotionPromptBuilder>();
         services.AddScoped<IMotionAnalyzer, MotionAnalyzer>();
+        services.AddScoped<IComponentAnalyzer, ComponentAnalyzer>();
         services.AddScoped<IExtractionCache, DbExtractionCache>();
         services.AddScoped<ILlmBudgetGuard, LlmBudgetGuard>();
         services.AddScoped<IScanOwnerProvider, CurrentScanOwnerProvider>();

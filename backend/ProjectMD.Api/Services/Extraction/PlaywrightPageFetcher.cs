@@ -222,6 +222,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
 
             var styleTexts = state.StyleTexts.Snapshot();
             var design = await Design.DesignCapture.TryCaptureAsync(page, styleTexts, html, _logger, token);
+            var components = await Components.ComponentCapture.TryCaptureAsync(page, _logger, token);
             var headers = FetchSupport.FilterHeaders(main.UpstreamHeaders);
 
             // Screenshots and animation evidence (last, because scrolling changes the page). Skipped
@@ -238,7 +239,7 @@ public sealed class PlaywrightPageFetcher : IPageFetcher, IAsyncDisposable, IDis
                     visual?.Motion?.Animations.Count ?? 0);
             }
 
-            return new RawPage(finalUrl, main.Status, html, headers, scripts, styles, Api: apiRecorder.Build(), Design: design, Visual: visual);
+            return new RawPage(finalUrl, main.Status, html, headers, scripts, styles, Api: apiRecorder.Build(), Design: design, Visual: visual, Components: components);
         }
         finally
         {

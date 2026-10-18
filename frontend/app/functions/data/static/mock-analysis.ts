@@ -32,4 +32,26 @@ export const MOCK_ANALYSIS: ScanAnalysis = {
     utilityFramework: "Tailwind",
   },
   api: null,
+  components: {
+    items: [
+      {
+        kind: "button",
+        name: "Primary button",
+        html: '<button class="btn">Get started</button>',
+        css: ".btn { color: #ffffff; background-color: #0ea5e9; border-radius: 8px; padding: 10px 20px; font-family: Inter, sans-serif; font-size: 14px; font-weight: 600; border: 0; cursor: pointer; }\n.btn:hover { background-color: #0284c7; }",
+      },
+      {
+        kind: "input",
+        name: "Text input",
+        html: '<input class="field" type="text" placeholder="Search docs">',
+        css: ".field { color: #0f172a; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-family: Inter, sans-serif; font-size: 14px; width: 220px; }\n.field:focus { border-color: #38bdf8; outline: 2px solid #bae6fd; }",
+      },
+      {
+        kind: "card",
+        name: "Card",
+        html: '<div class="card"><h3 class="title">Card title</h3><p class="text">A short description of the card.</p></div>',
+        css: ".card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 240px; font-family: Inter, sans-serif; }\n.title { color: #0f172a; font-size: 18px; margin: 0 0 8px; }\n.text { color: #64748b; font-size: 14px; margin: 0; }",
+      },
+    ],
+  },
 };

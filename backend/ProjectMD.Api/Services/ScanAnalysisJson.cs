@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ProjectMD.Api.Models;
 using ProjectMD.Api.Services.Extraction;
+using ProjectMD.Api.Services.Extraction.Components;
 
 namespace ProjectMD.Api.Services;
 
@@ -50,22 +51,30 @@ public static class ScanAnalysisJson
         }
     }
 
-    // Builds the analysis from a page digest, or null when it captured neither design nor API data.
-    public static ScanAnalysis? FromDigest(PageDigest digest)
+    // Builds the analysis from a page digest and the AI-written component previews, or null when
+    // none of design, API or components was captured.
+    public static ScanAnalysis? FromDigest(PageDigest digest, ComponentPreviews? components = null)
     {
-        if (digest.Design is null && digest.Api is null)
+        if (digest.Design is null && digest.Api is null && components is null)
         {
             return null;
         }
 
-        return Limit(new ScanAnalysis(CurrentVersion, digest.Design, digest.Api));
+        return Limit(new ScanAnalysis(CurrentVersion, digest.Design, digest.Api, components));
     }
 
     // Removes secret-looking CSS variables, then shrinks until the JSON fits in MaxBytes: first the
-    // endpoint response shapes, then the endpoints, then the whole API part, then the CSS variables.
+    // component previews, then the endpoint response shapes, then the endpoints, then the whole API
+    // part, then the CSS variables.
     public static ScanAnalysis Limit(ScanAnalysis analysis)
     {
         var current = analysis with { Design = Scrub(analysis.Design) };
+        if (Fits(current))
+        {
+            return current;
+        }
+
+        current = current with { Components = null };
         if (Fits(current))
         {
             return current;

@@ -13,7 +13,8 @@ public sealed record RawPage(
     IReadOnlyList<string> StylesheetUrls,
     ApiCatalog? Api = null,
     DesignSystem? Design = null,
-    VisualCapture? Visual = null);
+    VisualCapture? Visual = null,
+    Components.ComponentStyles? Components = null);
 
 // Loads a public web page and returns what the browser rendered. The only implementation is
 // PlaywrightPageFetcher. Every request it makes is checked against the SSRF rules first.
