@@ -92,9 +92,7 @@ public class LiveScanTests
         services.AddScoped<IExtractionCache, DbExtractionCache>();
         services.AddScoped<ILlmBudgetGuard, LlmBudgetGuard>();
         services.AddScoped<IScanOwnerProvider>(_ => new FakeOwner(user.Id));
-        services.AddScoped<IMotionAnalyzer, MotionAnalyzer>();
-        services.AddScoped<IComponentAnalyzer, ComponentAnalyzer>();
-        services.AddScoped<IScanGenerator, PipelineScanGenerator>();
+        services.AddScoped<IMotionAnalyzer, MotionAnalyzer>();        services.AddScoped<IScanGenerator, PipelineScanGenerator>();
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();

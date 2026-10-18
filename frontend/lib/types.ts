@@ -39,6 +39,10 @@ export interface ComponentPreview {
   name: string;
   html: string;
   css: string;
+  /** The colour of the page behind the component on the original site (older scans: missing). */
+  background?: string;
+  /** The component's height in pixels on the original site (older scans: missing or 0). */
+  height?: number;
 }
 
 export interface ComponentPreviews {

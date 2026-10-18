@@ -10,7 +10,14 @@ A plain-language list of what was added and why. Newest first. Each item matches
 - **Each animation gets a guess at the library and a starter snippet.** The server guesses whether it looks like GSAP, Framer Motion or plain CSS (using the AI's hint, the libraries found on the page, and the kind of trigger), and gives copyable code for both GSAP and Framer Motion, with a switch and a Copy button. The snippets come from fixed templates and use the page's typical measured animation time, so nothing written by the AI or the page can end up inside the code. This costs no extra AI call. The guess and the code are labelled as approximate.
 - **Old scans and scans without screenshots show a short note instead.** The animation data is saved with the scan; if it ever grows too big it is dropped before the design data.
 
-## Component previews
+## Component previews rebuilt from the real elements
+
+- **Previews now look much closer to the original.** Before, the AI wrote the HTML and CSS from about 20 measured values of one element, so it guessed at everything inside (inner text styles, icons, spacing) and the results looked quite different from the site. Now the scanner reads the real element tree of each button, input, card, navigation bar, heading and badge (up to 30 elements, 4 levels deep) with every element's measured styles, and the server turns that straight into HTML and CSS. Nesting, colours, borders, corner radii, padding, font, flex layout and sizes are kept; repeated styles share one class; default values are left out. Icons and images become empty boxes of the same size. Text is still a fixed sample word (page text is never captured).
+- **Each preview sits on the colour of the page behind it, and uses the site's fonts.** The scanner records the background colour behind each component, the frame uses it (a button for a dark page is no longer white-on-white), and a button lets you switch between page, light and dark backgrounds. Google Fonts used by the site are loaded inside the frame; the frame still allows nothing else from the outside. The frame height follows the component's real height.
+- **This no longer uses the AI, so it is free and works in every scan mode.** The Groq call for previews and its retry were removed (the same safety cleaning still applies to what is built). Older scans keep their AI-written previews.
+- **Not yet shown:** hover and focus looks, and icons. The result was checked by reading the generated code of a real scan of tailwindcss.com (button, card, heading with real nesting and fonts); it has not yet been looked at side by side with the site in a browser.
+
+## Component previews (first version)
 
 - **The component previews call now tries once more when the AI's answer is unusable.** Groq sometimes refuses or garbles the JSON it was asked for, which left a scan with no previews (seen on gsap.com). The scan now asks a second time, checking the daily limit before each try and recording the tokens of each, and never makes a third call. A live scan of gsap.com that had no previews before now shows four.
 

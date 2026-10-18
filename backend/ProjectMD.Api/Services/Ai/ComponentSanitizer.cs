@@ -15,11 +15,11 @@ namespace ProjectMD.Api.Services.Ai;
 // policy; this is the first of those two layers.)
 public static partial class ComponentSanitizer
 {
-    public const int MaxHtmlChars = 2500;
-    public const int MaxCssChars = 3500;
+    public const int MaxHtmlChars = 4000;
+    public const int MaxCssChars = 8000;
     private const int MaxNodes = 80;
     private const int MaxDepth = 8;
-    private const int MaxRules = 40;
+    private const int MaxRules = 80;
     private const int MaxTextChars = 80;
     private const int MaxValueChars = 200;
 
