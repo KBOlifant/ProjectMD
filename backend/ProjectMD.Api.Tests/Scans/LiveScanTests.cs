@@ -49,6 +49,19 @@ public class LiveScanTests
             ["Ai:ApiKey"] = apiKey,
             ["Ai:FastModel"] = Environment.GetEnvironmentVariable("Ai__FastModel") ?? string.Empty,
         };
+        if (Environment.GetEnvironmentVariable("PROJECTMD_LIVE_MOTION") == "1")
+        {
+            // Screenshots, animation evidence and the vision call, with the values from appsettings.json.
+            settings["Motion:Enabled"] = "true";
+            settings["Motion:AiEnabled"] = "true";
+            settings["Motion:VisionModel"] = "qwen/qwen3.8-27b";
+            settings["Motion:ResponseFormat"] = "json_object";
+            settings["Motion:ReasoningEffort"] = "none";
+            settings["Motion:MaxOutputTokens"] = "1800";
+            settings["Motion:TimeoutSeconds"] = "60";
+            settings["Ai:DailyTokenCapPerUser"] = "60000";
+        }
+
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 
         using var db = new TestDatabase();
