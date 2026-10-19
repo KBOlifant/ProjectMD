@@ -14,6 +14,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## Export the design system
 
 - **The Design tab has a new Export section with three formats.** *Figma tokens* is a JSON file in the Tokens Studio format: import it in Figma with the free Tokens Studio plugin to get the site's colours (named by role, such as `text-1` and `accent-2`), font families, corner radii, spacing and shadows as Figma tokens. *CSS variables* is a `:root` block to paste into any stylesheet. *Tailwind config* is a `tailwind.config.js` (v3) with everything under `theme.extend`. Each can be copied or downloaded.
@@ -28,6 +29,9 @@ A plain-language list of what was added and why. Newest first. Each item matches
 - **Not yet shown:** hover and focus looks, and icons. The result was checked by reading the generated code of a real scan of tailwindcss.com (button, card, heading with real nesting and fonts); it has not yet been looked at side by side with the site in a browser.
 
 ## Component previews (first version)
+=======
+## Component previews
+>>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
 =======
 ## Component previews
 >>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)

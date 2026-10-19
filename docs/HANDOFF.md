@@ -15,8 +15,12 @@ Paste a public URL, get Markdown documentation plus a Design tab. Next.js websit
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 1. **Component previews: DONE, rebuilt** (`Services/Extraction/Components/` captures element trees with computed styles and `ComponentPreviewBuilder` turns them into HTML/CSS; `Services/Ai/ComponentSanitizer.cs` cleans the result; `components/results/components-panel.tsx` shows them). No AI is involved any more. Not yet compared side by side with a real site in a browser (the browser pane hung). Possible polish: hover/focus capture, icons (SVG), real text widths.
 1b. **Design export: DONE** (`frontend/lib/design-export.ts` + `.check.ts`, `components/results/design-export.tsx`): Figma tokens (Tokens Studio JSON), CSS variables and Tailwind v3 config from the Design tab. Not yet imported into Figma by hand; Tokens Studio's import format is from memory of its docs, so confirm with one real import. A direct push into a Figma file would need the Figma connector authorised (claude.ai connector settings).
+=======
+1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
+>>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
 =======
 1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
 >>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
