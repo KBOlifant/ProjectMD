@@ -9,3 +9,5 @@ node_modules/
 # Logs
 *.log
 npm-debug.log*
+docs/HANDOFF.md
+CHANGELOG.md
