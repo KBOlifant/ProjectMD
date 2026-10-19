@@ -184,7 +184,7 @@ export function ResultsView({ id }: { id?: string }) {
           {tab === "preview" && <MarkdownPreview source={sections.document} />}
           {tab === "design" &&
             (hasDesignData(scan.analysis?.design) ? (
-              <DesignPanel design={scan.analysis.design} />
+              <DesignPanel design={scan.analysis.design} canExport={canExport} />
             ) : sections.design ? (
               <>
                 <p role="status" className="ts-small mb-4 rounded-md border border-border-strong bg-bg-raised p-3 text-warning">
