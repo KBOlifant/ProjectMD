@@ -200,11 +200,11 @@ export function ResultsView({ id }: { id?: string }) {
             ))}
           {tab === "components" &&
             (hasComponentData(scan.analysis?.components) ? (
-              <ComponentsPanel components={scan.analysis.components} fonts={scan.analysis.design?.fonts} />
+              <ComponentsPanel components={scan.analysis.components} />
             ) : (
               <p className="ts-body text-ink-muted">
-                No component previews for this scan. New scans include HTML and CSS rebuilt from the site&apos;s buttons, inputs,
-                cards and navigation here; older scans do not have them.
+                No component previews for this scan. Scans made in AI mode include small HTML and CSS versions of the
+                site&apos;s buttons, inputs, cards and navigation here; older scans do not have them.
               </p>
             ))}
           {tab === "animations" &&

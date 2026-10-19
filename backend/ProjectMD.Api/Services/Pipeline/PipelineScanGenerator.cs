@@ -35,6 +35,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
     private readonly TimeProvider _clock;
     private readonly ILogger<PipelineScanGenerator> _logger;
     private readonly IMotionAnalyzer? _motion;
+    private readonly IComponentAnalyzer? _components;
 
     // Receives the free extraction pieces, the AI pieces, the settings and the clock.
     public PipelineScanGenerator(
@@ -49,8 +50,10 @@ public sealed class PipelineScanGenerator : IScanGenerator
         IOptions<AiOptions> ai,
         TimeProvider clock,
         ILogger<PipelineScanGenerator> logger,
-        IMotionAnalyzer? motion = null)
+        IMotionAnalyzer? motion = null,
+        IComponentAnalyzer? components = null)
     {
+        _components = components;
         _extraction = extraction;
         _fingerprinter = fingerprinter;
         _cache = cache;
@@ -79,7 +82,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
 
         var (notes, basis) = await WriteNotesAsync(digest, tech, ct);
         var motionNotes = await WriteMotionNotesAsync(digest, ct);
-        var componentPreviews = BuildComponentPreviews(digest);
+        var componentPreviews = await WriteComponentPreviewsAsync(digest, ct);
 
         var confidence = ConfidenceEstimator.Estimate(digest, tech);
         const int pages = 1;
@@ -101,15 +104,20 @@ public sealed class PipelineScanGenerator : IScanGenerator
             digest, componentPreviews, AnimationReportBuilder.Build(motionNotes, digest.Visual?.Motion)));
     }
 
-    // The component previews are built from the captured element trees: free, no AI, any mode. A
-    // problem building them never fails the scan.
-    private ComponentPreviews? BuildComponentPreviews(PageDigest digest)
+    // The component-preview stage: only in `ai` mode with a real client, and never allowed to fail
+    // the scan. ComponentAnalyzer logs why it skips.
+    private async Task<ComponentPreviews?> WriteComponentPreviewsAsync(PageDigest digest, CancellationToken ct)
     {
+        if (_components is null || _scanner.Value.Resolve() != ScannerMode.Ai || _llm is NotConfiguredLlmClient)
+        {
+            return null;
+        }
+
         try
         {
-            return ComponentPreviewBuilder.Build(digest.Components);
+            return await _components.AnalyzeAsync(digest, ct);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogWarning("Component previews failed ({ErrorType}); the scan has none", ex.GetType().Name);
             return null;

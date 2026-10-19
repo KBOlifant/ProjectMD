@@ -10,6 +10,7 @@ A plain-language list of what was added and why. Newest first. Each item matches
 - **Each animation gets a guess at the library and a starter snippet.** The server guesses whether it looks like GSAP, Framer Motion or plain CSS (using the AI's hint, the libraries found on the page, and the kind of trigger), and gives copyable code for both GSAP and Framer Motion, with a switch and a Copy button. The snippets come from fixed templates and use the page's typical measured animation time, so nothing written by the AI or the page can end up inside the code. This costs no extra AI call. The guess and the code are labelled as approximate.
 - **Old scans and scans without screenshots show a short note instead.** The animation data is saved with the scan; if it ever grows too big it is dropped before the design data.
 
+<<<<<<< HEAD
 ## Export the design system
 
 - **The Design tab has a new Export section with three formats.** *Figma tokens* is a JSON file in the Tokens Studio format: import it in Figma with the free Tokens Studio plugin to get the site's colours (named by role, such as `text-1` and `accent-2`), font families, corner radii, spacing and shadows as Figma tokens. *CSS variables* is a `:root` block to paste into any stylesheet. *Tailwind config* is a `tailwind.config.js` (v3) with everything under `theme.extend`. Each can be copied or downloaded.
@@ -24,6 +25,9 @@ A plain-language list of what was added and why. Newest first. Each item matches
 - **Not yet shown:** hover and focus looks, and icons. The result was checked by reading the generated code of a real scan of tailwindcss.com (button, card, heading with real nesting and fonts); it has not yet been looked at side by side with the site in a browser.
 
 ## Component previews (first version)
+=======
+## Component previews
+>>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
 
 - **The component previews call now tries once more when the AI's answer is unusable.** Groq sometimes refuses or garbles the JSON it was asked for, which left a scan with no previews (seen on gsap.com). The scan now asks a second time, checking the daily limit before each try and recording the tokens of each, and never makes a third call. A live scan of gsap.com that had no previews before now shows four.
 
