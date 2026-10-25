@@ -30,7 +30,7 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
     >
       <div className="flex flex-col gap-3 sm:flex-row">
         <label
-          className={`flex h-[52px] flex-1 items-center gap-3 rounded-md border bg-bg-surface px-4 transition-shadow focus-within:border-violet-400 focus-within:shadow-glow ${
+          className={`flex h-[52px] flex-1 items-center gap-3 rounded-md border bg-bg-surface px-4 transition-shadow focus-within:border-rose-400 focus-within:shadow-glow ${
             error ? "border-danger" : "border-border-strong"
           } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
         >

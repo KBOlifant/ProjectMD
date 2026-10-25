@@ -20,7 +20,7 @@ function Avatar({ email }: { email: string | null }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-8 flex-none place-items-center rounded-md bg-violet-700 font-mono text-[11px] font-medium text-ink"
+      className="grid size-8 flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink"
     >
       {emailInitials(email)}
     </span>
@@ -32,7 +32,7 @@ function Avatar({ email }: { email: string | null }) {
 function RoleBadge({ role }: { role: Role }) {
   const tone =
     role === "admin"
-      ? "border-violet-500 bg-violet-700 text-ink"
+      ? "border-mulberry-500 bg-fig-500 text-ink"
       : role === "viewer"
         ? "border-border-strong bg-bg-raised text-warning"
         : "border-border-strong bg-bg-raised text-ink-muted";

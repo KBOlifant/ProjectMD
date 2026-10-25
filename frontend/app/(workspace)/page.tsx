@@ -59,13 +59,13 @@ export default function GeneratePage() {
   return (
     <div className="space-y-12">
       <section className="hero-glow -mx-4 -mt-8 px-4 pb-4 pt-12 md:-mx-8 md:px-8">
-        <span className="ts-label inline-block rounded-pill border border-violet-700 px-3 py-1 text-violet-400">
+        <span className="ts-label inline-block rounded-pill border border-fig-500 px-3 py-1 text-rose-400">
           AI-Powered · Live
         </span>
         <h1 className="ts-display mt-6 text-ink">
           Website → Documentation.
           <br />
-          <span className="text-violet-400">Intelligently.</span>
+          <span className="text-rose-400">Intelligently.</span>
         </h1>
         <p className="ts-body mt-4 max-w-xl text-ink-muted">
           Paste any URL. Project MD fetches and renders the page, fingerprints the tech stack, and writes the docs as
@@ -91,7 +91,7 @@ export default function GeneratePage() {
             Recent scans
           </h2>
           {n > 3 && (
-            <Link href="/history" className="ts-mono-ui text-violet-400 hover:text-ink">
+            <Link href="/history" className="ts-mono-ui text-rose-400 hover:text-ink">
               View all →
             </Link>
           )}

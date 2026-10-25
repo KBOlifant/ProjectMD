@@ -81,7 +81,7 @@ export function DesignTokens({ design, onCopy }: Props) {
               return (
                 <li key={s} className="flex items-center gap-3">
                   <span className="ts-small w-14 flex-none text-ink-muted">{s}</span>
-                  <span className="h-3 rounded-sm bg-violet-500" style={{ width }} />
+                  <span className="h-3 rounded-sm bg-mulberry-500" style={{ width }} />
                 </li>
               );
             })}

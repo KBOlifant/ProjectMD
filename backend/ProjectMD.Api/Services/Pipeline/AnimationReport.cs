@@ -24,7 +24,8 @@ public sealed record AnimationReport(string Summary, IReadOnlyList<string> Libra
 
 // Builds the AnimationReport from the AI's motion notes and the browser's measured evidence. Free
 // (no AI call) and pure. The estimate is a guess and the code is a starting point; both are labelled
-// that way on the website.
+// that way on the website. The code uses the browser's measured values for the animation the model
+// matched (or the model's own numbers), so it differs per animation.
 public static class AnimationReportBuilder
 {
     public const string EstimateGsap = "GSAP";
@@ -43,17 +44,18 @@ public static class AnimationReportBuilder
 
         var duration = TypicalDurationMs(evidence);
         var items = animations
-            .Select(a => new AnimationItem(
-                a.Section,
-                a.Name,
-                a.Description,
-                a.Trigger,
-                a.Evidence,
-                a.Library,
-                a.Recreate,
-                Estimate(a, libraries),
-                AnimationSnippets.Gsap(a.Trigger, duration),
-                AnimationSnippets.FramerMotion(a.Trigger, duration)))
+            .Select(a => (Note: a, Spec: MotionSpecBuilder.Build(a, evidence)))
+            .Select(x => new AnimationItem(
+                x.Note.Section,
+                x.Note.Name,
+                x.Note.Description,
+                x.Note.Trigger,
+                x.Note.Evidence,
+                x.Note.Library,
+                x.Note.Recreate,
+                Estimate(x.Note, libraries),
+                AnimationSnippets.Gsap(x.Note.Trigger, x.Spec, duration),
+                AnimationSnippets.FramerMotion(x.Note.Trigger, x.Spec, duration)))
             .ToList();
         return new AnimationReport(notes?.Summary ?? string.Empty, libraries, items);
     }

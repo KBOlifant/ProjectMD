@@ -73,10 +73,20 @@ public static class MotionScript
               const type = a.constructor ? a.constructor.name : '';
               const source = type === 'CSSAnimation' ? 'css-animation' : (type === 'CSSTransition' ? 'css-transition' : 'web-animation');
               const props = new Set();
+              const values = [];
               try {
-                for (const k of (fx.getKeyframes ? fx.getKeyframes() : [])) {
+                const kfs = fx.getKeyframes ? fx.getKeyframes() : [];
+                for (const k of kfs) {
                   for (const p of Object.keys(k)) {
                     if (p !== 'offset' && p !== 'computedOffset' && p !== 'easing' && p !== 'composite') { props.add(p); }
+                  }
+                }
+                if (kfs.length > 1) {
+                  const first = kfs[0], last = kfs[kfs.length - 1];
+                  for (const p of ['opacity', 'transform', 'translate', 'scale', 'rotate']) {
+                    if (first[p] != null || last[p] != null) {
+                      values.push({ p, f: first[p] == null ? null : clip(first[p], 60), t: last[p] == null ? null : clip(last[p], 60) });
+                    }
                   }
                 }
               } catch (e) { }
@@ -88,7 +98,8 @@ public static class MotionScript
                 delayMs: num(t.delay),
                 easing: clip(t.easing || '', 60) || null,
                 repeat: t.iterations === Infinity ? 'infinite' : (typeof t.iterations === 'number' ? String(t.iterations) : null),
-                props: Array.from(props).slice(0, 8)
+                props: Array.from(props).slice(0, 8),
+                values
               });
             }
           } catch (e) { }
@@ -97,7 +108,7 @@ public static class MotionScript
             const g = w.gsap;
             if (g && g.globalTimeline && g.globalTimeline.getChildren) {
               const skip = new Set(['ease', 'duration', 'delay', 'stagger', 'scrollTrigger', 'repeat', 'yoyo', 'paused', 'immediateRender',
-                'overwrite', 'id', 'data', 'callbackScope', 'lazy', 'inherit', 'runBackwards', 'startAt', 'keyframes', 'repeatDelay',
+                'overwrite', 'id', 'data', 'callbackScope', 'lazy', 'inherit', 'runBackwards', 'startAt', 'keyframes', 'repeatDelay', 'runBackwards',
                 'parent', 'scrollTrigger', 'reversed', 'smoothChildTiming', 'autoRemoveChildren']);
               let tweens = 0;
               for (const tw of g.globalTimeline.getChildren(true, true, false)) {
@@ -109,6 +120,17 @@ public static class MotionScript
                 let stagger = null;
                 if (typeof v.stagger === 'number') { stagger = v.stagger; }
                 else if (v.stagger && typeof v.stagger === 'object' && typeof v.stagger.each === 'number') { stagger = v.stagger.each; }
+                const values = [];
+                const back = !!v.runBackwards, sa = (v.startAt && typeof v.startAt === 'object') ? v.startAt : {};
+                for (const p of ['opacity', 'autoAlpha', 'x', 'y', 'xPercent', 'yPercent', 'scale', 'rotation', 'rotate']) {
+                  if (typeof v[p] !== 'number') { continue; }
+                  const name = p === 'autoAlpha' ? 'opacity' : (p === 'rotate' ? 'rotation' : p);
+                  values.push({
+                    p: name,
+                    f: back ? String(v[p]) : (typeof sa[p] === 'number' ? String(sa[p]) : null),
+                    t: back ? null : String(v[p])
+                  });
+                }
                 const targets = elements.slice(0, 2).map(describe);
                 animations.push({
                   source: 'gsap',
@@ -118,7 +140,8 @@ public static class MotionScript
                   delayMs: num((tw.delay ? tw.delay() : 0) * 1000),
                   easing: typeof v.ease === 'string' ? clip(v.ease, 40) : (v.ease ? 'custom' : null),
                   repeat: typeof v.repeat === 'number' ? (v.repeat < 0 ? 'infinite' : String(v.repeat)) : null,
-                  props: Object.keys(v).filter(k => !skip.has(k) && k.indexOf('on') !== 0).slice(0, 8)
+                  props: Object.keys(v).filter(k => !skip.has(k) && k.indexOf('on') !== 0).slice(0, 8),
+                  values
                 });
                 tweens++;
               }

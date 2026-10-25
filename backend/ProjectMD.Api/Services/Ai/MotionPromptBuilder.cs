@@ -22,14 +22,15 @@ public sealed class MotionPromptBuilder
 {
     // Part of the cache key; bump when the system prompt, schema or facts layout changes. Kept far
     // away from PromptBuilder.PromptVersion so the two kinds of cached answer never mix.
-    // (1002: animation descriptions and the design breakdown.)
-    public const int PromptVersion = 1002;
+    // (1002: animation descriptions and the design breakdown. 1003: numbered measured lines, keyframe
+    // values and per-animation motion numbers.)
+    public const int PromptVersion = 1003;
 
     public const string FactsOpen = "<<<VISUAL";
     public const string FactsClose = "VISUAL>>>";
 
     // Lines of measured facts kept at most, so the text part stays small.
-    private const int MaxAnimationLines = 25;
+    private const int MaxAnimationLines = MotionNotesLimits.MaxMeasuredRef;
     private const int MaxTriggerLines = 12;
     private const int MaxColorFacts = 12;
     private const int MaxFontFacts = 4;
@@ -44,7 +45,9 @@ public sealed class MotionPromptBuilder
         "or text revealed letter by letter or line by line. Also describe the measured animations in the facts even if a frame does not show them. " +
         "For each animation write a short name and a 2 to 4 sentence description of what moves, how and when. " +
         "Use the measured timings and easing when they exist; never invent exact durations or easing curves. " +
-        "Set evidence to measured only when it matches a measured animation or scroll trigger; otherwise inferred.\n" +
+        "Set evidence to measured only when it matches a measured animation or scroll trigger; otherwise inferred. " +
+        "When an animation matches a 'Measured #N' line, set measuredRef to N (otherwise 0); the code samples use that line's real values, so match carefully and never reuse one line for unrelated animations. " +
+        "Fill motion with what you can actually see (direction and distance of the slide, fade, scale, rotation, easing feel, stagger); use null for anything unclear and do not default every animation to a 40 px upward fade: describe what each one really does.\n" +
         "Design: describe the overall style, how each font is used, what each main colour is for (prefer the measured hex values), " +
         "and the visible components from top to bottom (navigation, hero, buttons, cards, sections, footer) with how they look.\n" +
         "Leave out anything you cannot see or that the facts do not support. Empty lists are fine.\n" +
@@ -57,7 +60,9 @@ public sealed class MotionPromptBuilder
         "{\"summary\": string (max 400 chars),\n" +
         " \"animations\": [ {\"section\": string, \"name\": string, \"description\": string (max 500 chars), " +
         "\"trigger\": one of \"load\",\"scroll\",\"scroll-scrub\",\"hover\",\"click\",\"loop\",\"page-transition\",\"unknown\", " +
-        "\"evidence\": \"measured\" or \"inferred\", \"library\": string, \"recreate\": string (max 200 chars)} ] (max 12),\n" +
+        "\"evidence\": \"measured\" or \"inferred\", \"library\": string, \"recreate\": string (max 200 chars), " +
+        "\"measuredRef\": integer (0 = none), \"motion\": {\"moveX\": number|null, \"moveY\": number|null, \"fromOpacity\": number|null, \"fromScale\": number|null, " +
+        "\"rotate\": number|null, \"easing\": string, \"durationMs\": integer|null, \"staggerMs\": integer|null}} ] (max 12),\n" +
         " \"design\": {\"overview\": string (max 500 chars),\n" +
         "   \"typography\": [ {\"role\": string, \"font\": string, \"details\": string} ] (max 6),\n" +
         "   \"colors\": [ {\"hex\": \"#rrggbb\", \"name\": string, \"usage\": string} ] (max 10),\n" +
@@ -159,9 +164,11 @@ public sealed class MotionPromptBuilder
             sb.Append("Signal: ").Append(OneLine(signal)).Append('\n');
         }
 
+        var index = 0;
         foreach (var a in motion.Animations.Take(MaxAnimationLines))
         {
-            sb.Append("Measured ").Append(OneLine(a.Source)).Append(": ").Append(OneLine(a.Target));
+            index++;
+            sb.Append("Measured #").Append(Num(index)).Append(' ').Append(OneLine(a.Source)).Append(": ").Append(OneLine(a.Target));
             if (a.Name is not null)
             {
                 sb.Append(" name=").Append(OneLine(a.Name));
@@ -170,6 +177,11 @@ public sealed class MotionPromptBuilder
             if (a.Properties.Count > 0)
             {
                 sb.Append(" animates=").Append(OneLine(string.Join("/", a.Properties)));
+            }
+
+            foreach (var v in (a.Values ?? []).Take(5))
+            {
+                sb.Append(' ').Append(OneLine(v.Property)).Append('=').Append(OneLine(v.From ?? "?")).Append("->").Append(OneLine(v.To ?? "?"));
             }
 
             if (a.DurationMs is { } d)

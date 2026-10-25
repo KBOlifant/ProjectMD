@@ -273,7 +273,37 @@ public static partial class MotionEvidenceReader
             Milliseconds(item, "delayMs"),
             Text(item, "easing"),
             Text(item, "repeat"),
-            properties);
+            properties,
+            ReadValues(item));
+    }
+
+    private static readonly HashSet<string> ValueProperties =
+        ["opacity", "transform", "translate", "scale", "rotate", "x", "y", "xPercent", "yPercent", "rotation"];
+
+    // The start and end values of the properties that matter; unknown property names are dropped.
+    private static List<MotionValue> ReadValues(JsonElement item)
+    {
+        var values = new List<MotionValue>();
+        if (!item.TryGetProperty("values", out var list) || list.ValueKind != JsonValueKind.Array)
+        {
+            return values;
+        }
+
+        foreach (var v in list.EnumerateArray())
+        {
+            if (values.Count >= MaxProperties || v.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var property = Text(v, "p");
+            if (property is not null && ValueProperties.Contains(property))
+            {
+                values.Add(new MotionValue(property, Text(v, "f"), Text(v, "t")));
+            }
+        }
+
+        return values;
     }
 
     // A string property, cleaned, or null when missing, empty or not a string.

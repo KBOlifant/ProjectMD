@@ -27,7 +27,7 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
   return (
     <div className="w-full max-w-[480px] overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-panel">
       <div className="flex items-center gap-3 border-b border-border-subtle px-6 py-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-violet-700 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
           {initials(host)}
         </span>
         <div className="min-w-0">
@@ -36,7 +36,7 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
         </div>
         <span
           className={`ts-label ml-auto rounded-pill border px-2.5 py-1 ${
-            complete ? "border-border-strong text-ink-muted" : "border-violet-700 text-violet-400"
+            complete ? "border-border-strong text-ink-muted" : "border-fig-500 text-rose-400"
           }`}
         >
           {complete ? "Complete" : "Scanning"}
@@ -56,7 +56,7 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
           aria-valuenow={pct}
           className="mb-4 mt-2 h-[3px] rounded-[3px] bg-bg-raised"
         >
-          <div className="h-full rounded-[3px] bg-violet-500" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-[3px] bg-mulberry-500" style={{ width: `${pct}%` }} />
         </div>
 
         <ol>
@@ -68,8 +68,8 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
                   s.state === "queued"
                     ? "border-border-strong"
                     : s.state === "current"
-                      ? "border-violet-500 bg-violet-700"
-                      : "border-violet-500 text-violet-400"
+                      ? "border-mulberry-500 bg-fig-500"
+                      : "border-mulberry-500 text-rose-400"
                 }`}
               >
                 {s.state === "done" && <CheckIcon width={10} height={10} />}

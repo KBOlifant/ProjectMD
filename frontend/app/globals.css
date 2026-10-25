@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base: #07030d;
-  --bg-sidebar: #0b0614;
-  --bg-surface: #110a1b;
-  --bg-raised: #1a1026;
-  --border-subtle: #1f1330;
-  --border-strong: #3a2552;
-  --violet-700: #5a1f6b;
-  --violet-500: #8b32a0;
-  --violet-400: #a948bd;
-  --violet-glow: #8b32a066;
-  --ink: #eadcf7;
-  --ink-body: #c9b8da;
-  --ink-muted: #9886ab;
-  --ink-dim: #6b5a7d;
-  --on-primary: #fbf3ff;
+  --bg-base: #170c1c;
+  --bg-sidebar: #1e1023;
+  --bg-surface: #28162d;
+  --bg-raised: #341d39;
+  --border-subtle: #3a2240;
+  --border-strong: #5e3a5c;
+  --fig-700: #5e3045;
+  --fig-500: #7a4058;
+  --mulberry-500: #a35b72;
+  --mulberry-400: #b86d85;
+  --mulberry-glow: #a35b7266;
+  --rose-400: #d3a19a;
+  --damson: #46294f;
+  --ink: #f5ede1;
+  --ink-body: #dccbc8;
+  --ink-muted: #b39aa6;
+  --ink-dim: #85697a;
+  --on-primary: #f5ede1;
   --success: #4cc38a;
   --success-bg: #0f2a20;
   --warning: #e0a84a;
   --danger: #ef6a80;
-  --shadow-glow: 0 0 24px 0 rgba(139, 50, 160, 0.35);
+  --shadow-glow: 0 0 24px 0 rgba(163, 91, 114, 0.35);
   --shadow-panel: 0 24px 64px 0 rgba(0, 0, 0, 0.6);
 }
 
@@ -31,10 +34,13 @@
   --color-bg-raised: var(--bg-raised);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
-  --color-violet-700: var(--violet-700);
-  --color-violet-500: var(--violet-500);
-  --color-violet-400: var(--violet-400);
-  --color-violet-glow: var(--violet-glow);
+  --color-fig-700: var(--fig-700);
+  --color-fig-500: var(--fig-500);
+  --color-mulberry-500: var(--mulberry-500);
+  --color-mulberry-400: var(--mulberry-400);
+  --color-mulberry-glow: var(--mulberry-glow);
+  --color-rose-400: var(--rose-400);
+  --color-damson: var(--damson);
   --color-ink: var(--ink);
   --color-ink-body: var(--ink-body);
   --color-ink-muted: var(--ink-muted);
@@ -129,11 +135,10 @@
 }
 
 @utility hero-glow {
-  background: radial-gradient(
-    ellipse 60% 70% at 85% 0%,
-    var(--violet-glow),
-    transparent 70%
-  );
+  background:
+    radial-gradient(ellipse 60% 70% at 85% 0%, var(--mulberry-glow), transparent 70%),
+    radial-gradient(ellipse 45% 60% at 5% 10%, #d3a19a26, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 0%, #46294f99, transparent 80%);
 }
 
 body {
@@ -145,7 +150,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--violet-400);
+  outline: 2px solid var(--rose-400);
   outline-offset: 2px;
 }
 

@@ -99,7 +99,7 @@ export function ResultsView({ id }: { id?: string }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-violet-700 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
           {initials(scan.host)}
         </span>
         <div className="min-w-0 flex-1 basis-56">
@@ -168,7 +168,7 @@ export function ResultsView({ id }: { id?: string }) {
               tabIndex={tab === t ? 0 : -1}
               onClick={() => setTab(t)}
               className={`ts-mono-ui -mb-px border-b-2 px-4 py-2.5 transition-colors ${
-                tab === t ? "border-violet-500 text-ink" : "border-transparent text-ink-muted hover:text-ink"
+                tab === t ? "border-mulberry-500 text-ink" : "border-transparent text-ink-muted hover:text-ink"
               }`}
             >
               {TAB_LABELS[t]}

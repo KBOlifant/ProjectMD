@@ -37,7 +37,7 @@ function Card({ item, onCopy }: { item: AnimationItem; onCopy: (text: string, la
         <span className="rounded-md border border-border-strong px-2 py-0.5 text-ink-muted">
           {item.evidence === "measured" ? "Measured" : "Inferred from screenshots"}
         </span>
-        <span className="rounded-md bg-violet-700 px-2 py-0.5 text-ink">Looks like {item.estimate}</span>
+        <span className="rounded-md bg-fig-500 px-2 py-0.5 text-ink">Looks like {item.estimate}</span>
       </div>
       {item.description && <p className="ts-body text-ink-body">{item.description}</p>}
       {item.recreate && <p className="ts-small text-ink-muted">How to rebuild: {item.recreate}</p>}
@@ -49,7 +49,7 @@ function Card({ item, onCopy }: { item: AnimationItem; onCopy: (text: string, la
               type="button"
               aria-pressed={flavour === f}
               onClick={() => setFlavour(f)}
-              className={`ts-mono-ui rounded-md border px-3 py-1 ${flavour === f ? "border-violet-500 text-ink" : "border-border-strong text-ink-muted hover:text-ink"}`}
+              className={`ts-mono-ui rounded-md border px-3 py-1 ${flavour === f ? "border-mulberry-500 text-ink" : "border-border-strong text-ink-muted hover:text-ink"}`}
             >
               {f === "gsap" ? "GSAP" : "Framer Motion"}
             </button>
@@ -57,7 +57,7 @@ function Card({ item, onCopy }: { item: AnimationItem; onCopy: (text: string, la
           <button
             type="button"
             onClick={() => onCopy(code, `${label} code`)}
-            className="ts-mono-ui ml-auto rounded-md bg-violet-700 px-3 py-1 text-ink hover:bg-violet-600"
+            className="ts-mono-ui ml-auto rounded-md bg-fig-500 px-3 py-1 text-ink hover:bg-mulberry-400"
           >
             Copy code
           </button>

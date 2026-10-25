@@ -31,7 +31,7 @@ export function UsageMeter() {
         className="mt-2 h-[3px] rounded-[3px] bg-bg-raised"
       >
         <div
-          className={`h-full rounded-[3px] ${used >= limit ? "bg-warning" : "bg-violet-500"}`}
+          className={`h-full rounded-[3px] ${used >= limit ? "bg-warning" : "bg-mulberry-500"}`}
           style={{ width: `${pct}%` }}
         />
       </div>

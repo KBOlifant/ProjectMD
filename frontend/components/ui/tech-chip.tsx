@@ -4,7 +4,7 @@ export function TechChip({ name, highlighted = false }: { name: string; highligh
     <span
       className={`inline-block rounded-sm border px-2 py-0.5 font-mono text-[11px] leading-4 ${
         highlighted
-          ? "border-violet-500 bg-violet-700 text-ink"
+          ? "border-mulberry-500 bg-fig-500 text-ink"
           : "border-border-strong bg-bg-raised text-ink-muted"
       }`}
     >

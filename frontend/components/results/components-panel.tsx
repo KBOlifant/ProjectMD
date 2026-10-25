@@ -49,7 +49,7 @@ function Preview({ item, dark, onCopy }: { item: ComponentPreview; dark: boolean
         <button type="button" onClick={() => onCopy(item.css, `${item.name} CSS`)} className="ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-muted hover:text-ink">
           Copy CSS
         </button>
-        <button type="button" onClick={() => onCopy(componentCode(item), `${item.name} code`)} className="ts-mono-ui rounded-md bg-violet-700 px-3 py-1.5 text-ink hover:bg-violet-600">
+        <button type="button" onClick={() => onCopy(componentCode(item), `${item.name} code`)} className="ts-mono-ui rounded-md bg-fig-500 px-3 py-1.5 text-ink hover:bg-mulberry-400">
           Copy code
         </button>
       </div>

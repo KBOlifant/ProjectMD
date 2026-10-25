@@ -199,7 +199,7 @@ public class MotionAiTests
         Assert.StartsWith(MotionPromptBuilder.FactsOpen, request.User);
         Assert.EndsWith(MotionPromptBuilder.FactsClose, request.User);
         Assert.Contains("Libraries: GSAP, GSAP ScrollTrigger", request.User);
-        Assert.Contains("Measured gsap: h1.hero-title name=stagger 0.04s animates=yPercent/opacity duration=900ms delay=200ms easing=power3.out", request.User);
+        Assert.Contains("Measured #1 gsap: h1.hero-title name=stagger 0.04s animates=yPercent/opacity duration=900ms delay=200ms easing=power3.out", request.User);
         Assert.Contains("Measured ScrollTrigger: section#work.work start=top 80% end=bottom top scrub=true pinned", request.User);
     }
 

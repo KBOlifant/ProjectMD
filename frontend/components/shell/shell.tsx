@@ -10,7 +10,7 @@ import { UsageMeter } from "./usage-meter";
 function Brand() {
   return (
     <Link href="/" className="ts-h3 text-ink">
-      Project<span className="text-violet-400">.MD</span>
+      Project<span className="text-rose-400">.MD</span>
     </Link>
   );
 }

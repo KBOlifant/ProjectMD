@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         <div className="relative w-full max-w-md">
           <header className="mb-8 text-center">
             <span className="ts-h2 text-ink">
-              Project<span className="text-violet-400">.MD</span>
+              Project<span className="text-rose-400">.MD</span>
             </span>
           </header>
           <main>{children}</main>

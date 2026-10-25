@@ -144,7 +144,7 @@ function renderList(items: { depth: number; text: string }[], key: number): Reac
     <ul key={key} className="ts-body space-y-1">
       {items.map((item, j) => (
         <li key={j} className="flex gap-2" style={{ paddingLeft: `${Math.min(item.depth, 5) * 1.25}rem` }}>
-          <span aria-hidden="true" className="text-violet-400">•</span>
+          <span aria-hidden="true" className="text-rose-400">•</span>
           <span className="min-w-0 break-words">{inline(item.text)}</span>
         </li>
       ))}

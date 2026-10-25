@@ -8,6 +8,9 @@ namespace ProjectMD.Api.Services.Extraction;
 // Source is "css-animation", "css-transition", "web-animation" or "gsap". Target is a short
 // description of the element such as "h1#title.hero-heading". Name is the @keyframes name (CSS
 // animations) or the property (CSS transitions). Properties are the CSS properties that change.
+// Values are the first and last keyframe values of the properties that matter for rebuilding it
+// (opacity, transform, translate, scale, rotate; for GSAP: opacity, x, y, xPercent, yPercent, scale,
+// rotation), or null when none were read.
 public sealed record MeasuredAnimation(
     string Source,
     string Target,
@@ -16,7 +19,12 @@ public sealed record MeasuredAnimation(
     int? DelayMs,
     string? Easing,
     string? Repeat,
-    IReadOnlyList<string> Properties);
+    IReadOnlyList<string> Properties,
+    IReadOnlyList<MotionValue>? Values = null);
+
+// One property's start and end value as the page reported them, each null when not known (a GSAP
+// "to" tween has no start value in its settings). Raw page text: treat as untrusted.
+public sealed record MotionValue(string Property, string? From, string? To);
 
 // One GSAP ScrollTrigger: the element that triggers it, where it starts and ends (GSAP's own words,
 // for example "top 80%"), whether the animation follows the scrollbar (scrub) and whether the

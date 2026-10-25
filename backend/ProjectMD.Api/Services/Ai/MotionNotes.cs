@@ -24,7 +24,24 @@ public sealed record DetectedAnimation(
     string Trigger,
     string Evidence,
     string Library,
-    string Recreate);
+    string Recreate,
+    int MeasuredRef = 0,
+    AiMotion? Motion = null);
+
+// The model's own reading of how an animation moves, used for the code snippets when the browser
+// measured nothing for it. Every number is optional (null = not seen): MoveX and MoveY are the start
+// offset in pixels (positive = starts right of / below its final spot), FromOpacity and FromScale the
+// start values, Rotate the start angle in degrees, Easing a GSAP ease name (or empty), and the times
+// in milliseconds.
+public sealed record AiMotion(
+    double? MoveX,
+    double? MoveY,
+    double? FromOpacity,
+    double? FromScale,
+    double? Rotate,
+    string Easing,
+    int? DurationMs,
+    int? StaggerMs);
 
 // The AI's reading of the visual design: one overview paragraph, how each font is used, what each
 // main colour is for, and the components (navigation bar, hero, buttons, cards...) with how they
@@ -59,6 +76,7 @@ public static class MotionNotesLimits
     public const int DescriptionChars = 500;
     public const int LibraryChars = 60;
     public const int RecreateChars = 200;
+    public const int MaxMeasuredRef = 25;
 
     public const int DesignOverviewChars = 500;
     public const int MaxTypography = 6;
@@ -98,9 +116,26 @@ public static class MotionNotesSchema
                   "trigger": { "type": "string", "description": "One of: load, scroll, scroll-scrub, hover, click, loop, page-transition, unknown." },
                   "evidence": { "type": "string", "description": "measured if it matches a measured animation or scroll trigger in the facts, otherwise inferred." },
                   "library": { "type": "string", "description": "The library that most likely runs it, from the facts (for example GSAP, CSS, Lenis), or empty." },
-                  "recreate": { "type": "string", "description": "One short hint for rebuilding it, at most 200 characters." }
+                  "recreate": { "type": "string", "description": "One short hint for rebuilding it, at most 200 characters." },
+                  "measuredRef": { "type": "integer", "description": "The number N of the matching 'Measured #N' line in the facts, or 0 when none matches." },
+                  "motion": {
+                    "type": "object",
+                    "description": "How it moves, read from the frames. Use null for anything you cannot see.",
+                    "properties": {
+                      "moveX": { "type": ["number", "null"], "description": "Start offset in pixels, positive = starts to the right of its final spot." },
+                      "moveY": { "type": ["number", "null"], "description": "Start offset in pixels, positive = starts below its final spot." },
+                      "fromOpacity": { "type": ["number", "null"], "description": "Start opacity 0 to 1." },
+                      "fromScale": { "type": ["number", "null"], "description": "Start scale, 1 = normal size." },
+                      "rotate": { "type": ["number", "null"], "description": "Start rotation in degrees." },
+                      "easing": { "type": "string", "description": "A GSAP ease such as power2.out, power3.inOut, expo.out, back.out(1.7), none; or empty." },
+                      "durationMs": { "type": ["integer", "null"], "description": "Duration in milliseconds, only if you can tell." },
+                      "staggerMs": { "type": ["integer", "null"], "description": "Delay between items in milliseconds when several animate one after another." }
+                    },
+                    "required": ["moveX", "moveY", "fromOpacity", "fromScale", "rotate", "easing", "durationMs", "staggerMs"],
+                    "additionalProperties": false
+                  }
                 },
-                "required": ["section", "name", "description", "trigger", "evidence", "library", "recreate"],
+                "required": ["section", "name", "description", "trigger", "evidence", "library", "recreate", "measuredRef", "motion"],
                 "additionalProperties": false
               }
             },
@@ -214,6 +249,18 @@ public static partial class MotionNotesParser
                 evidence = a.Evidence,
                 library = a.Library,
                 recreate = a.Recreate,
+                measuredRef = a.MeasuredRef,
+                motion = a.Motion is null ? null : new
+                {
+                    moveX = a.Motion.MoveX,
+                    moveY = a.Motion.MoveY,
+                    fromOpacity = a.Motion.FromOpacity,
+                    fromScale = a.Motion.FromScale,
+                    rotate = a.Motion.Rotate,
+                    easing = a.Motion.Easing,
+                    durationMs = a.Motion.DurationMs,
+                    staggerMs = a.Motion.StaggerMs,
+                },
             }),
             design = notes.Design is null ? null : new
             {
@@ -249,8 +296,28 @@ public static partial class MotionNotesParser
             trigger,
             evidence,
             Text(item, "library", MotionNotesLimits.LibraryChars),
-            Text(item, "recreate", MotionNotesLimits.RecreateChars));
+            Text(item, "recreate", MotionNotesLimits.RecreateChars),
+            item.TryGetProperty("measuredRef", out var mr) && mr.ValueKind == JsonValueKind.Number && mr.TryGetInt32(out var n)
+                && n is >= 1 and <= MotionNotesLimits.MaxMeasuredRef ? n : 0,
+            item.TryGetProperty("motion", out var m) && m.ValueKind == JsonValueKind.Object ? ReadMotion(m) : null);
     }
+
+    // The model's motion numbers, each kept only when it is a number in a sane range. The easing is
+    // kept only when it is a GSAP ease name this code knows.
+    private static AiMotion ReadMotion(JsonElement m) => new(
+        Number(m, "moveX", -2000, 2000),
+        Number(m, "moveY", -2000, 2000),
+        Number(m, "fromOpacity", 0, 1),
+        Number(m, "fromScale", 0, 10),
+        Number(m, "rotate", -3600, 3600),
+        Pipeline.GsapEase.Normalize(Text(m, "easing", 30)),
+        Number(m, "durationMs", 50, 10_000) is { } d ? (int)Math.Round(d) : null,
+        Number(m, "staggerMs", 0, 2000) is { } s ? (int)Math.Round(s) : null);
+
+    // A number property within [min, max], or null.
+    private static double? Number(JsonElement item, string name, double min, double max) =>
+        item.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var d)
+            && d >= min && d <= max ? d : null;
 
     // The design part.
     private static DesignBreakdown ReadDesign(JsonElement design) => new(

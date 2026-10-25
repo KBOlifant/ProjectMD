@@ -31,7 +31,7 @@ export function TextField({ label, hint, error, trailing, ref, ...inputProps }: 
         {label}
       </label>
       <div
-        className={`flex h-12 items-center gap-3 rounded-md border bg-bg-surface px-4 transition-shadow focus-within:border-violet-400 focus-within:shadow-glow ${
+        className={`flex h-12 items-center gap-3 rounded-md border bg-bg-surface px-4 transition-shadow focus-within:border-rose-400 focus-within:shadow-glow ${
           error ? "border-danger" : "border-border-strong"
         }`}
       >

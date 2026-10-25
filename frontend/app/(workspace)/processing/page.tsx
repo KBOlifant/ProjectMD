@@ -15,7 +15,7 @@ function FailedCard({ host, url, message, onRetry }: { host: string; url: string
   return (
     <div className="w-full max-w-[480px] overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-panel">
       <div className="flex items-center gap-3 border-b border-border-subtle px-6 py-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-violet-700 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
           {initials(host)}
         </span>
         <div className="min-w-0">
