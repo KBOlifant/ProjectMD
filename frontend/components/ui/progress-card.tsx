@@ -6,7 +6,6 @@ export interface ProgressStep {
   title: string;
   detail: string;
   state: "done" | "current" | "queued";
-  time?: string;
 }
 
 interface ProgressCardProps {
@@ -27,12 +26,12 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
   return (
     <div className="w-full max-w-[480px] overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-panel">
       <div className="flex items-center gap-3 border-b border-border-subtle px-6 py-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink">
           {initials(host)}
         </span>
         <div className="min-w-0">
           <p className="ts-mono-ui truncate text-ink">{host}</p>
-          <p className="truncate font-mono text-[11px] leading-4 text-ink-muted">{url}</p>
+          <p className="truncate ts-micro text-ink-muted">{url}</p>
         </div>
         <span
           className={`ts-label ml-auto rounded-pill border px-2.5 py-1 ${
@@ -54,9 +53,9 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={pct}
-          className="mb-4 mt-2 h-[3px] rounded-[3px] bg-bg-raised"
+          className="mb-4 mt-2 h-[3px] rounded-xs bg-bg-raised"
         >
-          <div className="h-full rounded-[3px] bg-mulberry-500" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-xs bg-mulberry-500" style={{ width: `${pct}%` }} />
         </div>
 
         <ol>
@@ -89,7 +88,6 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
                   {s.detail}
                 </p>
               </div>
-              {s.time && <span className="font-mono text-[10px] leading-5 text-ink-dim">{s.time}</span>}
             </li>
           ))}
         </ol>

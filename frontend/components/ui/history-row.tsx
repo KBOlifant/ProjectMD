@@ -11,7 +11,7 @@ export function HistoryRow({ scan }: { scan: Scan }) {
       href={`/results/${scan.id}`}
       className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 transition-colors hover:bg-bg-raised"
     >
-      <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
+      <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink">
         {initials(scan.host)}
       </span>
       <span className="min-w-0 flex-1 basis-48">

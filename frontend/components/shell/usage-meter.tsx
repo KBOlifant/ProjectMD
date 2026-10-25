@@ -28,10 +28,10 @@ export function UsageMeter() {
         aria-valuemin={0}
         aria-valuemax={limit}
         aria-valuenow={Math.min(used, limit)}
-        className="mt-2 h-[3px] rounded-[3px] bg-bg-raised"
+        className="mt-2 h-[3px] rounded-xs bg-bg-raised"
       >
         <div
-          className={`h-full rounded-[3px] ${used >= limit ? "bg-warning" : "bg-mulberry-500"}`}
+          className={`h-full rounded-xs ${used >= limit ? "bg-warning" : "bg-mulberry-500"}`}
           style={{ width: `${pct}%` }}
         />
       </div>

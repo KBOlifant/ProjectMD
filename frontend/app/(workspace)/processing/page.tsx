@@ -15,12 +15,12 @@ function FailedCard({ host, url, message, onRetry }: { host: string; url: string
   return (
     <div className="w-full max-w-[480px] overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-panel">
       <div className="flex items-center gap-3 border-b border-border-subtle px-6 py-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink">
           {initials(host)}
         </span>
         <div className="min-w-0">
           <p className="ts-mono-ui truncate text-ink">{host}</p>
-          <p className="truncate font-mono text-[11px] leading-4 text-ink-muted">{url}</p>
+          <p className="truncate ts-micro text-ink-muted">{url}</p>
         </div>
         <span className="ts-label ml-auto rounded-pill border border-danger px-2.5 py-1 text-danger">Failed</span>
       </div>

@@ -91,7 +91,7 @@ export function ResultsView({ id }: { id?: string }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink">
+        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink">
           {initials(scan.host)}
         </span>
         <div className="min-w-0 flex-1 basis-56">

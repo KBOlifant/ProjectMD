@@ -60,7 +60,7 @@ function inline(text: string, inTable = false): ReactNode[] {
       flush();
       let code = text.slice(i + ticks, end).trim();
       if (inTable) code = code.replaceAll("\\|", "|");
-      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 font-mono text-[12px] text-ink">{code}</code>);
+      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 ts-code text-ink">{code}</code>);
       i = end + ticks;
     } else if (c === "*") {
       const marker = text.startsWith("**", i) ? "**" : "*";

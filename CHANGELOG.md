@@ -4,6 +4,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+## Small text uses the design tokens
+
+- **Small labels and progress bars now use the shared styles.** No visible change; it keeps sizes in one place.
+
 ## Honest progress bar
 
 - **The progress bar no longer shows 100% too early.** It waits at 95% until the scan is really saved, and the made-up step times are gone.

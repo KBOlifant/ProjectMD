@@ -2,7 +2,7 @@
 export function TechChip({ name, highlighted = false }: { name: string; highlighted?: boolean }) {
   return (
     <span
-      className={`inline-block rounded-sm border px-2 py-0.5 font-mono text-[11px] leading-4 ${
+      className={`inline-block rounded-sm border px-2 py-0.5 ts-micro ${
         highlighted
           ? "border-mulberry-500 bg-fig-500 text-ink"
           : "border-border-strong bg-bg-raised text-ink-muted"
@@ -22,7 +22,7 @@ export function ConfidenceBadge({ value }: { value: number }) {
         ? "bg-bg-raised text-warning"
         : "bg-bg-raised text-ink-muted";
   return (
-    <span className={`ts-mono-ui rounded-sm px-2 py-0.5 text-[11px] leading-4 ${tone}`}>
+    <span className={`ts-micro rounded-sm px-2 py-0.5 font-medium ${tone}`}>
       {value}% confidence
     </span>
   );
