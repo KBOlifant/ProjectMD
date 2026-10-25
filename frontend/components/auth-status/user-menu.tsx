@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { getIdToken, signOutUser } from "@/app/functions/auth/auth-service";
 import { useAuth } from "@/app/functions/auth/useAuth";
 import type { Role } from "@/app/functions/rbac/roles";
+import { copyText } from "@/components/results/use-copy";
 import { Button } from "@/components/ui/button";
 
 // Turns an email into a 2-letter avatar label: first letters of the first two name parts
@@ -20,7 +21,7 @@ function Avatar({ email }: { email: string | null }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-8 flex-none place-items-center rounded-md bg-fig-500 font-mono text-[11px] font-medium text-ink"
+      className="grid size-8 flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink"
     >
       {emailInitials(email)}
     </span>
@@ -50,8 +51,7 @@ function CopyTokenButton() {
     try {
       const token = await getIdToken(true);
       if (!token) throw new Error("no token");
-      await navigator.clipboard.writeText(token);
-      setState("copied");
+      setState((await copyText(token)) ? "copied" : "failed");
     } catch {
       setState("failed");
     }
