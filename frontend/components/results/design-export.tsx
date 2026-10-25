@@ -1,6 +1,7 @@
 "use client";
 
 import { EXPORT_FORMATS, type ExportFormat } from "@/lib/design-export";
+import { downloadText } from "@/lib/download";
 import type { DesignSystem } from "@/lib/types";
 
 interface Props {
@@ -12,15 +13,9 @@ interface Props {
 
 const BLOCKED_REASON = "Your account cannot export scans.";
 
-// Saves text as a file through a temporary link. Nothing is stored in the app.
+// Saves one export format as its file. Nothing is stored in the app.
 function download(format: ExportFormat, text: string) {
-  const blob = new Blob([text], { type: format.mime });
-  const href = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = format.filename;
-  a.click();
-  URL.revokeObjectURL(href);
+  downloadText(format.filename, text, format.mime);
 }
 
 const BUTTON = "ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50";

@@ -8,12 +8,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, CopyIcon, DownloadIcon } from "@/components/ui/icons";
 import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
 import { splitDesignSections } from "@/lib/design-sections";
+import { downloadText } from "@/lib/download";
 import { formatDate, formatSeconds, initials } from "@/lib/format";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { AnimationsPanel, hasAnimationData } from "./animations-panel";
 import { ComponentsPanel, hasComponentData } from "./components-panel";
 import { DesignPanel, hasDesignData } from "./design-panel";
 import { MarkdownPreview } from "./markdown-preview";
+import { copyText } from "./use-copy";
 
 type Tab = "preview" | "design" | "components" | "animations" | "raw";
 
@@ -63,28 +65,18 @@ export function ResultsView({ id }: { id?: string }) {
     );
   }
 
-  // Copies the scan's markdown to the clipboard and flashes "Copied"/"Copy blocked" for 1.5s. Stores nothing.
+  // Copies the scan's markdown to the clipboard (with the old-style fallback when the clipboard API
+  // is blocked) and flashes "Copied"/"Copy blocked" for 1.5s. Stores nothing.
   async function copy() {
     if (!canExport) return;
-    try {
-      await navigator.clipboard.writeText(scan!.markdown);
-      setCopyState("copied");
-    } catch {
-      setCopyState("failed");
-    }
+    setCopyState((await copyText(scan!.markdown)) ? "copied" : "failed");
     setTimeout(() => setCopyState("idle"), 1500);
   }
 
   // Downloads the markdown as <host>.md or <host>.txt (chosen format) via a temporary file link. Nothing is stored in the app.
   function download() {
     if (!canExport) return;
-    const blob = new Blob([scan!.markdown], { type: format === "md" ? "text/markdown" : "text/plain" });
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = `${scan!.host}.${format}`;
-    a.click();
-    URL.revokeObjectURL(href);
+    downloadText(`${scan!.host}.${format}`, scan!.markdown, format === "md" ? "text/markdown" : "text/plain");
   }
 
   // Lets the left/right arrow keys move between the tabs (wrapping round). Stores nothing.

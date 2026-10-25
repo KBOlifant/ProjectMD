@@ -4,6 +4,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+## One copy and download helper
+
+- **Copy and download work the same everywhere.** The results page copy button now also works in browsers that block the clipboard.
+
 ## Clearer scan error messages
 
 - **A refused scan now says why.** Running out of today's AI allowance and sites that block or fail to load now show their own message instead of a general one.
