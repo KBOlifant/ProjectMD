@@ -23,6 +23,18 @@ export const TOTAL_MS = PIPELINE_STEPS.reduce((sum, s) => sum + s.ms, 0);
 
 export type StepState = "done" | "current" | "queued";
 
+// Highest percentage shown before the scan has really finished. The steps are a timed animation,
+// and in api mode the server can take far longer than TOTAL_MS, so the bar must not read 100%
+// while it is still waiting for the result.
+export const WAITING_MAX_PCT = 95;
+
+// Percentage for the progress bar: follows the step animation up to WAITING_MAX_PCT, and only
+// reaches 100 once the finished scan exists. Pure calculation; stores nothing.
+export function progressPercent(elapsed: number, complete: boolean): number {
+  if (complete) return 100;
+  return Math.min(WAITING_MAX_PCT, (elapsed / TOTAL_MS) * 100);
+}
+
 // Given how many ms have elapsed, returns the state ("done" | "current" | "queued") of each
 // pipeline step in order, for the progress card. Pure calculation; stores nothing.
 export function stepStates(elapsed: number): StepState[] {

@@ -5,8 +5,8 @@ import { useScan } from "@/components/scan-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressCard, type ProgressStep } from "@/components/ui/progress-card";
-import { formatSeconds, initials } from "@/lib/format";
-import { PIPELINE_STEPS, stepStates, TOTAL_MS } from "@/lib/scan";
+import { initials } from "@/lib/format";
+import { PIPELINE_STEPS, progressPercent, stepStates } from "@/lib/scan";
 
 // Card shown instead of the progress card when generating the docs failed. Same frame and header
 // as the progress card, with the error message and a "Try again" button (the caller clears the
@@ -37,7 +37,8 @@ function FailedCard({ host, url, message, onRetry }: { host: string; url: string
 }
 
 // /processing page: shows the live progress card for the scan in progress (read from ScanProvider).
-// Maps the elapsed time to each pipeline step's state. Cancel clears the session and returns home.
+// Maps the elapsed time to each pipeline step's state. The steps are a timed animation, not measured
+// stages, so no per-step times are shown and the bar stops short of 100% until the scan exists. Cancel clears the session and returns home.
 // If generating the docs failed (`session.error`) it shows the error with "Try again", which
 // clears the session and returns to Generate. Stores nothing itself; the finished scan is saved by
 // ScanProvider.
@@ -61,7 +62,6 @@ export default function ProcessingPage() {
     title: s.title,
     detail: states[i] === "done" ? s.done : states[i] === "current" ? s.active : "Queued",
     state: states[i],
-    time: states[i] === "done" ? formatSeconds(s.ms) : undefined,
   }));
   const host = new URL(session.url).hostname.replace(/^www\./, "");
 
@@ -87,7 +87,7 @@ export default function ProcessingPage() {
         host={host}
         url={session.url}
         steps={steps}
-        progress={(session.elapsed / TOTAL_MS) * 100}
+        progress={progressPercent(session.elapsed, complete)}
         complete={complete}
         resultsHref={complete ? `/results/${session.scanId}` : null}
         onCancel={() => {

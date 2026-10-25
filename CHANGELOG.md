@@ -4,6 +4,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+## Honest progress bar
+
+- **The progress bar no longer shows 100% too early.** It waits at 95% until the scan is really saved, and the made-up step times are gone.
+
 ## One copy and download helper
 
 - **Copy and download work the same everywhere.** The results page copy button now also works in browsers that block the clipboard.
