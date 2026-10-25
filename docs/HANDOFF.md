@@ -11,28 +11,8 @@ Paste a public URL, get Markdown documentation plus a Design tab. Next.js websit
 - **Verified:** 992 backend tests pass; website lints and builds; a live scan of tailwindcss.com finds 12 colours. **Not yet checked by eye:** the Design tab on a real scan (click a swatch, check fonts render).
 
 ## Next, one feature at a time (commit each, then push)
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-1. **Component previews: DONE, rebuilt** (`Services/Extraction/Components/` captures element trees with computed styles and `ComponentPreviewBuilder` turns them into HTML/CSS; `Services/Ai/ComponentSanitizer.cs` cleans the result; `components/results/components-panel.tsx` shows them). No AI is involved any more. Not yet compared side by side with a real site in a browser (the browser pane hung). Possible polish: hover/focus capture, icons (SVG), real text widths.
+1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
 1b. **Design export: DONE** (`frontend/lib/design-export.ts` + `.check.ts`, `components/results/design-export.tsx`): Figma tokens (Tokens Studio JSON), CSS variables and Tailwind v3 config from the Design tab. Not yet imported into Figma by hand; Tokens Studio's import format is from memory of its docs, so confirm with one real import. A direct push into a Figma file would need the Figma connector authorised (claude.ai connector settings).
-=======
-1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
->>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
-=======
-1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
->>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
-=======
-1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
->>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
-=======
-1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
->>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
-=======
-1. **Component previews: DONE** (`Services/Extraction/Components/`, `Services/Ai/Component*.cs`, `components/results/components-panel.tsx`). Not yet checked by eye in a signed-in browser. Possible polish: hover/focus capture, a kill-switch setting, taller frames for big cards.
->>>>>>> parent of 85b628f (Rebuild component previews from the real page elements so they look like the originals)
 2. **Animations: DONE** (`Services/Pipeline/AnimationReport.cs`, `AnimationSnippets.cs`, `components/results/animations-panel.tsx`; deterministic estimate and templated GSAP / Framer Motion snippets, no extra AI call). Not yet checked by eye. Old notes follow: capture and AI notes already exist (see commits `f0d3f07`, `ded71e9`, `89ffe56`). Missing: a dedicated tab, and an estimate of whether each effect looks like GSAP or Framer Motion with a copyable snippet. Check what the Results page already shows before building.
 Test Groq freely (credits are not real money), but keep calls small.
 
