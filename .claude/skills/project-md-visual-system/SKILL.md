@@ -23,14 +23,14 @@ Project MD is a precise dark-mode tool with monospace headings and a restrained 
 
 ## Type
 
-- JetBrains Mono: `ts-display`, `ts-h1` to `ts-h3`, `ts-stat`, `ts-label` (uppercase, tracked), `ts-mono-ui`, `ts-code`
+- JetBrains Mono: `ts-display`, `ts-h1` to `ts-h3`, `ts-stat`, `ts-label` (uppercase, tracked), `ts-mono-ui`, `ts-code`, `ts-micro` (11px: initials tiles, chips, small URLs)
 - Inter: `ts-body`, `ts-body-strong`, `ts-small`
 - Use a `ts-*` class, never ad hoc font sizes. Build hierarchy with size and weight.
 
 ## Rules
 
 - Use token classes (`bg-bg-surface`, `text-ink-muted`, `rounded-md`), never raw hex or arbitrary values for colour, radius or type. Add a token in `globals.css` first if one is missing.
-- Radii: `sm 4`, `md 8`, `lg 12`, `xl 16`, `pill`.
+- Radii: `xs 3` (thin progress bars), `sm 4`, `md 8`, `lg 12`, `xl 16`, `pill`.
 - Surfaces are flat with a one-pixel border. `shadow-panel` is for floating cards; `shadow-glow` only for focus on the URL box.
 - The `hero-glow` utility is the one gradient. Use it on the Generate hero and the auth backdrop only.
 - One exception to "no raw colours": the component preview frame uses fixed white and near-black backgrounds because it shows someone else's site, not app UI.

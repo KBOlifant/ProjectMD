@@ -20,7 +20,7 @@ Data and maths: `frontend/lib/scan.ts`. Display: `frontend/components/ui/progres
 
 ## States
 
-`stepStates(elapsed)` returns `"done" | "current" | "queued"` for each step. There is exactly one `current` step while running. Done steps show a check; queued steps show "Queued". No per-step times are shown, because the times would be invented. `ProgressStep.time` stays optional for when real timings exist.
+`stepStates(elapsed)` returns `"done" | "current" | "queued"` for each step. There is exactly one `current` step while running. Done steps show a check; queued steps show "Queued". No per-step times are shown, because the times would be invented. Add a time field back only when the backend sends real ones.
 
 ## Important: this is not real progress
 
