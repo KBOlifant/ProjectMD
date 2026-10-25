@@ -9,8 +9,10 @@ import type { ScanProvider } from "./scan-provider";
 export const apiScanProvider: ScanProvider = {
   // POST /api/scans { url } -> Scan. On failure it rejects with an Error whose message is ready to
   // show: 403 unverified -> "Verify your email to continue.", 403 role -> "Your account is
-  // read-only.", 429 quota -> "You've used this month's scans.", other 429 -> "Too many requests.
-  // Try again shortly.", 400 -> the server's own message, unreachable server -> "Can't reach the server".
+  // read-only.", 429 quota -> "You've used this month's scans.", 429 budget -> the daily AI
+  // allowance message, other 429 -> "Too many requests. Try again shortly.", 400 and reason "extract"
+  // (page blocked, unreachable or an HTTP error) -> the server's own message, unreachable server ->
+  // "Can't reach the server".
   async generate(url) {
     try {
       return await apiFetch<Scan>("/api/scans", { method: "POST", body: JSON.stringify({ url }) });

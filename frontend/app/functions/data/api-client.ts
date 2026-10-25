@@ -11,10 +11,32 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080").rep
 const NETWORK_MESSAGE = "Can't reach the server. Check your connection and try again.";
 const SESSION_MESSAGE = "Your session has expired. Sign in again.";
 
-// The machine-readable `reason` extension the backend adds to some 400, 403, 409 and 429 responses.
-// `self` and `last-admin` come from the admin role endpoint (changing your own role, removing the
-// last admin).
-export type ApiErrorReason = "unverified" | "role" | "quota" | "self" | "last-admin";
+// The machine-readable `reason` extension the backend adds to some 400, 403, 409, 429 and 502
+// responses. `self` and `last-admin` come from the admin role endpoint (changing your own role,
+// removing the last admin). The scan endpoint adds `url` (bad URL), `extract` (the page could not
+// be fetched or documented), `rate` (too many scans a minute) and `budget` (daily AI allowance used up).
+export type ApiErrorReason =
+  | "unverified"
+  | "role"
+  | "quota"
+  | "rate"
+  | "budget"
+  | "url"
+  | "extract"
+  | "self"
+  | "last-admin";
+
+const REASONS: readonly ApiErrorReason[] = [
+  "unverified",
+  "role",
+  "quota",
+  "rate",
+  "budget",
+  "url",
+  "extract",
+  "self",
+  "last-admin",
+];
 
 // A failed API call. `status` is the HTTP status (0 when the server could not be reached), `title`
 // and `detail` come from the ProblemDetails body, and `reason` from its `reason` extension.
@@ -42,13 +64,7 @@ function text(value: unknown): string | undefined {
 
 // Returns the value when it is one of the reasons the backend uses, otherwise undefined.
 function toReason(value: unknown): ApiErrorReason | undefined {
-  return value === "unverified" ||
-    value === "role" ||
-    value === "quota" ||
-    value === "self" ||
-    value === "last-admin"
-    ? value
-    : undefined;
+  return (REASONS as readonly unknown[]).includes(value) ? (value as ApiErrorReason) : undefined;
 }
 
 // Reads the ProblemDetails fields (title, detail, reason) out of an error response. A body that is
@@ -119,9 +135,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 }
 
 // Turns any error from apiFetch into a short message that is safe to show in the UI. Server detail
-// text is only used for 400 (the validation messages are written for users); everything else gets
-// fixed wording, or `fallback` when nothing more specific applies. Anything that is not an
-// ApiError gets `fallback`.
+// text is only used for 400 and for reason "extract" (the backend writes those messages for users,
+// for example "This site blocks automated scanners..."); everything else gets fixed wording, or
+// `fallback` when nothing more specific applies. Anything that is not an ApiError gets `fallback`.
 export function apiErrorMessage(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
   if (err.status === 0) return NETWORK_MESSAGE;
@@ -132,8 +148,11 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
     return "You don't have permission to do that.";
   }
   if (err.status === 429) {
-    return err.reason === "quota" ? "You've used this month's scans." : "Too many requests. Try again shortly.";
+    if (err.reason === "quota") return "You've used this month's scans.";
+    if (err.reason === "budget") return "Today's AI allowance is used up. Try again tomorrow.";
+    return "Too many requests. Try again shortly.";
   }
+  if (err.reason === "extract") return err.detail || fallback;
   if (err.status === 400) return err.detail || fallback;
   return fallback;
 }

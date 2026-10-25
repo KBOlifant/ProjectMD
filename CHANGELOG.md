@@ -4,6 +4,10 @@ A plain-language list of what was added and why. Newest first. Each item matches
 
 ## Coming next
 
+## Clearer scan error messages
+
+- **A refused scan now says why.** Running out of today's AI allowance and sites that block or fail to load now show their own message instead of a general one.
+
 ## Animations tab
 
 - **A new Animations tab lists the page's animations.** Each one shows its name and place on the page, what starts it (page load, scrolling, hover...), whether it was measured by the browser or only read from the screenshots, and the AI's description and rebuild hint. The libraries the browser found on the page (GSAP, Lenis...) are listed at the top.
