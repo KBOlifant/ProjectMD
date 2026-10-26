@@ -67,6 +67,31 @@ internal static class AnimationSnippets
         };
     }
 
+    // Plain CSS for the trigger: a @keyframes animation for anything that plays on its own, and a
+    // transition (with the matching pseudo-class) for hover/click. Used when the animation doesn't
+    // look like it is running through GSAP or Framer Motion at all.
+    public static string Css(string trigger, int durationMs)
+    {
+        var d = Seconds(durationMs);
+        return trigger switch
+        {
+            "scroll" or "load" =>
+                $"@keyframes reveal {{\n  from {{ opacity: 0; transform: translateY(40px); }}\n  to {{ opacity: 1; transform: translateY(0); }}\n}}\n\n.target {{\n  animation: reveal {d}s ease-out {(trigger == "scroll" ? "both" : "forwards")};\n}}",
+            "scroll-scrub" =>
+                ".target {\n  animation-timeline: scroll();\n  animation-name: scroll-move;\n  animation-fill-mode: both;\n}\n\n@keyframes scroll-move {\n  from { transform: translateY(0); }\n  to { transform: translateY(-120px); }\n}",
+            "hover" =>
+                $".target {{\n  transition: transform {d}s;\n}}\n.target:hover {{\n  transform: scale(1.05);\n}}",
+            "click" =>
+                $".target:active {{\n  transform: scale(0.95);\n  transition: transform {d}s;\n}}",
+            "loop" =>
+                ".target {\n  animation: spin 8s linear infinite;\n}\n\n@keyframes spin {\n  to { transform: rotate(360deg); }\n}",
+            "page-transition" =>
+                $"@keyframes fade {{\n  0% {{ opacity: 1; }}\n  50% {{ opacity: 0; }}\n  100% {{ opacity: 1; }}\n}}\n\n.target {{\n  animation: fade {d}s ease-in-out;\n}}",
+            _ =>
+                $"@keyframes fade-in {{\n  from {{ opacity: 0; }}\n  to {{ opacity: 1; }}\n}}\n\n.target {{\n  animation: fade-in {d}s ease-out forwards;\n}}",
+        };
+    }
+
     // Milliseconds as seconds with at most two decimals, for example 600 -> "0.6".
     internal static string Seconds(int durationMs) =>
         (Math.Clamp(durationMs, 100, 5000) / 1000.0).ToString("0.##", CultureInfo.InvariantCulture);

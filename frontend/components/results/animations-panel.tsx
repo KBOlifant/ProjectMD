@@ -7,12 +7,25 @@ import type { AnimationItem, AnimationReport } from "@/lib/types";
 import { TabHeader } from "./tab-header";
 import { useCopy } from "./use-copy";
 
-type Flavour = "framer" | "gsap";
+type Flavour = "framer" | "gsap" | "css";
 
 const FLAVOURS: { id: Flavour; label: string; copy: string }[] = [
   { id: "framer", label: "Framer Motion", copy: "Copy Framer" },
   { id: "gsap", label: "GSAP", copy: "Copy GSAP" },
+  { id: "css", label: "CSS", copy: "Copy CSS" },
 ];
+
+// The code for one animation in the chosen flavour.
+function codeFor(item: AnimationItem, flavour: Flavour): string {
+  if (flavour === "gsap") return item.gsap;
+  if (flavour === "css") return item.css;
+  return item.framerMotion;
+}
+
+// Entrance stagger for the card list and the stat row: each child fades and rises in slightly
+// after the one before it, instead of the whole tab appearing at once.
+const STAGGER_LIST = { animate: { transition: { staggerChildren: 0.08 } } };
+const STAGGER_ITEM = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 
 const TRIGGER_LABELS: Record<string, string> = {
   load: "Page load",
@@ -97,10 +110,10 @@ function Card({
   libraries: readonly string[];
   onCopy: (text: string, label: string) => void;
 }) {
-  const code = flavour === "gsap" ? item.gsap : item.framerMotion;
+  const code = codeFor(item, flavour);
   const meta = FLAVOURS.find((f) => f.id === flavour)!;
   return (
-    <li className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+    <motion.li variants={STAGGER_ITEM} transition={{ duration: 0.4, ease: "easeOut" }} className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
         <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
         <div className="min-w-0 flex-1 basis-40">
@@ -132,7 +145,7 @@ function Card({
         {item.recreate && <p className="ts-small text-ink-muted">How to rebuild: {item.recreate}</p>}
       </div>
       <pre className="ts-code overflow-x-auto border-t border-border-subtle bg-bg-sidebar p-5 text-ink-body">{code}</pre>
-    </li>
+    </motion.li>
   );
 }
 
@@ -174,24 +187,34 @@ export function AnimationsPanel({ report }: { report: AnimationReport }) {
       />
       <p role="status" aria-live="polite" className="ts-mono-ui min-h-5 text-success">{message}</p>
       {report.summary && <p className="ts-body max-w-3xl text-ink-body">{report.summary}</p>}
-      <dl className="grid overflow-hidden rounded-xl border border-border-subtle bg-bg-surface sm:grid-cols-3 sm:divide-x sm:divide-border-subtle">
+      <motion.dl
+        initial="initial"
+        animate="animate"
+        variants={STAGGER_LIST}
+        className="grid overflow-hidden rounded-xl border border-border-subtle bg-bg-surface sm:grid-cols-3 sm:divide-x sm:divide-border-subtle"
+      >
         {stats.map((s) => (
-          <div key={s.caption} className="border-b border-border-subtle px-5 py-4 last:border-b-0 sm:border-b-0">
+          <motion.div
+            key={s.caption}
+            variants={STAGGER_ITEM}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="border-b border-border-subtle px-5 py-4 last:border-b-0 sm:border-b-0"
+          >
             <dd className="ts-stat truncate text-ink" title={s.value}>{s.value}</dd>
             <dt className="ts-small text-ink-muted">{s.caption}</dt>
-          </div>
+          </motion.div>
         ))}
-      </dl>
+      </motion.dl>
       <p className="ts-small text-ink-muted">
         The library is a guess and the code is a starting point built from the page&apos;s typical timing. Replace <code>.target</code> with your own
         element and tune the values against the real site.
       </p>
       {report.items.length > 0 ? (
-        <ol className="space-y-4">
+        <motion.ol initial="initial" animate="animate" variants={STAGGER_LIST} className="space-y-4">
           {report.items.map((item, i) => (
             <Card key={`${item.name}-${i}`} item={item} index={i} flavour={flavour} libraries={report.libraries} onCopy={copy} />
           ))}
-        </ol>
+        </motion.ol>
       ) : (
         <p className="ts-body text-ink-muted">No individual animations were described for this page.</p>
       )}

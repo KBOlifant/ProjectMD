@@ -57,6 +57,7 @@ export interface AnimationItem {
   estimate: string;
   gsap: string;
   framerMotion: string;
+  css: string;
 }
 
 export interface AnimationReport {

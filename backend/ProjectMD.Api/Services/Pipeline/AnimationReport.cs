@@ -5,7 +5,7 @@ namespace ProjectMD.Api.Services.Pipeline;
 
 // One animation for the website's Animations tab: the AI's description (Section, Name, Description,
 // Trigger, Evidence, Library, Recreate), our estimate of the library that most likely runs it
-// ("GSAP", "Framer Motion" or "CSS"), and ready-to-copy code for GSAP and for Framer Motion.
+// ("GSAP", "Framer Motion" or "CSS"), and ready-to-copy code for GSAP, Framer Motion and plain CSS.
 public sealed record AnimationItem(
     string Section,
     string Name,
@@ -16,7 +16,8 @@ public sealed record AnimationItem(
     string Recreate,
     string Estimate,
     string Gsap,
-    string FramerMotion);
+    string FramerMotion,
+    string Css);
 
 // The animations of a scan: the AI's one-line summary, the libraries the browser measured on the
 // page, and the animations with their estimates and code.
@@ -53,7 +54,8 @@ public static class AnimationReportBuilder
                 a.Recreate,
                 Estimate(a, libraries),
                 AnimationSnippets.Gsap(a.Trigger, duration),
-                AnimationSnippets.FramerMotion(a.Trigger, duration)))
+                AnimationSnippets.FramerMotion(a.Trigger, duration),
+                AnimationSnippets.Css(a.Trigger, duration)))
             .ToList();
         return new AnimationReport(notes?.Summary ?? string.Empty, libraries, items);
     }
