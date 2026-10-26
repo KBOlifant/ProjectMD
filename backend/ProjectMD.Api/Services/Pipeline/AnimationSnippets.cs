@@ -6,6 +6,12 @@ namespace ProjectMD.Api.Services.Pipeline;
 // the trigger word (one of MotionNotesLimits.Triggers) and a duration in seconds, so no text from
 // the page or from the AI can end up inside the code. The result is shown as text and copied; it is
 // never run by the server. The ".target" selector is a placeholder the reader replaces.
+//
+// Every trigger word has its own case. "load" used to fall through to the same catch-all branch as
+// "page-transition" and "unknown", and the AI's most common trigger by far is "load" (most measured
+// durations also land on the 600ms default), so nearly every animation on every scan rendered the
+// exact same snippet. Keep each trigger distinct, and keep the catch-all for truly unrecognised
+// values only.
 internal static class AnimationSnippets
 {
     // The default duration in milliseconds when the browser measured none.
@@ -27,8 +33,12 @@ internal static class AnimationSnippets
                 $"const el = document.querySelector(\".target\");\nel.addEventListener(\"click\", () => {{\n  gsap.fromTo(el, {{ scale: 0.95 }}, {{ scale: 1, duration: {d}, ease: \"back.out(2)\" }});\n}});",
             "loop" =>
                 "gsap.to(\".target\", {\n  rotation: 360,\n  duration: 8,\n  ease: \"none\",\n  repeat: -1,\n});",
-            _ =>
+            "load" =>
                 $"gsap.from(\".target\", {{\n  opacity: 0,\n  y: 40,\n  duration: {d},\n  ease: \"power2.out\",\n}});",
+            "page-transition" =>
+                $"gsap.timeline()\n  .to(\".target\", {{ opacity: 0, duration: {d}, ease: \"power1.in\" }})\n  .set(\".target\", {{ /* swap page content here */ }})\n  .to(\".target\", {{ opacity: 1, duration: {d}, ease: \"power1.out\" }});",
+            _ =>
+                $"gsap.from(\".target\", {{\n  opacity: 0,\n  duration: {d},\n  ease: \"power1.out\",\n}});",
         };
     }
 
@@ -48,8 +58,12 @@ internal static class AnimationSnippets
                 $"<motion.button\n  whileTap={{{{ scale: 0.95 }}}}\n  transition={{{{ duration: {d} }}}}\n/>",
             "loop" =>
                 "<motion.div\n  animate={{ rotate: 360 }}\n  transition={{ duration: 8, repeat: Infinity, ease: \"linear\" }}\n/>",
-            _ =>
+            "load" =>
                 $"<motion.div\n  initial={{{{ opacity: 0, y: 40 }}}}\n  animate={{{{ opacity: 1, y: 0 }}}}\n  transition={{{{ duration: {d}, ease: \"easeOut\" }}}}\n/>",
+            "page-transition" =>
+                $"<AnimatePresence mode=\"wait\">\n  <motion.div\n    key={{pageKey}}\n    initial={{{{ opacity: 0 }}}}\n    animate={{{{ opacity: 1 }}}}\n    exit={{{{ opacity: 0 }}}}\n    transition={{{{ duration: {d} }}}}\n  />\n</AnimatePresence>",
+            _ =>
+                $"<motion.div\n  initial={{{{ opacity: 0 }}}}\n  animate={{{{ opacity: 1 }}}}\n  transition={{{{ duration: {d}, ease: \"easeOut\" }}}}\n/>",
         };
     }
 
