@@ -1,6 +1,8 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { PaletteIcon } from "@/components/ui/icons";
+import { STAGGER_LIST } from "@/lib/motion";
 import { hasExportableDesign } from "@/lib/design-export";
 import type { DesignSystem } from "@/lib/types";
 import { DesignColours } from "./design-colours";
@@ -40,12 +42,12 @@ export function DesignPanel({ design, canExport = true }: { design: DesignSystem
         aside={<CountBadge icon={<PaletteIcon size={13} />}>{count} {count === 1 ? "token" : "tokens"} captured</CountBadge>}
       />
       <p role="status" aria-live="polite" className="ts-mono-ui min-h-5 text-success">{message}</p>
-      <div className="flex flex-wrap gap-4">
+      <motion.div initial="initial" animate="animate" variants={STAGGER_LIST} className="flex flex-wrap gap-4">
         {hasExportableDesign(design) && <DesignExport design={design} onCopy={copy} canExport={canExport} />}
         <DesignColours colors={design.colors} onCopy={copy} />
         <DesignFonts fonts={design.fonts} onCopy={copy} />
         <DesignTokens design={design} onCopy={copy} />
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,10 +12,12 @@ import { Eyebrow } from "@/components/shell/page-frame";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HeroBackdrop } from "@/components/ui/hero-backdrop";
 import { HistoryRow } from "@/components/ui/history-row";
+import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { StatStrip } from "@/components/ui/stat-tile";
 import { UrlInput } from "@/components/ui/url-input";
 import { downloadScan } from "@/lib/download";
 import { formatSeconds } from "@/lib/format";
+import { STAGGER_ITEM, STAGGER_LIST } from "@/lib/motion";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { parseUrl } from "@/lib/url";
 
@@ -69,31 +72,35 @@ export default function GeneratePage() {
 
   return (
     <>
+      <SmoothScroll />
       <section className="relative isolate flex min-h-[640px] items-center justify-center overflow-hidden border-b border-border-subtle px-4 py-20 md:min-h-screen">
         <HeroBackdrop />
-        <div className="w-full max-w-[700px] text-center">
-          <span className="ts-label inline-flex items-center gap-2 rounded-pill border border-border-strong bg-bg-base/70 px-3 py-1.5 text-ink-body">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500" />
-            AI website intelligence
-          </span>
-          <h1 className="ts-hero mt-5 text-ink">
-            <span className="block">Project</span>
-            <span className="-mt-1 block text-violet-400">MD</span>
-          </h1>
-          <p className="mx-auto mt-8 max-w-[620px] text-[17px] leading-[30px] text-ink-body">
-            Enter a URL and Project MD will inspect the stack, content, components, design tokens, and motion—then
-            package everything for your team.
-          </p>
-          <div className="mt-8">
-            <UrlInput
-              value={value}
-              onChange={setValue}
-              onSubmit={submit}
-              error={error}
-              disabled={!canCreate}
-              notice={denyReason ? <ScanBlockedNotice reason={denyReason} /> : undefined}
-            />
-          </div>
+        {/* Outer div drifts slower than the page (Locomotive parallax); the inner one staggers in. */}
+        <div data-scroll data-scroll-speed="-0.2" className="w-full max-w-[700px]">
+          <motion.div initial="initial" animate="animate" variants={STAGGER_LIST} className="text-center">
+            <motion.span variants={STAGGER_ITEM} className="ts-label inline-flex items-center gap-2 rounded-pill border border-border-strong bg-bg-base/70 px-3 py-1.5 text-ink-body">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500" />
+              AI website intelligence
+            </motion.span>
+            <motion.h1 variants={STAGGER_ITEM} className="ts-hero mt-5 text-ink">
+              <span className="block">Project</span>
+              <span className="-mt-1 block text-violet-400">MD</span>
+            </motion.h1>
+            <motion.p variants={STAGGER_ITEM} className="mx-auto mt-8 max-w-[620px] text-[17px] leading-[30px] text-ink-body">
+              Enter a URL and Project MD will inspect the stack, content, components, design tokens, and motion—then
+              package everything for your team.
+            </motion.p>
+            <motion.div variants={STAGGER_ITEM} className="mt-8">
+              <UrlInput
+                value={value}
+                onChange={setValue}
+                onSubmit={submit}
+                error={error}
+                disabled={!canCreate}
+                notice={denyReason ? <ScanBlockedNotice reason={denyReason} /> : undefined}
+              />
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
@@ -103,10 +110,16 @@ export default function GeneratePage() {
           <h2 id="get" className="ts-h1 mt-3 text-ink">
             A complete handoff, not another audit.
           </h2>
-          <ul className="mt-8 grid overflow-hidden rounded-xl border border-border-subtle bg-bg-surface md:grid-cols-3 md:divide-x md:divide-border-subtle">
+          <motion.ul
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={STAGGER_LIST}
+            className="mt-8 grid overflow-hidden rounded-xl border border-border-subtle bg-bg-surface md:grid-cols-3 md:divide-x md:divide-border-subtle">
             {DELIVERABLES.map((d, i) => (
-              <li
+              <motion.li
                 key={d.title}
+                variants={STAGGER_ITEM}
                 className="flex min-h-[190px] flex-col justify-between gap-8 border-b border-border-subtle p-6 last:border-b-0 md:border-b-0"
               >
                 <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">
@@ -116,13 +129,20 @@ export default function GeneratePage() {
                   <h3 className="ts-h3 text-ink">{d.title}</h3>
                   <p className="ts-body mt-2 text-ink-muted">{d.text}</p>
                 </div>
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
         </section>
 
         <section aria-labelledby="recent" className="space-y-6">
-          <StatStrip stats={stats} />
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <StatStrip stats={stats} />
+          </motion.div>
           <div className="flex items-center justify-between">
             <h2 id="recent" className="ts-label text-plum-300">
               Recent scans
@@ -136,17 +156,18 @@ export default function GeneratePage() {
           {!hydrated ? null : n === 0 ? (
             <EmptyState>{loadError ?? "No scans yet. Enter a URL above to generate your first .md file."}</EmptyState>
           ) : (
-            <div className="space-y-3">
+            <motion.div initial="initial" whileInView="animate" viewport={{ once: true }} variants={STAGGER_LIST} className="space-y-3">
               {history.slice(0, 3).map((scan) => (
-                <HistoryRow
-                  key={scan.id}
-                  scan={scan}
-                  onDownload={() => downloadScan(scan)}
-                  downloadDisabled={!canExport}
-                  downloadHint="Your account cannot export scans."
-                />
+                <motion.div key={scan.id} variants={STAGGER_ITEM}>
+                  <HistoryRow
+                    scan={scan}
+                    onDownload={() => downloadScan(scan)}
+                    downloadDisabled={!canExport}
+                    downloadHint="Your account cannot export scans."
+                  />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </section>
       </div>

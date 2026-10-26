@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { CopyIcon } from "@/components/ui/icons";
+import { STAGGER_ITEM, STAGGER_LIST } from "@/lib/motion";
 import type { AnimationItem, AnimationReport } from "@/lib/types";
 import { TabHeader } from "./tab-header";
 import { useCopy } from "./use-copy";
@@ -21,11 +22,6 @@ function codeFor(item: AnimationItem, flavour: Flavour): string {
   if (flavour === "css") return item.css;
   return item.framerMotion;
 }
-
-// Entrance stagger for the card list and the stat row: each child fades and rises in slightly
-// after the one before it, instead of the whole tab appearing at once.
-const STAGGER_LIST = { animate: { transition: { staggerChildren: 0.08 } } };
-const STAGGER_ITEM = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 
 const TRIGGER_LABELS: Record<string, string> = {
   load: "Page load",
@@ -113,7 +109,7 @@ function Card({
   const code = codeFor(item, flavour);
   const meta = FLAVOURS.find((f) => f.id === flavour)!;
   return (
-    <motion.li variants={STAGGER_ITEM} transition={{ duration: 0.4, ease: "easeOut" }} className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+    <motion.li variants={STAGGER_ITEM} className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
         <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
         <div className="min-w-0 flex-1 basis-40">
@@ -197,7 +193,6 @@ export function AnimationsPanel({ report }: { report: AnimationReport }) {
           <motion.div
             key={s.caption}
             variants={STAGGER_ITEM}
-            transition={{ duration: 0.4, ease: "easeOut" }}
             className="border-b border-border-subtle px-5 py-4 last:border-b-0 sm:border-b-0"
           >
             <dd className="ts-stat truncate text-ink" title={s.value}>{s.value}</dd>
