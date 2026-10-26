@@ -37,8 +37,8 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
       }}
     >
       <div
-        className={`flex items-center gap-2 rounded-xl border bg-bg-surface/95 p-1.5 shadow-panel transition-colors focus-within:border-violet-400 ${
-          error ? "border-danger" : "border-border-strong"
+        className={`flex items-center gap-2 rounded-xl border bg-white/10 p-1.5 shadow-panel backdrop-blur-lg backdrop-saturate-200 transition-colors focus-within:border-violet-400 ${
+          error ? "border-danger" : "border-white/25"
         } ${disabled ? "opacity-60" : ""}`}
       >
         <label className="flex h-12 min-w-0 flex-1 items-center gap-3 px-3">
@@ -57,7 +57,7 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
             value={value}
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
-            className="ts-mono-ui min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none! placeholder:text-ink-muted disabled:cursor-not-allowed"
+            className="ts-mono-ui min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none! placeholder:text-zinc-200 disabled:cursor-not-allowed"
           />
         </label>
         <Button type="submit" variant="accent" className="h-12 flex-none px-5" disabled={disabled}>
