@@ -20,7 +20,7 @@ const BUTTON = "ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 te
 // Tailwind config, each to copy or download. Builds the text on click from the scan; stores nothing.
 export function DesignExport({ design, onCopy, canExport = true }: Props) {
   return (
-    <section aria-labelledby="design-export" className="rounded-xl border border-border-subtle bg-bg-surface p-5">
+    <section aria-labelledby="design-export" className="basis-full rounded-2xl border border-border-subtle bg-bg-surface p-5">
       <h3 id="design-export" className="ts-h3 text-ink">Export design system</h3>
       <p className="ts-small mt-1 text-ink-muted">Use the captured tokens wherever your team works.</p>
       {!canExport && <p className="ts-small mt-2 text-warning">{BLOCKED_REASON}</p>}

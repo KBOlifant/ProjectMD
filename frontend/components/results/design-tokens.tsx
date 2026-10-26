@@ -24,9 +24,9 @@ function safeShadow(value: string): string | undefined {
   return /^[\w\s.,()#%/-]+$/.test(value) ? value : undefined;
 }
 
-function Group({ id, title, meta, children, className }: { id: string; title: string; meta?: string; children: ReactNode; className?: string }) {
+function Group({ id, title, meta, children, wide }: { id: string; title: string; meta?: string; children: ReactNode; wide?: boolean }) {
   return (
-    <DesignCard id={id} title={title} meta={meta} className={className}>
+    <DesignCard id={id} title={title} meta={meta} wide={wide}>
       <div className="space-y-3">{children}</div>
     </DesignCard>
   );
@@ -42,12 +42,7 @@ export function DesignTokens({ design, onCopy }: Props) {
   const breakpoints = design.breakpoints ?? [];
   const framework = design.utilityFramework;
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {framework && (
-        <Group id="design-framework" title="Utility framework">
-          <span className="ts-mono-ui inline-block rounded-md border border-border-strong bg-bg-raised px-3 py-1 text-ink">{framework}</span>
-        </Group>
-      )}
+    <>
       {radii.length > 0 && (
         <Group id="design-radii" title="Corner radii" meta={`${radii.length} values`}>
           <ul className="grid grid-cols-2 gap-3">
@@ -56,6 +51,15 @@ export function DesignTokens({ design, onCopy }: Props) {
                 <div className="size-9 flex-none border border-border-strong bg-bg-raised" style={{ borderRadius: safeLength(r) }} />
                 <span className="font-mono text-[10px] text-ink-muted">{r}</span>
               </li>
+            ))}
+          </ul>
+        </Group>
+      )}
+      {breakpoints.length > 0 && (
+        <Group id="design-breakpoints" title="Breakpoints" meta={`${breakpoints.length} ranges`}>
+          <ul className="divide-y divide-border-subtle">
+            {breakpoints.map((b) => (
+              <li key={b} className="py-2 font-mono text-[11px] text-ink-body first:pt-0 last:pb-0">{b}</li>
             ))}
           </ul>
         </Group>
@@ -73,7 +77,7 @@ export function DesignTokens({ design, onCopy }: Props) {
         </Group>
       )}
       {spacing.length > 0 && (
-        <Group id="design-spacing" title="Spacing scale" meta={`${spacing.length} steps`} className="md:col-span-2">
+        <Group id="design-spacing" title="Spacing scale" meta={`${spacing.length} steps`}>
           <ul className="space-y-1.5">
             {spacing.map((s) => {
               const px = Number.parseFloat(s);
@@ -88,8 +92,13 @@ export function DesignTokens({ design, onCopy }: Props) {
           </ul>
         </Group>
       )}
+      {framework && (
+        <Group id="design-framework" title="Utility framework">
+          <span className="ts-mono-ui inline-block rounded-md border border-border-strong bg-bg-raised px-3 py-1 text-ink">{framework}</span>
+        </Group>
+      )}
       {vars.length > 0 && (
-        <Group id="design-vars" title="CSS variables" meta={`${vars.length} variables`} className="md:col-span-2 lg:col-span-3">
+        <Group id="design-vars" title="CSS variables" meta={`${vars.length} variables`} wide>
           <Button variant="secondary" className="!px-3 !py-1.5" onClick={() => onCopy(rootBlock(vars), ":root block")}>
             <CopyIcon /> Copy all as :root block
           </Button>
@@ -109,15 +118,6 @@ export function DesignTokens({ design, onCopy }: Props) {
           </ul>
         </Group>
       )}
-      {breakpoints.length > 0 && (
-        <Group id="design-breakpoints" title="Breakpoints" meta={`${breakpoints.length} ranges`}>
-          <ul className="divide-y divide-border-subtle">
-            {breakpoints.map((b) => (
-              <li key={b} className="py-2 font-mono text-[11px] text-ink-body first:pt-0 last:pb-0">{b}</li>
-            ))}
-          </ul>
-        </Group>
-      )}
-    </div>
+    </>
   );
 }

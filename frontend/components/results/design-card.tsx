@@ -7,13 +7,15 @@ interface DesignCardProps {
   meta?: string;
   children: ReactNode;
   className?: string;
+  // Takes a full row instead of sharing one with other tiles.
+  wide?: boolean;
 }
 
-// Bordered card with a title row, used for each section of the Design tab (Colours, Fonts, Corner
+// Bordered tile with a title row, used for each section of the Design tab (Colours, Fonts, Corner
 // radii...). `id` ties the heading to the section for screen readers. Stores nothing.
-export function DesignCard({ id, title, meta, children, className = "" }: DesignCardProps) {
+export function DesignCard({ id, title, meta, children, className = "", wide = false }: DesignCardProps) {
   return (
-    <section aria-labelledby={id} className={`rounded-xl border border-border-subtle bg-bg-surface p-5 ${className}`}>
+    <section aria-labelledby={id} className={`${wide ? "basis-full" : "min-w-0 flex-[1_1_260px]"} rounded-2xl border border-border-subtle bg-bg-surface p-5 ${className}`}>
       <header className="mb-4 flex items-baseline justify-between gap-3">
         <h3 id={id} className="ts-h3 text-ink">
           {title}

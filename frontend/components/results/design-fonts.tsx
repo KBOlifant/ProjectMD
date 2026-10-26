@@ -120,7 +120,7 @@ export function DesignFonts({ fonts, onCopy }: Props) {
   const list = (fonts ?? []).filter((f) => f && typeof f.family === "string" && f.family.trim());
   if (list.length === 0) return null;
   return (
-    <DesignCard id="design-fonts" title="Fonts" meta={`${list.length} ${list.length === 1 ? "family" : "families"}`}>
+    <DesignCard id="design-fonts" title="Fonts" meta={`${list.length} ${list.length === 1 ? "family" : "families"}`}  wide>
       <div className="grid gap-3 lg:grid-cols-2">
         {list.map((f) => (
           <FontCard key={f.family} font={f} onCopy={onCopy} />

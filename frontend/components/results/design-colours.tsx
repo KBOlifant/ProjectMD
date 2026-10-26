@@ -20,7 +20,7 @@ export function DesignColours({ colors, onCopy }: Props) {
   if (clean.length === 0) return null;
   const { main, others } = pickMainColours(clean);
   return (
-    <DesignCard id="design-colours" title="Colours" meta={`${clean.length} ${clean.length === 1 ? "value" : "values"}`} className="space-y-3">
+    <DesignCard id="design-colours" title="Colours" meta={`${clean.length} ${clean.length === 1 ? "value" : "values"}`} wide className="space-y-3">
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {main.map((c) => (
           <li key={c.hex}>
