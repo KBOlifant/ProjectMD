@@ -13,8 +13,9 @@ public interface IScreenshotStore
 
 // The Cloudinary-backed IScreenshotStore. The account comes from configuration only (backend/.env):
 // either one Cloudinary__Url / CLOUDINARY_URL ("cloudinary://key:secret@cloud") or the three parts
-// Cloudinary__CloudName, Cloudinary__ApiKey and Cloudinary__ApiSecret. With none of them set,
-// every upload is skipped and scans simply have no screenshot.
+// Cloudinary__CloudName, Cloudinary__ApiKey and Cloudinary__ApiSecret (Cloudinary's own
+// CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET names work too). Without a
+// complete set, every upload is skipped and scans simply have no screenshot.
 public sealed class CloudinaryScreenshotStore : IScreenshotStore
 {
     private const string Folder = "projectmd/screenshots";
@@ -29,7 +30,8 @@ public sealed class CloudinaryScreenshotStore : IScreenshotStore
         _cloudinary = Create(configuration);
         if (_cloudinary is null)
         {
-            _logger.LogInformation("Cloudinary is not configured; scans will have no screenshot");
+            _logger.LogWarning(
+                "Cloudinary is not fully configured (needs a URL, or cloud name + API key + API secret); scans will have no screenshot");
         }
     }
 
@@ -70,8 +72,9 @@ public sealed class CloudinaryScreenshotStore : IScreenshotStore
             return new Cloudinary(url) { Api = { Secure = true } };
         }
 
-        var section = configuration.GetSection("Cloudinary");
-        var (cloud, key, secret) = (section["CloudName"], section["ApiKey"], section["ApiSecret"]);
+        var cloud = configuration["Cloudinary:CloudName"] ?? configuration["CLOUDINARY_CLOUD_NAME"];
+        var key = configuration["Cloudinary:ApiKey"] ?? configuration["CLOUDINARY_API_KEY"];
+        var secret = configuration["Cloudinary:ApiSecret"] ?? configuration["CLOUDINARY_API_SECRET"];
         if (string.IsNullOrWhiteSpace(cloud) || string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(secret))
         {
             return null;

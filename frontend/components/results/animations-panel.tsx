@@ -19,7 +19,8 @@ const FLAVOURS: { id: Flavour; label: string; copy: string }[] = [
 // The code for one animation in the chosen flavour.
 function codeFor(item: AnimationItem, flavour: Flavour): string {
   if (flavour === "gsap") return item.gsap;
-  if (flavour === "css") return item.css;
+  // Scans saved before the CSS option existed have no css field.
+  if (flavour === "css") return item.css || "/* No CSS version for this scan. Run a new scan to get one. */";
   return item.framerMotion;
 }
 
