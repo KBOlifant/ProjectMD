@@ -1,8 +1,13 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useId, type ReactNode } from "react";
-import { Button } from "./button";
+import { buttonClass } from "./button";
 import { ArrowRightIcon, EnterIcon } from "./icons";
+
+// The arrow shifts right and grows slightly on hover; driven by the button's own hover state (see
+// `variants`/`whileHover` below), not a separate hover handler.
+const ARROW_VARIANTS = { rest: { x: 0, scale: 1 }, hover: { x: 3, scale: 1.15 } };
 
 interface UrlInputProps {
   value: string;
@@ -36,7 +41,9 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
         onSubmit();
       }}
     >
-      <div
+      <motion.div
+        whileHover={disabled ? undefined : { scale: 1.015 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
         className={`flex items-center gap-2 rounded-xl border bg-white/10 p-1.5 shadow-panel backdrop-blur-lg backdrop-saturate-200 transition-colors focus-within:border-violet-400 ${
           error ? "border-danger" : "border-white/25"
         } ${disabled ? "opacity-60" : ""}`}
@@ -60,11 +67,20 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
             className="ts-mono-ui min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none! placeholder:text-zinc-200 disabled:cursor-not-allowed"
           />
         </label>
-        <Button type="submit" variant="accent" className="h-12 flex-none px-5" disabled={disabled}>
+        <motion.button
+          type="submit"
+          disabled={disabled}
+          initial="rest"
+          whileHover="hover"
+          animate="rest"
+          className={buttonClass("accent", "h-12 flex-none px-5")}
+        >
           Analyze website
-          <ArrowRightIcon size={14} />
-        </Button>
-      </div>
+          <motion.span variants={ARROW_VARIANTS} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-flex">
+            <ArrowRightIcon size={14} />
+          </motion.span>
+        </motion.button>
+      </motion.div>
       {error ? (
         <p id={hintId} role="alert" className="ts-small mt-3 text-center text-danger">
           {error}
