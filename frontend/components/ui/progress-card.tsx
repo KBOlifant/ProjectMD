@@ -1,13 +1,10 @@
+"use client";
+
+import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { Button, ButtonLink } from "./button";
-import { ArrowRightIcon, CheckIcon } from "./icons";
+import { ArrowRightIcon } from "./icons";
 import { initials } from "@/lib/format";
-
-export interface ProgressStep {
-  title: string;
-  detail: string;
-  state: "done" | "current" | "queued";
-}
 
 type CardStatus = "scanning" | "complete" | "failed";
 
@@ -18,9 +15,24 @@ const STATUS_TONE: Record<CardStatus, string> = {
   failed: "border-danger text-danger",
 };
 
-// Frame shared by the progress card and the failed card: rounded panel, 520px max. Stores nothing.
-export function ScanCardFrame({ children }: { children: ReactNode }) {
-  return <div className="w-full max-w-[520px] overflow-hidden rounded-xl border border-border-strong bg-bg-surface shadow-panel">{children}</div>;
+// Frame shared by the progress card and the failed card: rounded panel, 520px max. While
+// `glowing`, a gold-to-purple ring orbits the card (a rotating conic gradient behind it, hidden by
+// the card's own background except for a sliver), to show the real generation call is in flight.
+export function ScanCardFrame({ children, glowing = false }: { children: ReactNode; glowing?: boolean }) {
+  return (
+    <div className="relative w-full max-w-[520px]">
+      {glowing && (
+        <motion.div
+          aria-hidden="true"
+          className="absolute -inset-[2px] rounded-xl blur-[1px]"
+          style={{ background: "conic-gradient(from 0deg, #e5b94c, #9e4abb, #e5b94c)" }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        />
+      )}
+      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface shadow-panel">{children}</div>
+    </div>
+  );
 }
 
 // Header row of the scan card: initials tile, host, URL and a status pill. Stores nothing.
@@ -42,23 +54,32 @@ export function ScanCardHeader({ host, url, status }: { host: string; url: strin
   );
 }
 
+// The status line under the bar: changes wording as the fake ramp approaches its ceiling, since
+// there are no real pipeline steps to report (the AI call's own timing is unknown until it answers).
+function progressLabel(pct: number, complete: boolean): string {
+  if (complete) return "Documentation ready";
+  if (pct >= 80) return "Almost there, finishing up…";
+  if (pct >= 35) return "Writing the documentation…";
+  return "Analyzing the site…";
+}
+
 interface ProgressCardProps {
   host: string;
   url: string;
-  steps: ProgressStep[];
   progress: number;
   complete: boolean;
   onCancel: () => void;
   resultsHref: string | null;
 }
 
-// Card showing scan progress: host/url header, percentage bar, the numbered pipeline steps with
-// their state, a Cancel button and a "View results" button that unlocks when complete.
-// Purely presentational; all data comes in through props and nothing is stored.
-export function ProgressCard({ host, url, steps, progress, complete, onCancel, resultsHref }: ProgressCardProps) {
+// Card showing scan progress: host/url header, one thick percentage bar (no per-step breakdown,
+// since the real call's timing can't be predicted), a Cancel button and a "View results" button
+// that unlocks when complete. Purely presentational; all data comes in through props and nothing
+// is stored.
+export function ProgressCard({ host, url, progress, complete, onCancel, resultsHref }: ProgressCardProps) {
   const pct = Math.round(progress);
   return (
-    <ScanCardFrame>
+    <ScanCardFrame glowing={!complete}>
       <ScanCardHeader host={host} url={url} status={complete ? "complete" : "scanning"} />
 
       <div className="px-5 pb-5 pt-4">
@@ -72,44 +93,17 @@ export function ProgressCard({ host, url, steps, progress, complete, onCancel, r
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={pct}
-          className="mb-5 mt-2.5 h-[3px] rounded-[3px] bg-border-strong"
+          className="mt-2.5 h-3 overflow-hidden rounded-pill bg-border-strong"
         >
-          <div className="h-full rounded-[3px] bg-plum-400" style={{ width: `${pct}%` }} />
+          <motion.div
+            className="h-full rounded-pill bg-gradient-to-r from-plum-400 to-violet-500"
+            animate={{ width: `${pct}%` }}
+            transition={{ ease: "easeOut", duration: 0.3 }}
+          />
         </div>
-
-        <ol>
-          {steps.map((s, i) => (
-            <li key={s.title} className="flex gap-3 border-b border-border-subtle py-3.5">
-              <span
-                aria-hidden="true"
-                className={`grid size-[22px] flex-none place-items-center rounded-full border font-mono text-[9px] ${
-                  s.state === "queued"
-                    ? "border-border-strong text-ink-dim"
-                    : s.state === "current"
-                      ? "border-violet-400 text-ink"
-                      : "border-violet-500 bg-violet-700 text-ink"
-                }`}
-              >
-                {s.state === "done" ? <CheckIcon size={11} /> : i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p
-                  className={`ts-mono-ui ${
-                    s.state === "current" ? "font-semibold text-ink" : s.state === "done" ? "text-ink-body" : "text-ink-dim"
-                  }`}
-                >
-                  {s.title}
-                </p>
-                <p
-                  aria-live={s.state === "current" ? "polite" : undefined}
-                  className={`ts-small ${s.state === "current" ? "text-ink-body" : s.state === "done" ? "text-ink-muted" : "text-ink-dim"}`}
-                >
-                  {s.detail}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <p aria-live="polite" className="ts-small mt-3 text-ink-muted">
+          {progressLabel(pct, complete)}
+        </p>
 
         <div className="mt-5 flex justify-end gap-3">
           <Button variant="ghost" onClick={onCancel}>
