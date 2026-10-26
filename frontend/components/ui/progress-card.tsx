@@ -15,20 +15,26 @@ const STATUS_TONE: Record<CardStatus, string> = {
   failed: "border-danger text-danger",
 };
 
-// Frame shared by the progress card and the failed card: rounded panel, 520px max. While
-// `glowing`, a gold-to-purple ring orbits the card (a rotating conic gradient behind it, hidden by
-// the card's own background except for a sliver), to show the real generation call is in flight.
+const GLOW_GRADIENT = "conic-gradient(from 0deg, #e5b94c, #9e4abb, #e5b94c)";
+
+// Frame shared by the progress card and the failed card: rounded panel, 720px max. While
+// `glowing`, a gold-to-purple ring orbits the card to show the real generation call is in flight.
+// It's built from two layers sharing one rotation: a soft blurred halo (bleeds past the card's
+// edges) and a thin line just outside them (the card's own opaque background covers everything
+// inside it, so only that sliver shows) -- an outline that glows and spins, not a filled rectangle.
 export function ScanCardFrame({ children, glowing = false }: { children: ReactNode; glowing?: boolean }) {
   return (
-    <div className="relative w-full max-w-[520px]">
+    <div className="relative w-full max-w-[720px]">
       {glowing && (
         <motion.div
           aria-hidden="true"
-          className="absolute -inset-[2px] rounded-xl blur-[1px]"
-          style={{ background: "conic-gradient(from 0deg, #e5b94c, #9e4abb, #e5b94c)" }}
+          className="absolute -inset-3"
           animate={{ rotate: 360 }}
           transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        />
+        >
+          <div className="absolute inset-0 rounded-[28px] opacity-70 blur-xl" style={{ background: GLOW_GRADIENT }} />
+          <div className="absolute inset-[10px] rounded-xl" style={{ background: GLOW_GRADIENT }} />
+        </motion.div>
       )}
       <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface shadow-panel">{children}</div>
     </div>
@@ -38,13 +44,13 @@ export function ScanCardFrame({ children, glowing = false }: { children: ReactNo
 // Header row of the scan card: initials tile, host, URL and a status pill. Stores nothing.
 export function ScanCardHeader({ host, url, status }: { host: string; url: string; status: CardStatus }) {
   return (
-    <div className="flex items-center gap-3 border-b border-border-subtle px-5 py-4">
-      <span className="grid size-10 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink">
+    <div className="flex items-center gap-4 border-b border-border-subtle px-7 py-5">
+      <span className="grid size-12 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[13px] font-semibold text-ink">
         {initials(host)}
       </span>
       <div className="min-w-0">
-        <p className="ts-mono-ui truncate font-semibold text-ink">{host}</p>
-        <p className="truncate font-mono text-[10px] leading-4 text-ink-muted">{url}</p>
+        <p className="ts-mono-ui truncate text-[15px] font-semibold text-ink">{host}</p>
+        <p className="truncate font-mono text-[11px] leading-4 text-ink-muted">{url}</p>
       </div>
       <span className={`ts-label ml-auto inline-flex flex-none items-center gap-1.5 rounded-pill border px-2.5 py-1 ${STATUS_TONE[status]}`}>
         {status === "scanning" && <span aria-hidden="true" className="size-1.5 rounded-full bg-plum-400" />}
@@ -82,7 +88,7 @@ export function ProgressCard({ host, url, progress, complete, onCancel, resultsH
     <ScanCardFrame glowing={!complete}>
       <ScanCardHeader host={host} url={url} status={complete ? "complete" : "scanning"} />
 
-      <div className="px-5 pb-5 pt-4">
+      <div className="px-7 pb-7 pt-6">
         <div className="ts-label flex justify-between text-ink-muted">
           <span>Analysis progress</span>
           <span className="text-ink">{pct}%</span>
@@ -93,7 +99,7 @@ export function ProgressCard({ host, url, progress, complete, onCancel, resultsH
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={pct}
-          className="mt-2.5 h-3 overflow-hidden rounded-pill bg-border-strong"
+          className="mt-3 h-4 overflow-hidden rounded-pill bg-border-strong"
         >
           <motion.div
             className="h-full rounded-pill bg-gradient-to-r from-plum-400 to-violet-500"
@@ -101,11 +107,11 @@ export function ProgressCard({ host, url, progress, complete, onCancel, resultsH
             transition={{ ease: "easeOut", duration: 0.3 }}
           />
         </div>
-        <p aria-live="polite" className="ts-small mt-3 text-ink-muted">
+        <p aria-live="polite" className="ts-body mt-4 text-ink-muted">
           {progressLabel(pct, complete)}
         </p>
 
-        <div className="mt-5 flex justify-end gap-3">
+        <div className="mt-7 flex justify-end gap-3">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>

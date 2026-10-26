@@ -14,8 +14,10 @@ interface NavItemProps {
 }
 
 // A single navigation link with icon, active state and optional count badge. The rail layout marks
-// the active item with a small dot under the icon; it shares one layoutId across all items, so
-// Framer Motion slides it to the new item instead of popping between them. Stores nothing.
+// the active item with a small glowing dot, given room below the icon so it doesn't crowd it (see
+// the rail's own gap in main-nav.tsx). It shares one layoutId across all items, so Framer Motion
+// slides it to the new item instead of popping between them, and it mounts a little oversized
+// (initial scale 1.6 easing to 1) so it visibly pulses as it settles into the new spot. Stores nothing.
 export function NavItem({ href, label, icon, active = false, count, layout = "rail" }: NavItemProps) {
   const hasCount = count !== undefined && count > 0;
 
@@ -53,8 +55,10 @@ export function NavItem({ href, label, icon, active = false, count, layout = "ra
         <motion.span
           layoutId="nav-active-dot"
           aria-hidden="true"
+          initial={{ scale: 1.6 }}
+          animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          className="absolute -bottom-1.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-violet-500"
+          className="absolute -bottom-3 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-violet-500 shadow-[0_0_8px_2px_var(--color-violet-glow)]"
         />
       )}
       {hasCount && (

@@ -29,7 +29,7 @@ export function MainNav({ row = false }: { row?: boolean }) {
   return (
     <nav
       aria-label="Main"
-      className={row ? "-mx-2 flex gap-1 overflow-x-auto py-2" : "flex flex-col gap-2"}
+      className={row ? "-mx-2 flex gap-1 overflow-x-auto py-2" : "flex flex-col gap-3.5"}
     >
       {items.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
