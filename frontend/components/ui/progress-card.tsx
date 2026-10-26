@@ -15,27 +15,12 @@ const STATUS_TONE: Record<CardStatus, string> = {
   failed: "border-danger text-danger",
 };
 
-const GLOW_GRADIENT = "conic-gradient(from 0deg, #e5b94c, #9e4abb, #e5b94c)";
-
 // Frame shared by the progress card and the failed card: rounded panel, 720px max. While
-// `glowing`, a gold-to-purple ring orbits the card to show the real generation call is in flight.
-// It's built from two layers sharing one rotation: a soft blurred halo (bleeds past the card's
-// edges) and a thin line just outside them (the card's own opaque background covers everything
-// inside it, so only that sliver shows) -- an outline that glows and spins, not a filled rectangle.
+// `glowing`, the `glow-border` class (globals.css) draws a gold-to-purple border on ::after whose
+// gradient spins, plus a blurred halo, to show the real generation call is in flight.
 export function ScanCardFrame({ children, glowing = false }: { children: ReactNode; glowing?: boolean }) {
   return (
-    <div className="relative w-full max-w-[720px]">
-      {glowing && (
-        <motion.div
-          aria-hidden="true"
-          className="absolute -inset-3"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        >
-          <div className="absolute inset-0 rounded-[28px] opacity-70 blur-xl" style={{ background: GLOW_GRADIENT }} />
-          <div className="absolute inset-[10px] rounded-xl" style={{ background: GLOW_GRADIENT }} />
-        </motion.div>
-      )}
+    <div className={`relative w-full max-w-[720px] rounded-xl ${glowing ? "glow-border" : ""}`}>
       <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface shadow-panel">{children}</div>
     </div>
   );

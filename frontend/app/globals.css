@@ -40,7 +40,7 @@
   --danger: #ef6a80;
 
   --shadow-glow: 0 0 24px 0 rgba(158, 74, 187, 0.35);
-  --shadow-panel: 0 24px 64px 0 rgba(0, 0, 0, 0.55);
+  --shadow-panel: 0 0px 64px 2px rgba(145, 9, 9, 0.55);
 
   --rail-width: 72px;
 }
@@ -178,6 +178,51 @@ body {
 :focus-visible {
   outline: 2px solid var(--violet-400);
   outline-offset: 2px;
+}
+
+/* Spinning glow border (the Processing card while generating). ::after is a 2px ring: a conic
+   gradient masked down to the padding box only. ::before is the same gradient blurred behind the
+   element for the halo; the element's own opaque content hides it except at the edges. Both spin
+   by animating the gradient's start angle (registered with @property so it can interpolate). */
+@property --glow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes glow-spin {
+  to {
+    --glow-angle: 360deg;
+  }
+}
+
+.glow-border {
+  position: relative;
+  isolation: isolate;
+}
+
+.glow-border::before,
+.glow-border::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--glow-angle), #e5b94c, #9e4abb 40%, transparent 55%, #9e4abb 70%, #e5b94c);
+  animation: glow-spin 3s linear infinite;
+  pointer-events: none;
+}
+
+.glow-border::before {
+  z-index: -1;
+  filter: blur(14px);
+  opacity: 0.75;
+}
+
+.glow-border::after {
+  padding: 2px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
 /* Thin scrollbars for the Results panes, which scroll inside the page frame. */
