@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { CopyIcon } from "@/components/ui/icons";
 import type { AnimationItem, AnimationReport } from "@/lib/types";
@@ -52,6 +53,15 @@ function Card({ item, index, flavour, onCopy }: { item: AnimationItem; index: nu
           <CopyIcon size={13} />
           {meta.copy}
         </button>
+      </div>
+      {/* Placeholder preview until real captured animations are rendered here. */}
+      <div className="grid h-24 place-items-center border-b border-border-subtle bg-bg-base px-8">
+        <motion.div
+          aria-hidden="true"
+          className="size-8 rounded-md bg-violet-500"
+          animate={{ x: [-80, 80, -80], rotate: [0, 180, 360] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
       <div className="space-y-3 px-5 py-4">
         <div className="flex flex-wrap gap-2">
