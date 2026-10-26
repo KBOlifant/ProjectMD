@@ -99,8 +99,8 @@ ProjectMD.Api.Auth.AuthServiceCollectionExtensions.AddFirebaseAuth(builder.Servi
 
 // ===== BEGIN SCAN SERVICES (owned by skill 16; edit only inside this block) =====
 // Registers the clock, the URL validator, IScanGenerator -> StaticScanGenerator (MOCK data),
-// IUsageService (monthly quota), the quota-checked scan recorder, their settings
-// (Usage:MonthlyLimit, RateLimiting:ScanCreate:PermitsPerMinute) and the per-user rate limit
+// IUsageService (no monthly cap), the scan recorder, their settings
+// (RateLimiting:ScanCreate:PermitsPerMinute) and the per-user rate limit
 // policy for POST /api/scans. See Services/ScanServiceCollectionExtensions.cs.
 ProjectMD.Api.Services.ScanServiceCollectionExtensions.AddScanServices(builder.Services, builder.Configuration);
 // ===== END SCAN SERVICES =====

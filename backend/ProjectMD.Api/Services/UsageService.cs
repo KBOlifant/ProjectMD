@@ -1,29 +1,20 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using ProjectMD.Api.Data;
 using ProjectMD.Api.Dtos;
 
 namespace ProjectMD.Api.Services;
 
-// Settings for the monthly scan allowance, bound from the "Usage" section of configuration.
-public sealed class UsageOptions
-{
-    // Scans a user may create per UTC calendar month (Usage:MonthlyLimit, default 10).
-    public int MonthlyLimit { get; set; } = 10;
-}
-
-// The database-backed IUsageService: counts the user's scans created this UTC month.
+// The database-backed IUsageService: counts the user's scans created this UTC month. There is no
+// monthly cap (see GetAsync).
 public sealed class UsageService : IUsageService
 {
     private readonly AppDbContext _db;
-    private readonly IOptions<UsageOptions> _options;
     private readonly TimeProvider _clock;
 
-    // Receives the database, the configured limit and the clock (replaceable in tests).
-    public UsageService(AppDbContext db, IOptions<UsageOptions> options, TimeProvider clock)
+    // Receives the database and the clock (replaceable in tests).
+    public UsageService(AppDbContext db, TimeProvider clock)
     {
         _db = db;
-        _options = options;
         _clock = clock;
     }
 
@@ -44,6 +35,8 @@ public sealed class UsageService : IUsageService
             .AsNoTracking()
             .CountAsync(s => s.UserId == userId && s.CreatedAt >= monthStart && s.CreatedAt < nextMonthStart, ct);
 
-        return new UsageDto(used, Math.Max(0, _options.Value.MonthlyLimit), nextMonthStart);
+        // No monthly cap: limit is reported as unbounded so the quota checks in ScansController and
+        // ScanRecorder (used >= limit) never trip. Usage:MonthlyLimit in config is no longer read.
+        return new UsageDto(used, int.MaxValue, nextMonthStart);
     }
 }

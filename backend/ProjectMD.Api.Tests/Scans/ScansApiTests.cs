@@ -344,102 +344,19 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
         Assert.Contains(_factory.Logs.Lines, line => line.Contains("example.com"));
     }
 
-    // --- Quota ------------------------------------------------------------------------------------
+    // --- Usage (no monthly cap) ---------------------------------------------------------------------
 
-    // Once the monthly allowance is used the API answers 429 with reason "quota" and saves nothing more.
+    // There is no monthly cap: creating stays 201 well past what the old default limit was.
     [Fact]
-    public async Task Create_over_the_monthly_limit_returns_429_quota()
+    public async Task Create_has_no_monthly_cap()
     {
-        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000);
-        var uid = NewUid("alice");
-        var client = factory.CreateClientFor(uid);
+        var client = _factory.CreateClientFor(NewUid("alice"));
 
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "one.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "two.example.com")).StatusCode);
-        var third = await PostScanAsync(client, "three.example.com");
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
-        Assert.Equal("application/problem+json", third.Content.Headers.ContentType?.MediaType);
-        var problem = await JsonAsync(third);
-        Assert.Equal("quota", problem.GetProperty("reason").GetString());
-        Assert.Equal(2, problem.GetProperty("used").GetInt32());
-        Assert.Equal(2, problem.GetProperty("limit").GetInt32());
-        Assert.Matches(@"^\d{4}-\d{2}-01T00:00:00\.000Z$", problem.GetProperty("resetsAt").GetString());
-        Assert.Equal(2, await factory.CountScansAsync(uid));
-    }
-
-    // Reading and clearing still work after the quota is used up.
-    [Fact]
-    public async Task Reading_and_clearing_still_work_over_the_limit()
-    {
-        using var factory = new ScansApiFactory(monthlyLimit: 1, permitsPerMinute: 1000);
-        var client = factory.CreateClientFor(NewUid("alice"));
-        await PostScanAsync(client, "one.example.com");
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "two.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/scans")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
-
-        // Clearing does not give the allowance back: creating is still refused.
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "two.example.com")).StatusCode);
-    }
-
-    // Each person has their own allowance.
-    [Fact]
-    public async Task Quota_is_per_person()
-    {
-        using var factory = new ScansApiFactory(monthlyLimit: 1, permitsPerMinute: 1000);
-        var alice = factory.CreateClientFor(NewUid("alice"));
-        var bob = factory.CreateClientFor(NewUid("bob"));
-
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(alice, "one.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(alice, "two.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(bob, "one.example.com")).StatusCode);
-    }
-
-    // Scans from earlier months do not use up this month's allowance.
-    [Fact]
-    public async Task Quota_counts_only_the_current_utc_month()
-    {
-        var now = new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
-        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000, clock: new FixedTimeProvider(now));
-        var uid = NewUid("alice");
-        await factory.SeedScanAsync(uid, new DateTime(2026, 9, 30, 23, 59, 59, DateTimeKind.Utc));
-        await factory.SeedScanAsync(uid, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
-        await factory.SeedScanAsync(uid, new DateTime(2025, 10, 14, 12, 0, 0, DateTimeKind.Utc));
-        var client = factory.CreateClientFor(uid);
-
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "one.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "two.example.com")).StatusCode);
-        var third = await PostScanAsync(client, "three.example.com");
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
-        Assert.Equal("2026-11-01T00:00:00.000Z", (await JsonAsync(third)).GetProperty("resetsAt").GetString());
-    }
-
-    // Scans the person cleared from their history still use up the allowance of the month they were
-    // created in, but a cleared scan from an earlier month does not count (same month rule as any scan).
-    [Fact]
-    public async Task Quota_counts_cleared_scans_from_the_current_month_only()
-    {
-        var now = new DateTimeOffset(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
-        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000, clock: new FixedTimeProvider(now));
-        var uid = NewUid("alice");
-        var clearedAt = new DateTime(2026, 10, 10, 9, 0, 0, DateTimeKind.Utc);
-        await factory.SeedScanAsync(uid, new DateTime(2026, 9, 30, 23, 59, 59, DateTimeKind.Utc), deletedAtUtc: clearedAt.AddDays(-20)); // last month, cleared
-        await factory.SeedScanAsync(uid, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), deletedAtUtc: clearedAt);                  // this month, cleared
-        await factory.SeedScanAsync(uid, new DateTime(2026, 10, 5, 8, 0, 0, DateTimeKind.Utc));                                         // this month, visible
-        var client = factory.CreateClientFor(uid);
-
-        Assert.Equal(2, await UsedAsync(client));
-        var response = await PostScanAsync(client, "one.example.com");
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
-        var problem = await JsonAsync(response);
-        Assert.Equal("quota", problem.GetProperty("reason").GetString());
-        Assert.Equal(2, problem.GetProperty("used").GetInt32());
-        Assert.Equal(1, await factory.CountScansAsync(uid));      // only the visible one
-        Assert.Equal(3, await factory.CountAllScansAsync(uid));   // nothing was added or removed
+        for (var i = 0; i < 12; i++)
+        {
+            Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, $"round{i}.example.com")).StatusCode);
+        }
+        Assert.Equal(12, await UsedAsync(client));
     }
 
     // A failed (400) request does not use up any allowance.
@@ -613,48 +530,24 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
         Assert.Empty(await ListedIdsAsync(bobClient));
     }
 
-    // A new scan after clearing still respects the monthly limit, and so does the whole loop
-    // "create, clear, repeat" the old hard delete allowed.
+    // Create, clear, repeat keeps working indefinitely: clearing never refunds usage (cleared rows
+    // still count), but there is no cap to hit either.
     [Fact]
-    public async Task New_scan_after_clearing_still_respects_the_limit()
+    public async Task Create_clear_repeat_never_gets_capped()
     {
-        using var factory = new ScansApiFactory(monthlyLimit: 2, permitsPerMinute: 1000);
-        var uid = NewUid("alice");
-        var client = factory.CreateClientFor(uid);
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "one.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, "two.example.com")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
-
-        var response = await PostScanAsync(client, "three.example.com");
-
-        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
-        var problem = await JsonAsync(response);
-        Assert.Equal("quota", problem.GetProperty("reason").GetString());
-        Assert.Equal(2, problem.GetProperty("used").GetInt32());
-        Assert.Equal(2, problem.GetProperty("limit").GetInt32());
-        Assert.Empty(await ListedIdsAsync(client));
-        Assert.Equal(2, await factory.CountAllScansAsync(uid));
-    }
-
-    // Create, clear, repeat: the (otherwise unthrottled) loop stops at the monthly limit, and the
-    // cleared rows are all still counted.
-    [Fact]
-    public async Task Create_clear_repeat_stops_at_the_monthly_limit()
-    {
-        using var factory = new ScansApiFactory(monthlyLimit: 3, permitsPerMinute: 1000);
+        using var factory = new ScansApiFactory(monthlyLimit: 0, permitsPerMinute: 1000);
         var uid = NewUid("alice");
         var client = factory.CreateClientFor(uid);
 
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < 4; i++)
         {
             Assert.Equal(HttpStatusCode.Created, (await PostScanAsync(client, $"round{i}.example.com")).StatusCode);
             Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync("/api/scans")).StatusCode);
         }
 
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await PostScanAsync(client, "round3.example.com")).StatusCode);
-        Assert.Equal(3, await UsedAsync(client));
+        Assert.Equal(4, await UsedAsync(client));
         Assert.Equal(0, await factory.CountScansAsync(uid));
-        Assert.Equal(3, await factory.CountAllScansAsync(uid));
+        Assert.Equal(4, await factory.CountAllScansAsync(uid));
     }
 
     // Own-data isolation still holds after a clear: Alice clearing her history does not hide Bob's

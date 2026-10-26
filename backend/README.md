@@ -45,7 +45,6 @@ Check it is up: `GET http://localhost:5080/api/health` returns `{ "status": "ok"
 | `Cors:AllowedOrigins` | `["http://localhost:3000"]` | Browser origins allowed to call the API |
 | `Auth:AdminEmails` | `[]` | Bootstrap admin emails, set as a secret (see [Roles in the database](#roles-in-the-database)) |
 | `Auth:DefaultRole` | `member` | Role given to new users (`viewer` or `member`) |
-| `Usage:MonthlyLimit` | `10` | Scans per user per UTC calendar month |
 | `Scanner:Mode` | `static` | `static` (mock), `extract` (real fetch, no AI) or `ai` (see [Scanner modes](#scanner-modes-and-ai-credits)) |
 | `Ai:MaxInputTokens` | `3000` | Hard ceiling for the prompt sent to the model (estimated tokens) |
 | `Ai:MaxOutputTokens` | `800` | Hard cap for the structured JSON answer |

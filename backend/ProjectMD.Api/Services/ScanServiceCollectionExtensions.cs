@@ -11,8 +11,8 @@ namespace ProjectMD.Api.Services;
 public static class ScanServiceCollectionExtensions
 {
     // Registers the clock, the URL validator, the scan generator chosen by Scanner:Mode, the AI
-    // pieces (settings, prompt builder, cache, budget guard, LLM seam), the usage counter, the
-    // quota-checked scan recorder, the settings and the per-user rate limiter.
+    // pieces (settings, prompt builder, cache, budget guard, LLM seam), the usage counter (no
+    // monthly cap), the scan recorder, the settings and the per-user rate limiter.
     //
     // Scanner:Mode picks the IScanGenerator:
     //   static  (default)  the MOCK StaticScanGenerator. Nothing else changes.
@@ -24,7 +24,6 @@ public static class ScanServiceCollectionExtensions
     {
         services.TryAddSingleton(TimeProvider.System);
 
-        services.Configure<UsageOptions>(configuration.GetSection("Usage"));
         services.Configure<ScanRateLimitOptions>(configuration.GetSection("RateLimiting:ScanCreate"));
         services.Configure<ScannerModeOptions>(configuration.GetSection("Scanner"));
 
