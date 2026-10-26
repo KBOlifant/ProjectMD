@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -12,7 +13,9 @@ interface NavItemProps {
   layout?: "rail" | "row";
 }
 
-// A single navigation link with icon, active state and optional count badge. Stores nothing.
+// A single navigation link with icon, active state and optional count badge. The rail layout marks
+// the active item with a small dot under the icon; it shares one layoutId across all items, so
+// Framer Motion slides it to the new item instead of popping between them. Stores nothing.
 export function NavItem({ href, label, icon, active = false, count, layout = "rail" }: NavItemProps) {
   const hasCount = count !== undefined && count > 0;
 
@@ -45,10 +48,15 @@ export function NavItem({ href, label, icon, active = false, count, layout = "ra
           : "border-transparent text-ink-muted hover:bg-bg-surface hover:text-ink"
       }`}
     >
-      {active && (
-        <span aria-hidden="true" className="absolute -left-3.5 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-sm bg-violet-500" />
-      )}
       {icon}
+      {active && (
+        <motion.span
+          layoutId="nav-active-dot"
+          aria-hidden="true"
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className="absolute -bottom-1.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-violet-500"
+        />
+      )}
       {hasCount && (
         <span
           aria-hidden="true"
