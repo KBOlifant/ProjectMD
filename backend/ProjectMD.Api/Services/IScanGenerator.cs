@@ -10,7 +10,8 @@ public sealed record GeneratedScan(
     int Pages,
     IReadOnlyList<ScanTech> Tech,
     string Markdown,
-    ScanAnalysis? Analysis = null);
+    ScanAnalysis? Analysis = null,
+    string? ScreenshotUrl = null);
 
 // Turns an already-validated public URL into the documentation for a scan. Today the only
 // implementation is StaticScanGenerator (MOCK data). A Groq-backed generator will replace it

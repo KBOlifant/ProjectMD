@@ -86,6 +86,7 @@ public static class ScanServiceCollectionExtensions
         }
 
         services.AddExtraction(configuration);
+        services.AddSingleton<IScreenshotStore, CloudinaryScreenshotStore>();
         services.AddScoped<IScanGenerator, PipelineScanGenerator>();
     }
 }

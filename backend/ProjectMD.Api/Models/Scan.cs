@@ -44,4 +44,8 @@ public class Scan
 
     // Captured design and API data (jsonb), or null for scans made before this existed.
     public ScanAnalysis? Analysis { get; set; }
+
+    // Public https address of the site's first-screen screenshot (Cloudinary, max 2048 characters),
+    // or null when none was uploaded.
+    public string? ScreenshotUrl { get; set; }
 }

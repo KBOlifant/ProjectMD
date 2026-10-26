@@ -4,7 +4,7 @@ using ProjectMD.Api.Models;
 namespace ProjectMD.Api.Dtos;
 
 // A scan as the frontend receives it (matches frontend/lib/types.ts). JSON is camelCase:
-// { id, url, host, createdAt, durationMs, confidence, pages, tech: [{ name, highlighted }], markdown }.
+// { id, url, host, createdAt, durationMs, confidence, pages, tech: [{ name, highlighted }], markdown, analysis, screenshotUrl }.
 // Id is a string (the GUID) and createdAt is a UTC ISO-8601 string.
 public record ScanDto(
     string Id,
@@ -16,7 +16,8 @@ public record ScanDto(
     int Pages,
     IReadOnlyList<TechDto> Tech,
     string Markdown,
-    ScanAnalysis? Analysis = null);
+    ScanAnalysis? Analysis = null,
+    string? ScreenshotUrl = null);
 
 // Small mapping helpers from database models to DTOs.
 public static class ScanMappingExtensions
@@ -32,7 +33,8 @@ public static class ScanMappingExtensions
         scan.Pages,
         scan.Tech.Select(t => t.ToDto()).ToList(),
         scan.Markdown,
-        scan.Analysis);
+        scan.Analysis,
+        scan.ScreenshotUrl);
 
     // Converts a stored ScanTech into its DTO.
     public static TechDto ToDto(this ScanTech tech) => new(tech.Name, tech.Highlighted);

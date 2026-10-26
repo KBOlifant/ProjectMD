@@ -13,16 +13,26 @@ interface HistoryRowProps {
   downloadHint?: string;
 }
 
-// One row summarising a saved scan: initials tile, host with confidence badge, up to four tech
+// One row summarising a saved scan: site screenshot (initials tile when there is none), host with confidence badge, up to four tech
 // tags, scan date, page count and a ".MD" download button. The host is a real link to
 // /results/<scan.id> stretched over the whole row; the download button sits above that link so
 // the two never nest. Display only; stores nothing.
 export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloadHint }: HistoryRowProps) {
   return (
     <div className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3.5 transition-colors focus-within:border-border-strong hover:border-border-strong hover:bg-bg-raised">
-      <span className="grid size-10 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink">
-        {initials(scan.host)}
-      </span>
+      {scan.screenshotUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- small remote thumbnail; Cloudinary already serves it sized
+        <img
+          src={scan.screenshotUrl}
+          alt=""
+          loading="lazy"
+          className="h-10 w-16 flex-none rounded-md border border-border-strong object-cover object-top"
+        />
+      ) : (
+        <span className="grid size-10 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink">
+          {initials(scan.host)}
+        </span>
+      )}
       <div className="min-w-0 flex-1 basis-56">
         <div className="flex items-center gap-2">
           <Link

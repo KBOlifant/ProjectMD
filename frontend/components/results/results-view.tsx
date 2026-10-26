@@ -180,7 +180,19 @@ export function ResultsView({ id }: { id?: string }) {
             className="pane-scroll min-h-0 flex-1 px-4 py-7 md:overflow-y-auto md:px-12 md:py-9"
           >
             <div className={tab === "preview" || tab === "raw" ? "max-w-[760px]" : "max-w-[1024px]"}>
-              {tab === "preview" && <MarkdownPreview source={sections.document} />}
+              {tab === "preview" && (
+                <>
+                  {scan.screenshotUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary image, no Next image config needed
+                    <img
+                      src={scan.screenshotUrl}
+                      alt={`Screenshot of ${scan.host}`}
+                      className="mb-7 w-full rounded-lg border border-border-strong"
+                    />
+                  )}
+                  <MarkdownPreview source={sections.document} />
+                </>
+              )}
               {tab === "design" &&
                 (hasDesignData(scan.analysis?.design) ? (
                   <DesignPanel design={scan.analysis.design} canExport={canExport} />

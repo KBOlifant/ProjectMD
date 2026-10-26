@@ -122,7 +122,9 @@ adds `AppUsers.Role` (`varchar(20) NOT NULL DEFAULT 'member'`; existing users be
 `{ version, design, api }` (camelCase JSON of the captured `DesignSystem` and `ApiCatalog`), is capped
 at 64 KB (response shapes are dropped first, then endpoints), has secret-looking CSS variables removed,
 and is returned as `analysis` on every scan. Later features add `components` and `animations` next to
-them; readers ignore unknown properties. Static mode attaches a small sample design. Migrations
+them; readers ignore unknown properties. Static mode attaches a small sample design. `AddScanScreenshot`
+adds `Scans.ScreenshotUrl` (`varchar(2048)`, nullable): the Cloudinary address of the first-screen
+screenshot, uploaded once per scan when `Cloudinary__Url` (or the three `Cloudinary__*` parts) is set. Migrations
 have to be reviewed and applied deliberately; the API never migrates the database on startup.
 
 ### Generating a migration without a database

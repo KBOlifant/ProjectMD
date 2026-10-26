@@ -36,6 +36,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
     private readonly ILogger<PipelineScanGenerator> _logger;
     private readonly IMotionAnalyzer? _motion;
     private readonly IComponentAnalyzer? _components;
+    private readonly IScreenshotStore? _screenshots;
 
     // Receives the free extraction pieces, the AI pieces, the settings and the clock.
     public PipelineScanGenerator(
@@ -51,9 +52,11 @@ public sealed class PipelineScanGenerator : IScanGenerator
         TimeProvider clock,
         ILogger<PipelineScanGenerator> logger,
         IMotionAnalyzer? motion = null,
-        IComponentAnalyzer? components = null)
+        IComponentAnalyzer? components = null,
+        IScreenshotStore? screenshots = null)
     {
         _components = components;
+        _screenshots = screenshots;
         _extraction = extraction;
         _fingerprinter = fingerprinter;
         _cache = cache;
@@ -83,6 +86,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
         var (notes, basis) = await WriteNotesAsync(digest, tech, ct);
         var motionNotes = await WriteMotionNotesAsync(digest, ct);
         var componentPreviews = await WriteComponentPreviewsAsync(digest, ct);
+        var screenshotUrl = await UploadScreenshotAsync(digest, ct);
 
         var confidence = ConfidenceEstimator.Estimate(digest, tech);
         const int pages = 1;
@@ -101,7 +105,15 @@ public sealed class PipelineScanGenerator : IScanGenerator
             motionNotes);
 
         return new GeneratedScan(durationMs, confidence, pages, tech, markdown, ScanAnalysisJson.FromDigest(
-            digest, componentPreviews, AnimationReportBuilder.Build(motionNotes, digest.Visual?.Motion)));
+            digest, componentPreviews, AnimationReportBuilder.Build(motionNotes, digest.Visual?.Motion)), screenshotUrl);
+    }
+
+    // Uploads the first-screen screenshot (one per scan) and returns its address, or null when no
+    // screenshot was taken or the store is not set up. The store itself never throws.
+    private async Task<string?> UploadScreenshotAsync(PageDigest digest, CancellationToken ct)
+    {
+        var firstScreen = digest.Visual?.Frames.FirstOrDefault();
+        return firstScreen is null || _screenshots is null ? null : await _screenshots.UploadAsync(firstScreen, ct);
     }
 
     // The component-preview stage: only in `ai` mode with a real client, and never allowed to fail

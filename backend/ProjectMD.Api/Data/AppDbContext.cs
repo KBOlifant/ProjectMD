@@ -57,6 +57,7 @@ public class AppDbContext : DbContext
             scan.Property(s => s.Url).IsRequired().HasMaxLength(2048);
             scan.Property(s => s.Host).IsRequired().HasMaxLength(255);
             scan.Property(s => s.Markdown).IsRequired(); // unbounded "text" column
+            scan.Property(s => s.ScreenshotUrl).HasMaxLength(2048);
 
             // Deleting a user deletes all of their scans.
             scan.HasOne(s => s.User)

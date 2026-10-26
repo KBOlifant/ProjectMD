@@ -158,6 +158,10 @@ namespace ProjectMD.Api.Data.Migrations
                     b.Property<int>("Pages")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ScreenshotUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(2048)

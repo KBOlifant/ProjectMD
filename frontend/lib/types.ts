@@ -86,4 +86,6 @@ export interface Scan {
   tech: Tech[];
   markdown: string;
   analysis?: ScanAnalysis | null;
+  // https address of the site's first-screen screenshot (Cloudinary), or null/missing when none.
+  screenshotUrl?: string | null;
 }
