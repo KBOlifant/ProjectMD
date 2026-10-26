@@ -1,0 +1,26 @@
+import type { ReactNode } from "react";
+
+interface DesignCardProps {
+  id: string;
+  title: string;
+  // Right-aligned count, e.g. "8 values".
+  meta?: string;
+  children: ReactNode;
+  className?: string;
+}
+
+// Bordered card with a title row, used for each section of the Design tab (Colours, Fonts, Corner
+// radii...). `id` ties the heading to the section for screen readers. Stores nothing.
+export function DesignCard({ id, title, meta, children, className = "" }: DesignCardProps) {
+  return (
+    <section aria-labelledby={id} className={`rounded-xl border border-border-subtle bg-bg-surface p-5 ${className}`}>
+      <header className="mb-4 flex items-baseline justify-between gap-3">
+        <h3 id={id} className="ts-h3 text-ink">
+          {title}
+        </h3>
+        {meta && <span className="font-mono text-[10px] text-ink-muted">{meta}</span>}
+      </header>
+      {children}
+    </section>
+  );
+}

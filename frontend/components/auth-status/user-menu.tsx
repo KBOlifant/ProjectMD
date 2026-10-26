@@ -20,7 +20,7 @@ function Avatar({ email }: { email: string | null }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-8 flex-none place-items-center rounded-md bg-violet-700 font-mono text-[11px] font-medium text-ink"
+      className="grid size-9 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink"
     >
       {emailInitials(email)}
     </span>
@@ -32,7 +32,7 @@ function Avatar({ email }: { email: string | null }) {
 function RoleBadge({ role }: { role: Role }) {
   const tone =
     role === "admin"
-      ? "border-violet-500 bg-violet-700 text-ink"
+      ? "border-violet-500/60 bg-violet-700 text-ink"
       : role === "viewer"
         ? "border-border-strong bg-bg-raised text-warning"
         : "border-border-strong bg-bg-raised text-ink-muted";
@@ -112,22 +112,12 @@ function AccountCard() {
   );
 }
 
-// Sidebar footer card (desktop) showing who is signed in, their role and a Sign out button.
-// Renders nothing when nobody is signed in. Reads the user from useAuth(); stores nothing.
-export function UserMenu() {
-  const { user } = useAuth();
-  if (!user) return null;
-  return (
-    <div className="rounded-lg border border-border-subtle bg-bg-surface p-3">
-      <AccountCard />
-    </div>
-  );
-}
-
-// Compact account menu for the mobile top bar: an avatar button that opens a small panel with the
-// same account card. It is a disclosure (aria-expanded): Escape closes it and returns focus to the
-// button, and so does a click or focus move outside it. `open` is temporary state; nothing is stored.
-export function UserMenuCompact() {
+// Account menu used in both frames: an avatar button that opens a small panel with the account card
+// (email, role, Sign out). `placement` says where the panel opens: "rail" beside the desktop icon
+// rail, "top-bar" under the mobile top bar. It is a disclosure (aria-expanded): Escape closes it and
+// returns focus to the button, and so does a click or focus move outside it. Renders nothing when
+// nobody is signed in. `open` is temporary state; nothing is stored.
+export function UserMenuCompact({ placement = "top-bar" }: { placement?: "rail" | "top-bar" }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -177,7 +167,9 @@ export function UserMenuCompact() {
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-border-subtle bg-bg-surface p-3 shadow-panel"
+          className={`absolute z-40 w-64 rounded-lg border border-border-strong bg-bg-surface p-3 shadow-panel ${
+            placement === "rail" ? "bottom-0 left-full ml-3" : "right-0 top-full mt-2"
+          }`}
         >
           <AccountCard />
         </div>

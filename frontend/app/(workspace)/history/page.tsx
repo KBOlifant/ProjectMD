@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { isApiMode } from "@/app/functions/data/mode";
 import { Can } from "@/app/functions/rbac/can-gate";
+import { useCan } from "@/app/functions/rbac/useCan";
+import { Eyebrow, PageFrame } from "@/components/shell/page-frame";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DownloadIcon } from "@/components/ui/icons";
 import { HistoryRow } from "@/components/ui/history-row";
+import { downloadAllScans, downloadScan } from "@/lib/download";
 import { clearHistory, reloadHistory, useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 
-// /history page: lists every saved scan and offers a two-step "Clear history" button, shown only
-// to accounts with the "history:clear" permission. Reads scans from the history store; clearing
+// /history page: lists every saved scan with a ".MD" download on each row, an "Export all" button
+// (one combined Markdown file) and a two-step "Clear history" button, shown only to accounts with
+// the "history:clear" permission. Downloads need the "scan:export" permission. Reads scans from the history store; clearing
 // wipes them (localStorage in static mode, the backend in api mode, where a failure keeps the list
 // and shows the error). If loading the list from the backend failed it shows the error with a
 // Retry button. `confirming`, `clearing` and `clearError` are temporary UI state and are not stored.
@@ -17,6 +21,7 @@ export default function HistoryPage() {
   const history = useHistory();
   const hydrated = useIsHydrated();
   const { error: loadError } = useHistoryStatus();
+  const canExport = useCan("scan:export");
   const [confirming, setConfirming] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
@@ -36,38 +41,51 @@ export default function HistoryPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-end justify-between gap-4">
+    <PageFrame>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="ts-h1 text-ink">Scan History</h1>
+          <Eyebrow>Archive</Eyebrow>
+          <h1 className="ts-h1 mt-2 text-ink">Scan history</h1>
           {hydrated && !(loadError && history.length === 0) && (
-            <p className="ts-small mt-1 text-ink-muted">
-              {history.length} {history.length === 1 ? "scan" : "scans"} saved {isApiMode ? "to your account" : "in this browser"}
+            <p className="ts-body mt-1 text-ink-muted">
+              {history.length} completed {history.length === 1 ? "scan" : "scans"}
             </p>
           )}
         </div>
-        <Can permission="history:clear">
-          {history.length > 0 &&
-            (confirming ? (
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => setConfirming(false)} disabled={clearing}>
-                  Keep
+        {history.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => downloadAllScans(history)}
+              disabled={!canExport}
+              title={canExport ? undefined : "Your account cannot export scans."}
+            >
+              <DownloadIcon />
+              Export all
+            </Button>
+            <Can permission="history:clear">
+              {confirming ? (
+                <>
+                  <Button variant="ghost" onClick={() => setConfirming(false)} disabled={clearing}>
+                    Keep
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="text-danger hover:text-danger"
+                    onClick={confirmClear}
+                    disabled={clearing}
+                  >
+                    Confirm clear
+                  </Button>
+                </>
+              ) : (
+                <Button variant="ghost" onClick={() => setConfirming(true)}>
+                  Clear history
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="text-danger hover:text-danger"
-                  onClick={confirmClear}
-                  disabled={clearing}
-                >
-                  Confirm clear
-                </Button>
-              </div>
-            ) : (
-              <Button variant="ghost" onClick={() => setConfirming(true)}>
-                Clear history
-              </Button>
-            ))}
-        </Can>
+              )}
+            </Can>
+          </div>
+        )}
       </div>
 
       {(clearError ?? (history.length > 0 ? loadError : null)) && (
@@ -83,16 +101,22 @@ export default function HistoryPage() {
           </span>
         </EmptyState>
       ) : history.length === 0 ? (
-        <EmptyState action={<ButtonLink href="/">Generate .MD</ButtonLink>}>
-          No scans yet. Generate your first .md file to see it here.
+        <EmptyState action={<ButtonLink href="/">Analyze a website</ButtonLink>}>
+          No scans yet. Analyze your first website to see it here.
         </EmptyState>
       ) : (
         <div className="space-y-3">
           {history.map((scan) => (
-            <HistoryRow key={scan.id} scan={scan} />
+            <HistoryRow
+              key={scan.id}
+              scan={scan}
+              onDownload={() => downloadScan(scan)}
+              downloadDisabled={!canExport}
+              downloadHint="Your account cannot export scans."
+            />
           ))}
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

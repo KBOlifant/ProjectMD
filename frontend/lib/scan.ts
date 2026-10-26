@@ -13,10 +13,10 @@ export interface PipelineStep {
 }
 
 export const PIPELINE_STEPS: PipelineStep[] = [
-  { id: "fetch", title: "Fetching URL", active: "Resolving the host and downloading the page…", done: "Page downloaded", ms: 300 },
-  { id: "render", title: "Rendering HTML (JavaScript)", active: "Executing page scripts…", done: "Page rendered", ms: 600 },
-  { id: "fingerprint", title: "Fingerprinting Tech Stack", active: "Identifying frameworks, CDNs, build tools…", done: "Stack identified", ms: 900 },
-  { id: "synthesize", title: "AI Synthesizing Documentation", active: "Writing the Markdown…", done: "Documentation written", ms: 1200 },
+  { id: "fetch", title: "Fetching website", active: "Resolving the host and downloading the page…", done: "Page downloaded", ms: 300 },
+  { id: "render", title: "Rendering client-side code", active: "Executing page scripts…", done: "Page rendered", ms: 600 },
+  { id: "fingerprint", title: "Fingerprinting design and stack", active: "Inspecting tokens, components and the tech stack…", done: "Stack identified", ms: 900 },
+  { id: "synthesize", title: "Writing documentation", active: "Writing the Markdown…", done: "Documentation written", ms: 1200 },
 ];
 
 export const TOTAL_MS = PIPELINE_STEPS.reduce((sum, s) => sum + s.ms, 0);

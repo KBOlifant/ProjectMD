@@ -1,27 +1,48 @@
 @import "tailwindcss";
 
+/*
+  Project MD design tokens (wireframes v2, Oct 2026).
+  Names are unchanged from v1 so every component keeps working; only the values moved:
+  a neutral graphite canvas, plum for actions, violet for the brand accent.
+  The values are sampled from the v2 wireframes and match the Design tab of the sitescribe.com mock.
+*/
 :root {
-  --bg-base: #07030d;
-  --bg-sidebar: #0b0614;
-  --bg-surface: #110a1b;
-  --bg-raised: #1a1026;
-  --border-subtle: #1f1330;
-  --border-strong: #3a2552;
-  --violet-700: #5a1f6b;
-  --violet-500: #8b32a0;
-  --violet-400: #a948bd;
-  --violet-glow: #8b32a066;
-  --ink: #eadcf7;
-  --ink-body: #c9b8da;
-  --ink-muted: #9886ab;
-  --ink-dim: #6b5a7d;
-  --on-primary: #fbf3ff;
+  /* Surfaces, darkest to lightest */
+  --bg-sidebar: #141416;
+  --bg-base: #18181b;
+  --bg-surface: #202024;
+  --bg-raised: #29292e;
+  --border-subtle: #2c2b30;
+  --border-strong: #3b3a40;
+
+  /* Brand */
+  --violet-700: #3a004d; /* avatar tiles, the deepest purple */
+  --violet-600: #7a2d93;
+  --violet-500: #9e4abb; /* accent violet: hero button, active tab, focus marker */
+  --violet-400: #b565d0; /* violet used as text on dark */
+  --violet-glow: #9e4abb55;
+  --plum-700: #5b3344;
+  --plum-500: #8b4f67; /* brand plum: every in-app primary button */
+  --plum-400: #9e6078; /* plum hover, progress fills */
+  --plum-300: #bb8499; /* small plum text, eyebrows */
+
+  /* Text */
+  --ink: #f0e0e0;
+  --ink-body: #d3c6ca;
+  --ink-muted: #a89ca2;
+  --ink-dim: #7c7278;
+  --on-primary: #fbf3f6;
+
+  /* Status */
   --success: #4cc38a;
-  --success-bg: #0f2a20;
+  --success-bg: #12291f;
   --warning: #e0a84a;
   --danger: #ef6a80;
-  --shadow-glow: 0 0 24px 0 rgba(139, 50, 160, 0.35);
-  --shadow-panel: 0 24px 64px 0 rgba(0, 0, 0, 0.6);
+
+  --shadow-glow: 0 0 24px 0 rgba(158, 74, 187, 0.35);
+  --shadow-panel: 0 24px 64px 0 rgba(0, 0, 0, 0.55);
+
+  --rail-width: 72px;
 }
 
 @theme inline {
@@ -32,9 +53,14 @@
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
   --color-violet-700: var(--violet-700);
+  --color-violet-600: var(--violet-600);
   --color-violet-500: var(--violet-500);
   --color-violet-400: var(--violet-400);
   --color-violet-glow: var(--violet-glow);
+  --color-plum-700: var(--plum-700);
+  --color-plum-500: var(--plum-500);
+  --color-plum-400: var(--plum-400);
+  --color-plum-300: var(--plum-300);
   --color-ink: var(--ink);
   --color-ink-body: var(--ink-body);
   --color-ink-muted: var(--ink-muted);
@@ -46,9 +72,9 @@
   --color-danger: var(--danger);
 
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-pill: 999px;
 
   --shadow-glow: var(--shadow-glow);
@@ -58,6 +84,19 @@
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* Soft violet glow behind the sign-in screens. The home hero uses a photo instead. */
+@utility hero-glow {
+  background: radial-gradient(ellipse 60% 70% at 85% 0%, var(--violet-glow), transparent 70%);
+}
+
+/* Text styles. Mono carries headings and UI; Inter carries reading text. */
+@utility ts-hero {
+  font-family: var(--font-mono);
+  font-size: clamp(56px, 9.2vw, 112px);
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
 @utility ts-display {
   font-family: var(--font-mono);
   font-size: 44px;
@@ -67,7 +106,7 @@
 }
 @utility ts-h1 {
   font-family: var(--font-mono);
-  font-size: 28px;
+  font-size: 26px;
   line-height: 34px;
   font-weight: 700;
 }
@@ -79,7 +118,7 @@
 }
 @utility ts-h3 {
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 22px;
   font-weight: 600;
 }
@@ -117,23 +156,15 @@
 }
 @utility ts-mono-ui {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   font-weight: 500;
 }
 @utility ts-code {
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 22px;
+  font-size: 12px;
+  line-height: 19px;
   font-weight: 400;
-}
-
-@utility hero-glow {
-  background: radial-gradient(
-    ellipse 60% 70% at 85% 0%,
-    var(--violet-glow),
-    transparent 70%
-  );
 }
 
 body {
@@ -147,6 +178,12 @@ body {
 :focus-visible {
   outline: 2px solid var(--violet-400);
   outline-offset: 2px;
+}
+
+/* Thin scrollbars for the Results panes, which scroll inside the page frame. */
+.pane-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

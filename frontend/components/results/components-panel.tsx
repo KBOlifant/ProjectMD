@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { CopyIcon, GridIcon } from "@/components/ui/icons";
 import type { ComponentPreview, ComponentPreviews } from "@/lib/types";
+import { CountBadge, TabHeader } from "./tab-header";
 import { useCopy } from "./use-copy";
 
 // True when a scan has at least one component preview worth showing.
@@ -28,9 +30,29 @@ function frameDocument(item: ComponentPreview, dark: boolean): string {
   );
 }
 
-function Preview({ item, dark, onCopy }: { item: ComponentPreview; dark: boolean; onCopy: (text: string, label: string) => void }) {
+const SMALL_BUTTON =
+  "ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-raised hover:text-ink";
+
+function Preview({ item, index, dark, onCopy }: { item: ComponentPreview; index: number; dark: boolean; onCopy: (text: string, label: string) => void }) {
   return (
-    <li className="overflow-hidden rounded-lg border border-border-strong bg-bg-raised">
+    <li className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
+        <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
+        <div className="min-w-0 flex-1 basis-40">
+          <h3 className="ts-mono-ui truncate font-semibold text-ink">{item.name}</h3>
+          <p className="font-mono text-[10px] leading-4 text-ink-muted">{item.kind}</p>
+        </div>
+        <button type="button" onClick={() => onCopy(item.html, `${item.name} HTML`)} className={SMALL_BUTTON}>
+          Copy HTML
+        </button>
+        <button type="button" onClick={() => onCopy(item.css, `${item.name} CSS`)} className={SMALL_BUTTON}>
+          Copy CSS
+        </button>
+        <button type="button" onClick={() => onCopy(componentCode(item), `${item.name} code`)} className={SMALL_BUTTON}>
+          <CopyIcon size={13} />
+          Copy code
+        </button>
+      </div>
       <iframe
         title={`${item.name} preview`}
         sandbox=""
@@ -38,39 +60,33 @@ function Preview({ item, dark, onCopy }: { item: ComponentPreview; dark: boolean
         srcDoc={frameDocument(item, dark)}
         className="block h-48 w-full border-0"
       />
-      <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle p-3">
-        <div className="min-w-0 flex-1 basis-32">
-          <p className="ts-label truncate text-ink">{item.name}</p>
-          <p className="ts-small text-ink-dim">{item.kind}</p>
-        </div>
-        <button type="button" onClick={() => onCopy(item.html, `${item.name} HTML`)} className="ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-muted hover:text-ink">
-          Copy HTML
-        </button>
-        <button type="button" onClick={() => onCopy(item.css, `${item.name} CSS`)} className="ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-muted hover:text-ink">
-          Copy CSS
-        </button>
-        <button type="button" onClick={() => onCopy(componentCode(item), `${item.name} code`)} className="ts-mono-ui rounded-md bg-violet-700 px-3 py-1.5 text-ink hover:bg-violet-600">
-          Copy code
-        </button>
-      </div>
+      <pre className="ts-code max-h-64 overflow-auto border-t border-border-subtle bg-bg-sidebar p-5 text-ink-body">{componentCode(item)}</pre>
     </li>
   );
 }
 
-// The Components tab: small AI-written HTML/CSS versions of the site's main components, each in a
-// sandboxed frame with copy buttons. Only reads the scan; the background choice is temporary UI state.
+// The Components tab: small AI-written HTML/CSS versions of the site's main components, each with a
+// sandboxed live preview, its code and copy buttons. Only reads the scan; the background choice is
+// temporary UI state.
 export function ComponentsPanel({ components }: { components: ComponentPreviews }) {
   const { message, copy } = useCopy();
   const [dark, setDark] = useState(false);
+  const count = components.items.length;
   return (
     <div className="space-y-6">
+      <TabHeader
+        eyebrow="Reusable UI"
+        title="Captured components"
+        description="Patterns reconstructed from the scanned site, ready to copy."
+        aside={<CountBadge icon={<GridIcon size={13} />}>{count} {count === 1 ? "component" : "components"} found</CountBadge>}
+      />
       <div className="flex flex-wrap items-center gap-4">
         <p role="status" aria-live="polite" className="ts-mono-ui min-h-5 flex-1 text-success">{message}</p>
         <button
           type="button"
           aria-pressed={dark}
           onClick={() => setDark((d) => !d)}
-          className="ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-muted hover:text-ink"
+          className={SMALL_BUTTON}
         >
           {dark ? "Dark background" : "Light background"}
         </button>
@@ -78,11 +94,11 @@ export function ComponentsPanel({ components }: { components: ComponentPreviews 
       <p className="ts-small text-ink-muted">
         These are approximate, AI-written versions built from the styles measured on the page. Check them against the real site before using them.
       </p>
-      <ul className="grid gap-4 md:grid-cols-2">
+      <ol className="space-y-4">
         {components.items.map((item, i) => (
-          <Preview key={`${item.kind}-${i}`} item={item} dark={dark} onCopy={copy} />
+          <Preview key={`${item.kind}-${i}`} item={item} index={i} dark={dark} onCopy={copy} />
         ))}
-      </ul>
+      </ol>
     </div>
   );
 }

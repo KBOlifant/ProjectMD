@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DesignCard } from "./design-card";
 import { CopyIcon } from "@/components/ui/icons";
 import { cleanWeights, fontFamilyCss, googleFontsUrl, isGoogleFontCandidate } from "@/lib/design-utils";
 import type { DesignFont } from "@/lib/types";
@@ -65,7 +66,7 @@ function FontCard({ font, onCopy }: { font: DesignFont; onCopy: Props["onCopy"] 
   const style = { fontFamily: `"${font.family.replace(/["\\]/g, "")}", system-ui, sans-serif` };
   const generic = !isGoogleFontCandidate(font.family);
   return (
-    <article className="space-y-3 rounded-lg border border-border-subtle bg-bg-raised p-4">
+    <article className="space-y-3 rounded-lg border border-border-subtle bg-bg-base p-4">
       <header className="flex flex-wrap items-center gap-2">
         <h4 className="ts-h3 min-w-0 flex-1 basis-32 truncate text-ink">{font.family}</h4>
         <Button variant="ghost" className="!px-3 !py-1.5" onClick={() => onCopy(css, "font-family")}>
@@ -92,7 +93,7 @@ function FontCard({ font, onCopy }: { font: DesignFont; onCopy: Props["onCopy"] 
       <ul className="space-y-1">
         {weights.map((w) => (
           <li key={w} className="flex items-baseline gap-3 text-ink-body">
-            <span className="ts-label w-10 flex-none text-ink-dim">{w}</span>
+            <span className="ts-label w-10 flex-none text-ink-muted">{w}</span>
             <span className="min-w-0 truncate text-lg" style={{ ...style, fontWeight: w }}>{SAMPLE}</span>
           </li>
         ))}
@@ -119,13 +120,12 @@ export function DesignFonts({ fonts, onCopy }: Props) {
   const list = (fonts ?? []).filter((f) => f && typeof f.family === "string" && f.family.trim());
   if (list.length === 0) return null;
   return (
-    <section aria-labelledby="design-fonts" className="space-y-3">
-      <h3 id="design-fonts" className="ts-label text-ink-dim">Fonts</h3>
+    <DesignCard id="design-fonts" title="Fonts" meta={`${list.length} ${list.length === 1 ? "family" : "families"}`}>
       <div className="grid gap-3 lg:grid-cols-2">
         {list.map((f) => (
           <FontCard key={f.family} font={f} onCopy={onCopy} />
         ))}
       </div>
-    </section>
+    </DesignCard>
   );
 }

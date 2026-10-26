@@ -7,17 +7,27 @@ import { PermissionError } from "@/app/functions/rbac/errors";
 import { useCan, useDenyReason } from "@/app/functions/rbac/useCan";
 import { ScanBlockedNotice } from "@/components/auth-status/scan-blocked-notice";
 import { useScan } from "@/components/scan-provider";
+import { Eyebrow } from "@/components/shell/page-frame";
 import { EmptyState } from "@/components/ui/empty-state";
+import { HeroBackdrop } from "@/components/ui/hero-backdrop";
 import { HistoryRow } from "@/components/ui/history-row";
 import { StatStrip } from "@/components/ui/stat-tile";
 import { UrlInput } from "@/components/ui/url-input";
+import { downloadScan } from "@/lib/download";
 import { formatSeconds } from "@/lib/format";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { parseUrl } from "@/lib/url";
 
-// Home page (/): URL box, summary stats and the 3 latest scans. Stats are calculated from the saved
-// history on every render (not stored). The typed URL and error are temporary state, not stored.
-// The URL box is disabled (with the reason shown) when the account may not create scans.
+const DELIVERABLES = [
+  { title: "Technical documentation", text: "A readable map of frameworks, infrastructure, dependencies, and content." },
+  { title: "Design system exports", text: "Tokens Studio JSON, CSS variables, and a Tailwind v3 configuration." },
+  { title: "Reusable building blocks", text: "Copy-ready components and detected animations in your preferred format." },
+];
+
+// Home page (/): a full-height hero with the URL bar, a "what you'll get" panel, then summary stats
+// and the 3 latest scans. Stats are calculated from the saved history on every render (not stored).
+// The typed URL and error are temporary state, not stored. The URL bar is disabled (with the reason
+// shown) when the account may not create scans.
 export default function GeneratePage() {
   const router = useRouter();
   const { startScan } = useScan();
@@ -25,6 +35,7 @@ export default function GeneratePage() {
   const hydrated = useIsHydrated();
   const { error: loadError } = useHistoryStatus();
   const canCreate = useCan("scan:create");
+  const canExport = useCan("scan:export");
   const denyReason = useDenyReason("scan:create");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -50,62 +61,95 @@ export default function GeneratePage() {
   const avg = (pick: (s: (typeof history)[number]) => number) =>
     history.reduce((sum, s) => sum + pick(s), 0) / n;
   const stats = [
-    { value: String(n), caption: "Total Scans" },
-    { value: n ? `${Math.round(avg((s) => s.confidence))}%` : "—", caption: "Avg Confidence" },
-    { value: String(history.reduce((sum, s) => sum + s.pages, 0)), caption: "Pages Indexed" },
-    { value: n ? formatSeconds(avg((s) => s.durationMs)) : "—", caption: "Avg Speed" },
+    { value: String(n), caption: "Total scans" },
+    { value: n ? `${Math.round(avg((s) => s.confidence))}%` : "—", caption: "Avg confidence" },
+    { value: String(history.reduce((sum, s) => sum + s.pages, 0)), caption: "Pages indexed" },
+    { value: n ? formatSeconds(avg((s) => s.durationMs)) : "—", caption: "Avg speed" },
   ];
 
   return (
-    <div className="space-y-12">
-      <section className="hero-glow -mx-4 -mt-8 px-4 pb-4 pt-12 md:-mx-8 md:px-8">
-        <span className="ts-label inline-block rounded-pill border border-violet-700 px-3 py-1 text-violet-400">
-          AI-Powered · Live
-        </span>
-        <h1 className="ts-display mt-6 text-ink">
-          Website → Documentation.
-          <br />
-          <span className="text-violet-400">Intelligently.</span>
-        </h1>
-        <p className="ts-body mt-4 max-w-xl text-ink-muted">
-          Paste any URL. Project MD fetches and renders the page, fingerprints the tech stack, and writes the docs as
-          Markdown.
-        </p>
-        <div className="mt-8 max-w-2xl">
-          <UrlInput
-            value={value}
-            onChange={setValue}
-            onSubmit={submit}
-            error={error}
-            disabled={!canCreate}
-            notice={denyReason ? <ScanBlockedNotice reason={denyReason} /> : undefined}
-          />
-        </div>
-      </section>
-
-      <StatStrip stats={stats} />
-
-      <section aria-labelledby="recent">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="recent" className="ts-label text-ink-dim">
-            Recent scans
-          </h2>
-          {n > 3 && (
-            <Link href="/history" className="ts-mono-ui text-violet-400 hover:text-ink">
-              View all →
-            </Link>
-          )}
-        </div>
-        {!hydrated ? null : n === 0 ? (
-          <EmptyState>{loadError ?? "No scans yet. Generate your first .md file above to see it here."}</EmptyState>
-        ) : (
-          <div className="space-y-3">
-            {history.slice(0, 3).map((scan) => (
-              <HistoryRow key={scan.id} scan={scan} />
-            ))}
+    <>
+      <section className="relative isolate flex min-h-[640px] items-center justify-center overflow-hidden border-b border-border-subtle px-4 py-20 md:min-h-screen">
+        <HeroBackdrop />
+        <div className="w-full max-w-[700px] text-center">
+          <span className="ts-label inline-flex items-center gap-2 rounded-pill border border-border-strong bg-bg-base/70 px-3 py-1.5 text-ink-body">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500" />
+            AI website intelligence
+          </span>
+          <h1 className="ts-hero mt-5 text-ink">
+            <span className="block">Project</span>
+            <span className="-mt-1 block text-violet-400">MD</span>
+          </h1>
+          <p className="mx-auto mt-8 max-w-[620px] text-[17px] leading-[30px] text-ink-body">
+            Enter a URL and Project MD will inspect the stack, content, components, design tokens, and motion—then
+            package everything for your team.
+          </p>
+          <div className="mt-8">
+            <UrlInput
+              value={value}
+              onChange={setValue}
+              onSubmit={submit}
+              error={error}
+              disabled={!canCreate}
+              notice={denyReason ? <ScanBlockedNotice reason={denyReason} /> : undefined}
+            />
           </div>
-        )}
+        </div>
       </section>
-    </div>
+
+      <div className="space-y-16 px-4 py-14 md:px-[84px] md:py-16">
+        <section aria-labelledby="get">
+          <Eyebrow>What you&apos;ll get</Eyebrow>
+          <h2 id="get" className="ts-h1 mt-3 text-ink">
+            A complete handoff, not another audit.
+          </h2>
+          <ul className="mt-8 grid overflow-hidden rounded-xl border border-border-subtle bg-bg-surface md:grid-cols-3 md:divide-x md:divide-border-subtle">
+            {DELIVERABLES.map((d, i) => (
+              <li
+                key={d.title}
+                className="flex min-h-[190px] flex-col justify-between gap-8 border-b border-border-subtle p-6 last:border-b-0 md:border-b-0"
+              >
+                <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="ts-h3 text-ink">{d.title}</h3>
+                  <p className="ts-body mt-2 text-ink-muted">{d.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="recent" className="space-y-6">
+          <StatStrip stats={stats} />
+          <div className="flex items-center justify-between">
+            <h2 id="recent" className="ts-label text-plum-300">
+              Recent scans
+            </h2>
+            {n > 3 && (
+              <Link href="/history" className="ts-mono-ui text-violet-400 hover:text-ink">
+                View all
+              </Link>
+            )}
+          </div>
+          {!hydrated ? null : n === 0 ? (
+            <EmptyState>{loadError ?? "No scans yet. Enter a URL above to generate your first .md file."}</EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {history.slice(0, 3).map((scan) => (
+                <HistoryRow
+                  key={scan.id}
+                  scan={scan}
+                  onDownload={() => downloadScan(scan)}
+                  downloadDisabled={!canExport}
+                  downloadHint="Your account cannot export scans."
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </>
   );
 }
