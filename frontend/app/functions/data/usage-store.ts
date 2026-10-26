@@ -1,22 +1,20 @@
 import { getMeSnapshot, loadMe, setMeOwner, subscribeMe } from "./me-store";
 import { isApiMode } from "./mode";
 
-// The monthly scan quota the UI shows in static mode, and the placeholder in api mode until the
-// backend's real limit (GET /api/me) has loaded.
-export const USAGE_LIMIT = 10;
+// There is no monthly scan cap any more (backend: UsageService). This only tracks how many scans
+// the signed-in user has made this month, for the sidebar meter.
 
 export interface Usage {
   used: number;
-  limit: number;
   loading: boolean;
 }
 
 // What the server render (and the first client paint) sees: nothing loaded yet.
-const SERVER_SNAPSHOT: Usage = { used: 0, limit: USAGE_LIMIT, loading: true };
+const SERVER_SNAPSHOT: Usage = { used: 0, loading: true };
 // The numbers handed out last, and the /api/me state they were worked out from, so the snapshot is
 // the same object until the numbers really change (useSyncExternalStore needs that).
 let lastSource: ReturnType<typeof getMeSnapshot> | null = null;
-let lastUsage: Usage = { used: 0, limit: USAGE_LIMIT, loading: false };
+let lastUsage: Usage = { used: 0, loading: false };
 
 // Registers a callback to run when the usage changes (used by useSyncExternalStore). The numbers
 // come from the shared /api/me store, so this simply listens to it. Returns a function that removes it.
@@ -33,10 +31,9 @@ export function getUsageSnapshot(): Usage {
   lastSource = source;
   const next: Usage = {
     used: source.me?.usage.used ?? 0,
-    limit: source.me?.usage.limit ?? USAGE_LIMIT,
     loading: source.owner !== null && !source.loaded,
   };
-  if (next.used !== lastUsage.used || next.limit !== lastUsage.limit || next.loading !== lastUsage.loading) {
+  if (next.used !== lastUsage.used || next.loading !== lastUsage.loading) {
     lastUsage = next;
   }
   return lastUsage;

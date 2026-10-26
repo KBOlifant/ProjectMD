@@ -210,5 +210,3 @@ export function useHistoryStatus(): HistoryStatus {
   return useSyncExternalStore(subscribe, () => status, () => IDLE_STATUS);
 }
 
-// The monthly quota constant now lives with the usage code; re-exported here for older imports.
-export { USAGE_LIMIT } from "@/app/functions/data/usage-store";
