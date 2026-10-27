@@ -11,24 +11,29 @@ function PanelLabel({ id, children }: { id: string; children: string }) {
   );
 }
 
-// Stylised page preview: a purple "browser" with placeholder bars, then the host and scan time.
-// It is an illustration, not a screenshot of the scanned site (the scan stores none yet).
+// Page preview: the site's screenshot when the scan has one, otherwise a stylised purple
+// "browser" with placeholder bars; then the host and scan time.
 function ScanThumbnail({ scan }: { scan: Scan }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border-strong bg-bg-surface">
-      <div aria-hidden="true" className="bg-violet-700 px-3 pb-5 pt-3">
-        <div className="flex items-center gap-1.5 rounded-sm bg-black/25 px-2 py-1.5">
-          <span className="size-1.5 rounded-full bg-ink/60" />
-          <span className="size-1.5 rounded-full bg-ink/60" />
-          <span className="size-1.5 rounded-full bg-ink/60" />
-          <span className="ml-1 h-1 flex-1 rounded-full bg-ink/25" />
+      {scan.screenshotUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary image, no Next image config needed
+        <img src={scan.screenshotUrl} alt={`Screenshot of ${scan.host}`} className="aspect-[16/10] w-full object-cover object-top" />
+      ) : (
+        <div aria-hidden="true" className="bg-violet-700 px-3 pb-5 pt-3">
+          <div className="flex items-center gap-1.5 rounded-sm bg-black/25 px-2 py-1.5">
+            <span className="size-1.5 rounded-full bg-ink/60" />
+            <span className="size-1.5 rounded-full bg-ink/60" />
+            <span className="size-1.5 rounded-full bg-ink/60" />
+            <span className="ml-1 h-1 flex-1 rounded-full bg-ink/25" />
+          </div>
+          <div className="mt-5 space-y-2 px-1">
+            <span className="block h-2 w-4/5 rounded-full bg-ink/80" />
+            <span className="block h-2 w-3/5 rounded-full bg-ink/80" />
+            <span className="mt-3 block h-3.5 w-14 rounded-sm bg-plum-500" />
+          </div>
         </div>
-        <div className="mt-5 space-y-2 px-1">
-          <span className="block h-2 w-4/5 rounded-full bg-ink/80" />
-          <span className="block h-2 w-3/5 rounded-full bg-ink/80" />
-          <span className="mt-3 block h-3.5 w-14 rounded-sm bg-plum-500" />
-        </div>
-      </div>
+      )}
       <div className="px-3.5 py-3">
         <p className="ts-mono-ui truncate font-semibold text-ink">{scan.host}</p>
         <p className="font-mono text-[10px] leading-4 text-ink-muted">
