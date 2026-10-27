@@ -49,7 +49,7 @@ export function StatStrip({ stats }: { stats: Stat[] }) {
   return (
     <dl
       ref={ref}
-      className={`my-24 grid grid-cols-2 overflow-hidden rounded-[2.5rem] border border-border-subtle bg-bg-surface lg:grid-cols-4 lg:rounded-pill ${
+      className={`my-24 grid grid-cols-2 overflow-hidden rounded-[2.5rem]  border-border-subtle bg-bg-surface lg:grid-cols-4 lg:rounded-pill ${
         inView ? "stat-tile-shadow" : "stat-tile-shadow-off"
       }`}
     >
