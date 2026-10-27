@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { HeroBackdrop } from "@/components/ui/hero-backdrop";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { HistoryRow } from "@/components/ui/history-row";
+import { ScrambleText } from "@/components/ui/scramble-text";
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { StatStrip } from "@/components/ui/stat-tile";
 import { UrlInput } from "@/components/ui/url-input";
@@ -84,8 +85,8 @@ export default function GeneratePage() {
               AI website intelligence
             </motion.span>
             <motion.h1 variants={STAGGER_ITEM} className="ts-hero mt-5 text-ink">
-              <span className="block">Project</span>
-              <span className="-mt-1 block text-violet-400">MD</span>
+              <span className="block"><ScrambleText text="Project" /></span>
+              <span className="-mt-1 block text-violet-400"><ScrambleText text="MD" delay={320} /></span>
             </motion.h1>
             <motion.p variants={STAGGER_ITEM} className="mx-auto mt-8 max-w-[620px] text-[17px] leading-[30px] text-ink-body">
               Enter a URL and Project MD will inspect the stack, content, components, design tokens, and motion—then
@@ -107,9 +108,11 @@ export default function GeneratePage() {
 
       <div className="space-y-16 px-4 py-14 md:px-[84px] md:py-16">
         <section aria-labelledby="get">
-          <Eyebrow>What you&apos;ll get</Eyebrow>
+          <Eyebrow>
+            <ScrambleText text="What you'll get" />
+          </Eyebrow>
           <h2 id="get" className="ts-h1 mt-3 text-ink">
-            A complete handoff, not another audit.
+            <ScrambleText text="A complete handoff, not another audit." />
           </h2>
           <motion.ul
             initial="initial"
