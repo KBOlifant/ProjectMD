@@ -12,10 +12,16 @@ function PanelLabel({ id, children }: { id: string; children: string }) {
 }
 
 // Page preview: the site's screenshot when the scan has one, otherwise a stylised purple
-// "browser" with placeholder bars; then the host and scan time.
+// "browser" with placeholder bars; then the host and scan time. The whole card opens the site.
 function ScanThumbnail({ scan }: { scan: Scan }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border-strong bg-bg-surface">
+    <a
+      href={scan.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Open ${scan.host}`}
+      className="block overflow-hidden rounded-xl border border-border-strong bg-bg-surface transition-colors hover:border-violet-500/60"
+    >
       {scan.screenshotUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary image, no Next image config needed
         <img src={scan.screenshotUrl} alt={`Screenshot of ${scan.host}`} className="aspect-[16/10] w-full object-cover object-top" />
@@ -40,7 +46,7 @@ function ScanThumbnail({ scan }: { scan: Scan }) {
           Scanned {formatDate(scan.createdAt)} · {formatSeconds(scan.durationMs)}
         </p>
       </div>
-    </div>
+    </a>
   );
 }
 

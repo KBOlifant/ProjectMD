@@ -6,7 +6,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost";
 
 const base =
-  "ts-mono-ui inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 transition-colors " +
+  "ts-mono-ui inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 cursor-pointer transition-[color,background-color,border-color,scale] hover:scale-[1.03] " +
   "disabled:pointer-events-none disabled:border-border-subtle disabled:bg-bg-surface disabled:text-ink-dim disabled:shadow-none " +
   "aria-disabled:pointer-events-none aria-disabled:border-border-subtle aria-disabled:bg-bg-surface aria-disabled:text-ink-dim aria-disabled:shadow-none";
 

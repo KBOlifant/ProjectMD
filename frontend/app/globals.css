@@ -240,6 +240,24 @@ body {
   animation: blink 2s ease-in-out infinite;
 }
 
+/* Every enabled button gets a pointer cursor and grows slightly on hover. In the base layer so a
+   component's own transition or cursor classes still win; `scale` composes with Framer Motion's
+   transform instead of fighting it. */
+@layer base {
+  button,
+  [role="button"] {
+    cursor: pointer;
+    transition: scale 0.15s ease;
+  }
+  button:not(:disabled):hover,
+  [role="button"]:not([aria-disabled="true"]):hover {
+    scale: 1.03;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 /* Thin scrollbars for the Results panes, which scroll inside the page frame. */
 .pane-scroll {
   scrollbar-width: thin;
