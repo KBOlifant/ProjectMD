@@ -11,13 +11,14 @@ import { useScan } from "@/components/scan-provider";
 import { Eyebrow } from "@/components/shell/page-frame";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HeroBackdrop } from "@/components/ui/hero-backdrop";
+import { ArrowRightIcon } from "@/components/ui/icons";
 import { HistoryRow } from "@/components/ui/history-row";
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { StatStrip } from "@/components/ui/stat-tile";
 import { UrlInput } from "@/components/ui/url-input";
 import { downloadScan } from "@/lib/download";
 import { formatSeconds } from "@/lib/format";
-import { STAGGER_ITEM, STAGGER_LIST } from "@/lib/motion";
+import { RISE_ITEM, STAGGER_ITEM, STAGGER_LIST } from "@/lib/motion";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { parseUrl } from "@/lib/url";
 
@@ -144,21 +145,25 @@ export default function GeneratePage() {
             <StatStrip stats={stats} />
           </motion.div>
           <div className="flex items-center justify-between">
-            <h2 id="recent" className="ts-label text-plum-300">
+            <h2 id="recent" className="ts-label text-[13px] leading-5 text-plum-300">
               Recent scans
             </h2>
             {n > 3 && (
-              <Link href="/history" className="ts-mono-ui text-violet-400 hover:text-ink">
+              <Link
+                href="/history"
+                className="ts-mono-ui group inline-flex items-center gap-1.5 rounded-md border border-transparent px-3.5 py-2 text-[14px] text-violet-400 transition-colors duration-300 hover:border-violet-500 hover:text-ink"
+              >
                 View all
+                <ArrowRightIcon className="-ml-1 w-0 -translate-x-2 opacity-0 transition-all duration-300 group-hover:ml-0 group-hover:w-4 group-hover:translate-x-0 group-hover:opacity-100" />
               </Link>
             )}
           </div>
           {!hydrated ? null : n === 0 ? (
             <EmptyState>{loadError ?? "No scans yet. Enter a URL above to generate your first .md file."}</EmptyState>
           ) : (
-            <motion.div initial="initial" whileInView="animate" viewport={{ once: true }} variants={STAGGER_LIST} className="space-y-3">
+            <motion.div initial="initial" whileInView="animate" viewport={{ once: true, amount: 0.15 }} variants={STAGGER_LIST} className="space-y-3">
               {history.slice(0, 3).map((scan) => (
-                <motion.div key={scan.id} variants={STAGGER_ITEM}>
+                <motion.div key={scan.id} variants={RISE_ITEM}>
                   <HistoryRow
                     scan={scan}
                     onDownload={() => downloadScan(scan)}
