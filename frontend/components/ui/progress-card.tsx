@@ -21,7 +21,7 @@ const STATUS_TONE: Record<CardStatus, string> = {
 export function ScanCardFrame({ children, glowing = false }: { children: ReactNode; glowing?: boolean }) {
   return (
     <div className={`relative w-full max-w-[720px] rounded-xl ${glowing ? "glow-border" : ""}`}>
-      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface shadow-panel">{children}</div>
+      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface neumorphic-panel">{children}</div>
     </div>
   );
 }

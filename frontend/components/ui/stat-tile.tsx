@@ -6,7 +6,7 @@ export interface Stat {
 // Row of summary numbers (e.g. Total scans, Avg confidence) with captions. Display only; stores nothing.
 export function StatStrip({ stats }: { stats: Stat[] }) {
   return (
-    <dl className="grid grid-cols-2 overflow-hidden rounded-[2.5rem] border border-border-subtle bg-bg-surface shadow-[0_40px_90px_-10px_rgba(0,0,0,0.85),0_0_60px_-15px_rgba(158,74,187,0.45)] lg:grid-cols-4 lg:rounded-pill">
+    <dl className="my-24 grid grid-cols-2 overflow-hidden rounded-[2.5rem] border border-border-subtle bg-bg-surface shadow-[0_40px_90px_-10px_rgba(0,0,0,0.85),0_0_60px_-15px_rgba(158,74,187,0.45)] lg:grid-cols-4 lg:rounded-pill">
       {stats.map((s, i) => (
         <div
           key={s.caption}

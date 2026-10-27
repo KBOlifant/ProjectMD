@@ -79,7 +79,7 @@ export default function GeneratePage() {
         <div data-scroll data-scroll-speed="-0.2" className="w-full max-w-[700px]">
           <motion.div initial="initial" animate="animate" variants={STAGGER_LIST} className="text-center">
             <motion.span variants={STAGGER_ITEM} className="ts-label inline-flex items-center gap-2 rounded-pill border border-border-strong bg-bg-base/70 px-3 py-1.5 text-ink-body">
-              <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500" />
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500 dot-blink" />
               AI website intelligence
             </motion.span>
             <motion.h1 variants={STAGGER_ITEM} className="ts-hero mt-5 text-ink">

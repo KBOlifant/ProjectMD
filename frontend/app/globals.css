@@ -40,7 +40,7 @@
   --danger: #ef6a80;
 
   --shadow-glow: 0 0 24px 0 rgba(158, 74, 187, 0.35);
-  --shadow-panel: 0 0px 64px 2px rgba(145, 9, 9, 0.55);
+  --shadow-panel: 0px 24px 64px 12px rgba(0, 0, 0, 0.514);
 
   --rail-width: 72px;
 }
@@ -225,10 +225,29 @@ body {
   mask-composite: exclude;
 }
 
+/* 1. Define the animation keyframes */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1; /* Fully visible at start and end */
+  }
+  50% {
+    opacity: 0; /* Fully invisible halfway through */
+  }
+}
+
+/* 2. Apply the animation to your element */
+.dot-blink {
+  animation: blink 2s ease-in-out infinite;
+}
+
 /* Thin scrollbars for the Results panes, which scroll inside the page frame. */
 .pane-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+.neumorphic-panel{
+  box-shadow: -6px 6px 24px 4px rgba(0, 0, 0, 0.76), 4px -4px 24px 0px rgba(236, 233, 233, 0.185);
 }
 
 @media (prefers-reduced-motion: reduce) {
