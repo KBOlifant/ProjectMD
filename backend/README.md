@@ -348,6 +348,10 @@ Elsewhere use the environment variable `Auth__AdminEmails__0` (and `__1`, ...).
   the request is `503` ProblemDetails; no default role is ever assumed.
 - **Admin endpoints** (need `admin:access`, so `403` with `reason: "role"` for others):
   - `GET /api/admin/users`: up to 200 users, newest first: `[{ id, email, role, createdAt, lastSeenAt }]`.
+  - `DELETE /api/admin/users/{id}`: removes the user; their scans and AI usage rows go with them
+    (cascade). `204` on success. Errors: your own account `400` `self`; removing the last admin `409`
+    `last-admin`; unknown user `404`. The Firebase account is not deleted, so someone who signs in again
+    gets a fresh user row. The deletion is logged with ids only.
   - `PUT /api/admin/users/{id}/role` with `{ "role": "viewer|member|admin" }` returns the updated
     user. Errors are ProblemDetails with a `reason`: unknown role `400` `role`; your own account
     `400` `self`; removing the last admin `409` `last-admin`; unknown user `404`. The last-admin

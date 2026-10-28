@@ -13,7 +13,7 @@ namespace ProjectMD.Api.Controllers;
 // The body of PUT /api/admin/users/{id}/role.
 public sealed record ChangeRoleRequest(string? Role);
 
-// Admin-only user management: list users and change a user's role. Every action needs the
+// Admin-only user management: list users, change a user's role and delete a user. Every action needs the
 // admin:access permission (403 with reason "role" otherwise).
 [ApiController]
 [Authorize(Policy = Permissions.AdminAccess)]
@@ -70,6 +70,20 @@ public class AdminController : ControllerBase
 
         var newRole = request.Role!;
 
+        return await RunLockedAsync(() => TryChangeAsync(id, newRole, cancellationToken), cancellationToken);
+    }
+
+    // DELETE /api/admin/users/{id}: removes the user and, by cascade, their scans and AI usage rows.
+    // 204 on success, 400 "self" for your own account, 409 "last-admin" when it would leave no admin,
+    // 404 when the user does not exist. The Firebase account is not touched.
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken) =>
+        await RunLockedAsync(() => TryDeleteAsync(id, cancellationToken), cancellationToken);
+
+    // Runs one admin change at a time in this process and retries it when the database reports a
+    // serialization conflict.
+    private async Task<T> RunLockedAsync<T>(Func<Task<T>> change, CancellationToken cancellationToken)
+    {
         await ChangeLock.WaitAsync(cancellationToken);
         try
         {
@@ -77,7 +91,7 @@ public class AdminController : ControllerBase
             {
                 try
                 {
-                    return await TryChangeAsync(id, newRole, cancellationToken);
+                    return await change();
                 }
                 catch (Exception ex) when (attempt < MaxAttempts && IsSerializationFailure(ex))
                 {
@@ -134,6 +148,43 @@ public class AdminController : ControllerBase
             _currentUser.Uid, target.Id, oldRole, newRole);
 
         return AdminUserDto.From(target);
+    }
+
+    // Does the checks and the delete in one serializable transaction.
+    private async Task<IActionResult> TryDeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var target = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (target is null)
+        {
+            return Reason(StatusCodes.Status404NotFound, "", "User not found", "There is no user with that id.");
+        }
+
+        if (target.FirebaseUid == _currentUser.Uid)
+        {
+            return Reason(StatusCodes.Status400BadRequest, "self", "Cannot delete yourself", "You can't delete your own account.");
+        }
+
+        if (Roles.FromStored(target.Role) == Roles.Admin)
+        {
+            var otherAdmins = await _db.AppUsers
+                .CountAsync(u => u.Role == Roles.Admin && u.Id != target.Id, cancellationToken);
+            if (otherAdmins == 0)
+            {
+                return Reason(StatusCodes.Status409Conflict, "last-admin", "Last admin", "There must be at least one admin.");
+            }
+        }
+
+        _db.AppUsers.Remove(target);
+        await _db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        _cache.Remove(DbRoleClaimsTransformation.CacheKey(target.FirebaseUid));
+
+        _logger.LogInformation("User {UserId} deleted by {ActorUid}", target.Id, _currentUser.Uid);
+
+        return NoContent();
     }
 
     // A ProblemDetails response with a machine-readable `reason`.

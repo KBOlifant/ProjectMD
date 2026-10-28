@@ -1,7 +1,7 @@
 import { isRole, type Role } from "@/app/functions/rbac/roles";
 import { ApiError, apiFetch } from "./api-client";
 
-// Calls the admin endpoints of the backend (api mode only): list users and change a user's role.
+// Calls the admin endpoints of the backend (api mode only): list users, change a user's role and delete a user.
 // The backend checks the Firebase ID token and that the caller is an admin on every request; hiding
 // the screen in the browser is only a convenience. Tokens and bodies are never logged or stored.
 
@@ -56,16 +56,24 @@ export async function setUserRole(id: string, role: Role): Promise<AdminUser> {
   return user;
 }
 
+// DELETE /api/admin/users/{id} -> resolves when the user (and their scans) are gone. Rejects with an
+// ApiError (reason "self" for your own account, "last-admin" for the last admin). The user's Firebase
+// account is not removed.
+export async function deleteUser(id: string): Promise<void> {
+  await apiFetch<void>(`/api/admin/users/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 // Turns any error from the admin calls into a short message that is safe to show: your own role
 // ("self"), the last admin ("last-admin"), no access (403), unknown role or user, the server being
-// unreachable, or `fallback` for anything else. Server text is never shown.
-export function adminErrorMessage(err: unknown, fallback: string): string {
+// unreachable, or `fallback` for anything else. `action` picks the wording for "self" (changing your
+// role or deleting your account). Server text is never shown.
+export function adminErrorMessage(err: unknown, fallback: string, action: "role" | "delete" = "role"): string {
   if (!(err instanceof ApiError)) return fallback;
   if (err.status === 0) return "Can't reach the server.";
   if (err.status === 401) return "Your session has expired. Sign in again.";
   if (err.status === 403) return "You don't have access.";
   if (err.status === 404) return "That user no longer exists.";
-  if (err.reason === "self") return "You can't change your own role.";
+  if (err.reason === "self") return action === "delete" ? "You can't delete your own account." : "You can't change your own role.";
   if (err.reason === "last-admin") return "There must be at least one admin.";
   if (err.status === 400 && err.reason === "role") return "That isn't a valid role.";
   return fallback;

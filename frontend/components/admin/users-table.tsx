@@ -1,6 +1,7 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { AdminUser } from "@/app/functions/data/admin-api";
 import { ROLES, type Role } from "@/app/functions/rbac/roles";
+import { Button } from "@/components/ui/button";
 import { TechChip } from "@/components/ui/tech-chip";
 import { formatDate } from "@/lib/format";
 
@@ -23,24 +24,30 @@ function lastSeen(iso: string | null): string {
 // One table row: the user's email, a labelled role <select>, last seen and joined. `pendingRole` is
 // the role being saved (the select shows it and is disabled until the server answers), `message` is
 // the last error for this row, and `isSelf` marks the signed-in admin's own row, whose select is
-// disabled with an explanation (the backend refuses self-changes too). Calls `onChange` with the new
-// role; stores nothing.
+// disabled with an explanation (the backend refuses self-changes too). The Delete button asks for a
+// second click ("Confirm" / "Cancel") before calling `onDelete`; `deleting` is true while that runs.
+// Calls `onChange` with the new role; the only state kept is whether the confirmation is open.
 function UserRow({
   user,
   isSelf,
   pendingRole,
+  deleting,
   message,
   onChange,
+  onDelete,
 }: {
   user: AdminUser;
   isSelf: boolean;
   pendingRole: Role | undefined;
+  deleting: boolean;
   message: string | undefined;
   onChange: (user: AdminUser, role: Role) => void;
+  onDelete: (user: AdminUser) => void;
 }) {
   const noteId = useId();
+  const [confirming, setConfirming] = useState(false);
   const saving = pendingRole !== undefined;
-  const note = saving ? "Saving…" : message ? message : isSelf ? "You can't change your own role." : null;
+  const note = deleting ? "Deleting…" : saving ? "Saving…" : message ? message : isSelf ? "You can't change your own role." : null;
 
   return (
     <tr className="border-b border-border-subtle last:border-b-0 align-top">
@@ -58,7 +65,7 @@ function UserRow({
           aria-describedby={note ? noteId : undefined}
           aria-busy={saving}
           value={pendingRole ?? user.role}
-          disabled={isSelf || saving}
+          disabled={isSelf || saving || deleting}
           onChange={(e) => onChange(user, e.target.value as Role)}
           className="ts-mono-ui rounded-md border border-border-strong bg-bg-surface px-3 py-2 text-ink disabled:border-border-subtle disabled:text-ink-dim"
         >
@@ -74,31 +81,67 @@ function UserRow({
       </td>
       <td className="ts-small whitespace-nowrap px-4 py-3 text-ink-muted">{lastSeen(user.lastSeenAt)}</td>
       <td className="ts-small whitespace-nowrap px-4 py-3 text-ink-muted">{joined(user.createdAt)}</td>
+      <td className="whitespace-nowrap px-4 py-3">
+        {confirming ? (
+          <span className="flex gap-2">
+            <Button
+              variant="secondary"
+              aria-label={`Confirm delete ${user.email}`}
+              disabled={deleting}
+              onClick={() => {
+                setConfirming(false);
+                onDelete(user);
+              }}
+              className="text-danger"
+            >
+              Confirm
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+          </span>
+        ) : (
+          <Button
+            variant="ghost"
+            aria-label={`Delete ${user.email}`}
+            disabled={isSelf || saving || deleting}
+            title={isSelf ? "You can't delete your own account." : undefined}
+            onClick={() => setConfirming(true)}
+          >
+            Delete
+          </Button>
+        )}
+      </td>
     </tr>
   );
 }
 
-// The Users table. `pending` maps a user id to the role being saved, `errors` maps a user id to the
+// The Users table. `pending` maps a user id to the role being saved, `deleting` marks users being
+// deleted, `errors` maps a user id to the
 // message from the last failed change, and `isSelf` says which row is the signed-in admin. It
 // scrolls sideways on narrow screens. Display only; the parent does the saving and stores the state.
 export function UsersTable({
   users,
   pending,
+  deleting,
   errors,
   isSelf,
   onChange,
+  onDelete,
 }: {
   users: AdminUser[];
   pending: Record<string, Role>;
+  deleting: Record<string, true>;
   errors: Record<string, string>;
   isSelf: (user: AdminUser) => boolean;
   onChange: (user: AdminUser, role: Role) => void;
+  onDelete: (user: AdminUser) => void;
 }) {
   const head = "ts-label px-4 py-3 text-left font-medium text-ink-dim";
   return (
     <div className="overflow-x-auto rounded-lg border border-border-subtle bg-bg-surface">
       <table className="w-full min-w-[640px] border-collapse">
-        <caption className="sr-only">Users and their roles</caption>
+        <caption className="sr-only">Users, their roles and a delete button</caption>
         <thead>
           <tr className="border-b border-border-subtle">
             <th scope="col" className={head}>
@@ -113,6 +156,9 @@ export function UsersTable({
             <th scope="col" className={head}>
               Joined
             </th>
+            <th scope="col" className={head}>
+              <span className="sr-only">Delete</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -122,8 +168,10 @@ export function UsersTable({
               user={user}
               isSelf={isSelf(user)}
               pendingRole={pending[user.id]}
+              deleting={deleting[user.id] === true}
               message={errors[user.id]}
               onChange={onChange}
+              onDelete={onDelete}
             />
           ))}
         </tbody>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/app/functions/auth/useAuth";
-import { adminErrorMessage, listAdminUsers, setUserRole, type AdminUser } from "@/app/functions/data/admin-api";
+import { adminErrorMessage, deleteUser, listAdminUsers, setUserRole, type AdminUser } from "@/app/functions/data/admin-api";
 import type { Role } from "@/app/functions/rbac/roles";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -35,13 +35,15 @@ function UsersSkeleton() {
 // The admin Users list (api mode, admins only): loads GET /api/admin/users, shows a skeleton while
 // loading, an error with Retry if that fails, an empty state, or the table. Changing a role calls
 // PUT /api/admin/users/{id}/role: that row is disabled and shows "Saving…" until the server answers,
-// then it is replaced by the updated user, or shows the mapped error message. A screen-reader-only
+// then it is replaced by the updated user, or shows the mapped error message. Delete asks for a
+// confirmation, calls DELETE /api/admin/users/{id} and removes the row. A screen-reader-only
 // live region announces each result. The signed-in admin's own row cannot be changed (found by
 // email). The list, the pending roles and the row errors are temporary state; nothing is stored.
 export function UsersPanel() {
   const { user: me } = useAuth();
   const [view, setView] = useState<View>({ status: "loading" });
   const [pending, setPending] = useState<Record<string, Role>>({});
+  const [deleting, setDeleting] = useState<Record<string, true>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [announcement, setAnnouncement] = useState("");
 
@@ -98,6 +100,25 @@ export function UsersPanel() {
     }
   }
 
+  // Deletes one user (the table already asked for confirmation): marks the row as deleting, calls the
+  // backend, then removes the row, or records the error message for that row. Announces the outcome.
+  async function removeUser(row: AdminUser) {
+    if (deleting[row.id]) return;
+    setDeleting((d) => ({ ...d, [row.id]: true }));
+    setErrors((e) => without(e, row.id));
+    try {
+      await deleteUser(row.id);
+      setView((v) => (v.status === "ready" ? { status: "ready", users: v.users.filter((u) => u.id !== row.id) } : v));
+      setAnnouncement(`${row.email} was deleted.`);
+    } catch (err) {
+      const message = adminErrorMessage(err, "Could not delete the user. Try again.", "delete");
+      setErrors((e) => ({ ...e, [row.id]: message }));
+      setAnnouncement(`${row.email}: ${message}`);
+    } finally {
+      setDeleting((d) => without(d, row.id));
+    }
+  }
+
   return (
     <div>
       <p role="status" aria-live="polite" className="sr-only">
@@ -116,10 +137,18 @@ export function UsersPanel() {
       ) : (
         <>
           <p className="ts-small mb-4 text-ink-muted">
-            {view.users.length} {view.users.length === 1 ? "user" : "users"}, newest first. Role changes apply
-            right away.
+            {view.users.length} {view.users.length === 1 ? "user" : "users"}, newest first. Role changes and
+            deletions apply right away.
           </p>
-          <UsersTable users={view.users} pending={pending} errors={errors} isSelf={isSelf} onChange={changeRole} />
+          <UsersTable
+            users={view.users}
+            pending={pending}
+            deleting={deleting}
+            errors={errors}
+            isSelf={isSelf}
+            onChange={changeRole}
+            onDelete={removeUser}
+          />
         </>
       )}
     </div>

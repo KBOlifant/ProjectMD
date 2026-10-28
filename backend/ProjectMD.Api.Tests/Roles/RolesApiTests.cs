@@ -36,6 +36,10 @@ public class RolesApiTests
     private static Task<HttpResponseMessage> PutRoleAsync(HttpClient client, Guid id, string? role) =>
         client.PutAsJsonAsync($"/api/admin/users/{id}/role", new { role });
 
+    // Sends DELETE /api/admin/users/{id}.
+    private static Task<HttpResponseMessage> DeleteUserAsync(HttpClient client, Guid id) =>
+        client.DeleteAsync($"/api/admin/users/{id}");
+
     // The role /api/me reports for the client's user.
     private static async Task<string?> MeRoleAsync(HttpClient client) =>
         (await JsonAsync(await client.GetAsync("/api/me"))).GetProperty("role").GetString();
@@ -410,6 +414,132 @@ public class RolesApiTests
         var lines = factory.Logs.Lines;
         Assert.Contains(lines, l => l.Contains("Role changed") && l.Contains(targetId.ToString()) && l.Contains("member") && l.Contains("viewer"));
         Assert.DoesNotContain(lines, l => l.Contains("private.person@example.com") || l.Contains("admin.person@example.com"));
+    }
+
+    // ---- Deleting users ------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("viewer")]
+    [InlineData("member")]
+    // Only admins may delete a user: everyone else gets 403 and the user stays.
+    public async Task Delete_user_needs_admin(string role)
+    {
+        using var factory = new AuthTestFactory();
+        var callerUid = NewUid();
+        var targetUid = NewUid();
+        factory.SeedUser(callerUid, role);
+        var targetId = factory.SeedUser(targetUid, "member");
+        using var client = ClientFor(factory, callerUid);
+
+        var response = await DeleteUserAsync(client, targetId);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("member", factory.StoredRole(targetUid));
+    }
+
+    [Fact]
+    // An admin deletes another user: 204 and the row is gone.
+    public async Task Admin_can_delete_a_user()
+    {
+        using var factory = new AuthTestFactory();
+        var adminUid = NewUid();
+        var targetUid = NewUid();
+        factory.SeedUser(adminUid, "admin");
+        var targetId = factory.SeedUser(targetUid, "member");
+        using var client = ClientFor(factory, adminUid);
+
+        var response = await DeleteUserAsync(client, targetId);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Null(factory.StoredRole(targetUid));
+    }
+
+    [Fact]
+    // An unknown user is 404.
+    public async Task Deleting_an_unknown_user_is_404()
+    {
+        using var factory = new AuthTestFactory();
+        var adminUid = NewUid();
+        factory.SeedUser(adminUid, "admin");
+        using var client = ClientFor(factory, adminUid);
+
+        var response = await DeleteUserAsync(client, Guid.NewGuid());
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    // Deleting your own account is refused with reason "self".
+    public async Task Deleting_yourself_is_refused()
+    {
+        using var factory = new AuthTestFactory();
+        var adminUid = NewUid();
+        var adminId = factory.SeedUser(adminUid, "admin");
+        factory.SeedUser(NewUid(), "admin");
+        using var client = ClientFor(factory, adminUid);
+
+        var response = await DeleteUserAsync(client, adminId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("self", (await JsonAsync(response)).GetProperty("reason").GetString());
+        Assert.Equal("admin", factory.StoredRole(adminUid));
+    }
+
+    [Fact]
+    // The last admin cannot be deleted. B is still cached as admin although the database already
+    // demoted B, so B passes authorization but A is the only real admin.
+    public async Task Last_admin_cannot_be_deleted()
+    {
+        using var factory = new AuthTestFactory();
+        var aUid = NewUid();
+        var bUid = NewUid();
+        var aId = factory.SeedUser(aUid, "admin");
+        factory.SeedUser(bUid, "admin");
+        using var b = ClientFor(factory, bUid);
+        Assert.Equal("admin", await MeRoleAsync(b));
+        factory.SeedUser(bUid, "member");
+
+        var response = await DeleteUserAsync(b, aId);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("last-admin", (await JsonAsync(response)).GetProperty("reason").GetString());
+        Assert.Equal("admin", factory.StoredRole(aUid));
+    }
+
+    [Fact]
+    // An admin can be deleted while another admin remains.
+    public async Task Admin_can_be_deleted_when_another_admin_remains()
+    {
+        using var factory = new AuthTestFactory();
+        var adminUid = NewUid();
+        var otherUid = NewUid();
+        factory.SeedUser(adminUid, "admin");
+        var otherId = factory.SeedUser(otherUid, "admin");
+        using var client = ClientFor(factory, adminUid);
+
+        var response = await DeleteUserAsync(client, otherId);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Null(factory.StoredRole(otherUid));
+    }
+
+    [Fact]
+    // A deleted user's cached role is dropped, so their next request is not served as an admin.
+    public async Task Deleted_admin_loses_access_immediately()
+    {
+        using var factory = new AuthTestFactory();
+        var adminUid = NewUid();
+        var otherUid = NewUid();
+        factory.SeedUser(adminUid, "admin");
+        var otherId = factory.SeedUser(otherUid, "admin");
+        using var admin = ClientFor(factory, adminUid);
+        using var other = ClientFor(factory, otherUid);
+        Assert.Equal(HttpStatusCode.OK, (await other.GetAsync("/api/admin/users")).StatusCode);
+
+        await DeleteUserAsync(admin, otherId);
+
+        // The row is recreated as a fresh member on the next request, so admin access is gone.
+        Assert.Equal(HttpStatusCode.Forbidden, (await other.GetAsync("/api/admin/users")).StatusCode);
     }
 
     // ---- Database failure ----------------------------------------------------------------

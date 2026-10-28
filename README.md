@@ -283,7 +283,7 @@ Use the sidebar to move between **Generate**, **Processing**, **Results**, **His
   - **Animations:** what each animation does and what triggers it, with GSAP and Framer Motion snippets.
 - **File generation:** **Copy** or **Download** the breakdown as `<host>.md`. In the Design tab, **Export** the design system as Figma tokens, CSS variables or a Tailwind config.
 - **History:** reopen past scans, with a screenshot preview when you hover over one. Clearing your history does not reset your usage.
-- **Roles:** a *viewer* can read and export scans. A *member* (the default) can also run scans. An *admin* can also change users' roles under **Admin > Users**.
+- **Roles:** a *viewer* can read and export scans. A *member* (the default) can also run scans. An *admin* can also change or delete users under **Admin > Users**.
 
 ---
 
@@ -301,6 +301,7 @@ Base URL in development: `http://localhost:5080`. Every endpoint except `/api/he
 | `DELETE` | `/api/scans` | `history:clear` | Clear your history (soft delete) |
 | `GET` | `/api/admin/users` | `admin:access` | List up to 200 users, newest first |
 | `PUT` | `/api/admin/users/{id}/role` | `admin:access` | Change a user's role. Body: `{ "role": "viewer" \| "member" \| "admin" }` |
+| `DELETE` | `/api/admin/users/{id}` | `admin:access` | Delete a user and their scans (not their Firebase account) |
 
 Error responses include a `reason` field that says what went wrong:
 
@@ -313,7 +314,7 @@ Error responses include a `reason` field that says what went wrong:
 | `budget` | 429 | The daily AI budget is used up (only when `Ai:FallbackOnBudget` is `false`) |
 | `unverified` | 403 | You need to verify your email first |
 | `role` | 403 | Your role does not allow this |
-| `self` / `last-admin` | 400 / 409 | Admin role-change guards |
+| `self` / `last-admin` | 400 / 409 | Admin guards: you can't change or delete yourself, or remove the last admin |
 
 ---
 
