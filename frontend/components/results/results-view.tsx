@@ -146,7 +146,7 @@ export function ResultsView({ id }: { id?: string }) {
 
         <section className="flex min-w-0 flex-1 flex-col md:min-h-0">
           <div className="flex items-center gap-4 border-b border-border-subtle px-2 md:px-7">
-            <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 overflow-x-auto">
+            <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 overflow-hidden">
               {TABS.map((t) => (
                 <button
                   key={t}
