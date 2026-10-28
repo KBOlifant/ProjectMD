@@ -2,6 +2,8 @@
 
 **Have you ever seen a design system on a website, or an element, styled so well that you would like to reuse it but didn't know where to start?**
 
+![Project MD home page](frontend/app/assets/screenshots/HomePageScreenshot.png)
+
 Project MD is for full-stack developers who look at a website and wonder how it was made. It opens the page in a temporary browser, works out the tech stack, API calls, design system, components and animations, and uses Groq AI to explain what it found. You get it all back as a single Markdown (`.md`) document.
 
 <p align="left">
