@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useScan } from "@/components/scan-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { GridBreath } from "@/components/ui/grid-breath";
 import { ProgressCard, ScanCardFrame, ScanCardHeader } from "@/components/ui/progress-card";
 
 // Card shown instead of the progress card when generating the docs failed. Same frame and header
@@ -65,7 +66,8 @@ export default function ProcessingPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <GridBreath />
       <ProgressCard
         host={host}
         url={session.url}
