@@ -282,7 +282,7 @@ Use the sidebar to move between **Generate**, **Processing**, **Results**, **His
   - **Components:** HTML and CSS previews of the page's elements, ready to copy.
   - **Animations:** what each animation does and what triggers it, with GSAP and Framer Motion snippets.
 - **File generation:** **Copy** or **Download** the breakdown as `<host>.md`. In the Design tab, **Export** the design system as Figma tokens, CSS variables or a Tailwind config.
-- **History:** reopen past scans, with a screenshot preview when you hover over one. Clearing your history does not reset your usage.
+- **History:** reopen past scans, delete a single one (or clear them all), with a screenshot preview when you hover over one. Clearing your history does not reset your usage.
 - **Roles:** a *viewer* can read and export scans. A *member* (the default) can also run scans. An *admin* can also change or delete users under **Admin > Users**.
 
 ---
@@ -299,6 +299,7 @@ Base URL in development: `http://localhost:5080`. Every endpoint except `/api/he
 | `GET` | `/api/scans/{id}` | `scan:read` | Get one scan, with its Markdown and analysis |
 | `POST` | `/api/scans` | `scan:create` + verified email | Run a scan. Body: `{ "url": "https://example.com" }` |
 | `DELETE` | `/api/scans` | `history:clear` | Clear your history (soft delete) |
+| `DELETE` | `/api/scans/{id}` | `history:clear` | Remove one scan from your history (soft delete) |
 | `GET` | `/api/admin/users` | `admin:access` | List up to 200 users, newest first |
 | `PUT` | `/api/admin/users/{id}/role` | `admin:access` | Change a user's role. Body: `{ "role": "viewer" \| "member" \| "admin" }` |
 | `DELETE` | `/api/admin/users/{id}` | `admin:access` | Delete a user and their scans (not their Firebase account) |

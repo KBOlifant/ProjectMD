@@ -5,13 +5,13 @@ namespace ProjectMD.Api.Services.Extraction.Components;
 // and badges). It also reads each component's short visible text (or placeholder) so the preview
 // can repeat it, and the colour painted behind it. It never reads cookies, storage or typed form
 // values and makes no request. It checks at most 1500 elements, keeps at most 2 differently-styled
-// examples of each kind (button, input, card, nav, heading, badge) and returns one JSON string:
+// examples of each kind (4 for buttons; button, input, card, nav, menu, link, tabs, footer, heading, badge) and returns one JSON string:
 //   { items:[ { kind, tag, text, backdrop, styles:{ cssProperty: value } } ] }
 public static class ComponentScript
 {
     public const string Source = """
 (() => {
-  const MAX_CHECK = 1500, PER_KIND = 2;
+  const MAX_CHECK = 1500, DEFAULT_PER_KIND = 2, PER_KIND = { button: 4 };
   const PROPS = ['color', 'background-color', 'border-top-width', 'border-top-style', 'border-top-color', 'border-radius',
     'box-shadow', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-transform',
     'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'width', 'height', 'display', 'gap', 'text-decoration-line'];
@@ -30,12 +30,12 @@ public static class ComponentScript
     } catch (e) { /* keep the original */ }
     return v;
   };
-  // Visible text: one line per text line, at most 6 lines, joined with " | " so the AI can lay them out.
-  const MAX_TEXT = 300;
+  // Visible text: one line per text line, at most 8 lines, joined with " | " so the AI can lay them out.
+  const MAX_TEXT = 400;
   const textOf = (kind, el) => {
     if (kind === 'input') { return (el.getAttribute('placeholder') || el.getAttribute('aria-label') || '').trim().slice(0, 80); }
     const raw = (el.innerText || el.getAttribute('aria-label') || '').split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-    return raw.slice(0, 6).join(' | ').slice(0, MAX_TEXT);
+    return raw.slice(0, 8).join(' | ').slice(0, MAX_TEXT);
   };
   // The first solid background behind the element, or the page's default white.
   const backdropOf = (el) => {
@@ -45,10 +45,11 @@ public static class ComponentScript
     }
     return '#ffffff';
   };
-  const kinds = { button: [], input: [], card: [], nav: [], heading: [], badge: [] };
+  const kinds = { button: [], input: [], card: [], nav: [], menu: [], link: [], tabs: [], footer: [], heading: [], badge: [] };
+  const room = (kind) => kinds[kind].length < (PER_KIND[kind] || DEFAULT_PER_KIND);
   const seen = new Set();
   const take = (kind, el) => {
-    if (kinds[kind].length >= PER_KIND) { return; }
+    if (!room(kind)) { return; }
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') { return; }
     const rect = el.getBoundingClientRect();
@@ -73,13 +74,17 @@ public static class ComponentScript
     if (tag === 'BUTTON' || el.getAttribute('role') === 'button' || (tag === 'A' && looksLike(el, /(^|[\s_-])(btn|button)([\s_-]|$)/i))) { take('button', el); }
     else if (tag === 'INPUT' && ['text', 'email', 'search', 'password', 'url', 'tel', null, ''].includes(el.getAttribute('type'))) { take('input', el); }
     else if (tag === 'TEXTAREA' || tag === 'SELECT') { take('input', el); }
-    else if (tag === 'NAV') { take('nav', el); }
+    else if (tag === 'NAV' || (tag === 'HEADER' && el.querySelector('a'))) { take('nav', el); }
+    else if (tag === 'FOOTER') { take('footer', el); }
+    else if (el.getAttribute('role') === 'tablist') { take('tabs', el); }
+    else if (['menu', 'menubar'].includes(el.getAttribute('role')) || ((tag === 'UL' || tag === 'OL') && el.querySelectorAll(':scope > li').length >= 3 && !el.closest('footer'))) { take('menu', el); }
+    else if (tag === 'A' && el.closest('nav, header') && el.getAttribute('href')) { take('link', el); }
     else if (tag === 'H1' || tag === 'H2') { take('heading', el); }
     else if (looksLike(el, /(^|[\s_-])(badge|chip|pill|tag)([\s_-]|$)/i)) { take('badge', el); }
     else if ((tag === 'DIV' || tag === 'ARTICLE' || tag === 'LI') && el.children.length >= 2 && looksLike(el, /card/i)) { take('card', el); }
   }
   if (kinds.card.length === 0) {
-    for (let i = 0; i < limit && kinds.card.length < PER_KIND; i++) {
+    for (let i = 0; i < limit && room('card'); i++) {
       const el = all[i];
       if (!['DIV', 'ARTICLE', 'LI'].includes(el.tagName) || el.children.length < 2) { continue; }
       const cs = getComputedStyle(el);
@@ -87,7 +92,7 @@ public static class ComponentScript
       if (boxed && parseFloat(cs.borderTopLeftRadius) >= 4 && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') { take('card', el); }
     }
   }
-  const items = [].concat(kinds.button, kinds.input, kinds.card, kinds.nav, kinds.heading, kinds.badge);
+  const items = [].concat(kinds.button, kinds.nav, kinds.menu, kinds.link, kinds.tabs, kinds.input, kinds.card, kinds.footer, kinds.heading, kinds.badge);
   return JSON.stringify({ items });
 })()
 """;

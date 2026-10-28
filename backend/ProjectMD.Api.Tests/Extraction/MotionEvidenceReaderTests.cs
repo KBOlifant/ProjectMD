@@ -36,14 +36,15 @@ public class MotionEvidenceReaderTests
         Assert.Equal(["GSAP", "GSAP ScrollTrigger", "Lenis (smooth scroll)"], evidence.Libraries);
         Assert.Equal(2, evidence.Animations.Count);
 
-        var spin = evidence.Animations[0];
+        // Listed by source (GSAP first), not in page order.
+        var spin = evidence.Animations[1];
         Assert.Equal("css-animation", spin.Source);
         Assert.Equal("spin", spin.Name);
         Assert.Equal(1200, spin.DurationMs);
         Assert.Equal("infinite", spin.Repeat);
         Assert.Equal(["transform"], spin.Properties);
 
-        var hero = evidence.Animations[1];
+        var hero = evidence.Animations[0];
         Assert.Equal("gsap", hero.Source);
         Assert.Equal("power3.out", hero.Easing);
         Assert.Equal(200, hero.DelayMs);
@@ -158,5 +159,54 @@ public class MotionEvidenceReaderTests
         Assert.Same(one, MotionEvidenceReader.Merge(one, null));
         Assert.Same(one, MotionEvidenceReader.Merge(null, one));
         Assert.Null(MotionEvidenceReader.Merge(null, null));
+    }
+
+    // Hover states found by the probe are added, are marked as hover, and survive next to many
+    // transitions: a long run of one source cannot push the others out of the capped list.
+    [Fact]
+    public void Hover_states_and_text_animations_are_kept_next_to_many_transitions()
+    {
+        var transitions = Enumerable.Range(0, 70)
+            .Select(i => new MeasuredAnimation("css-transition", "div.card" + i, "opacity", 200, 0, "ease", null, ["opacity"]))
+            .ToList();
+        var evidence = new MotionEvidence([], transitions, [], []);
+        var hover = "{\"animations\":[{\"source\":\"css-hover\",\"target\":\"a.btn\",\"name\":\"hover\",\"durationMs\":200,\"props\":[\"background-color\"],"
+            + "\"values\":[{\"p\":\"background-color\",\"f\":\"rgb(0, 0, 0)\",\"t\":\"rgb(20, 20, 20)\"},{\"p\":\"evil\",\"f\":\"x\",\"t\":\"y\"}]}]}";
+
+        var merged = MotionEvidenceReader.WithHoverStates(evidence, hover)!;
+
+        Assert.Equal(MotionEvidenceReader.MaxAnimations, merged.Animations.Count);
+        var state = Assert.Single(merged.Animations, a => a.Source == "css-hover");
+        Assert.Equal("a.btn", state.Target);
+        var value = Assert.Single(state.Values!);
+        Assert.Equal("background-color", value.Property);
+    }
+
+    // The text flag from the page is read, and text animations are listed first within their source.
+    [Fact]
+    public void Text_animations_come_first_within_a_source()
+    {
+        var answer = "{\"animations\":["
+            + "{\"source\":\"gsap\",\"target\":\"div.bg\",\"durationMs\":900},"
+            + "{\"source\":\"gsap\",\"target\":\"h1.title\",\"durationMs\":900,\"text\":true}]}";
+
+        var evidence = MotionEvidenceReader.Read(answer, None, None)!;
+
+        Assert.Equal("h1.title", evidence.Animations[0].Target);
+        Assert.True(evidence.Animations[0].OnText);
+        Assert.False(evidence.Animations[1].OnText);
+    }
+
+    // Damaged or empty hover answers change nothing.
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not json")]
+    [InlineData("{\"animations\":\"x\"}")]
+    public void Garbage_hover_answers_leave_the_evidence_alone(string? hover)
+    {
+        var one = new MotionEvidence(["GSAP"], [], [], []);
+
+        Assert.Same(one, MotionEvidenceReader.WithHoverStates(one, hover));
     }
 }

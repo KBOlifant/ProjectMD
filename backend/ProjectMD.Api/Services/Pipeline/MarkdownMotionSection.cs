@@ -185,6 +185,7 @@ internal static class MarkdownMotionSection
         "css-transition" => "CSS transition",
         "web-animation" => "Web Animations API",
         "gsap" => "GSAP tween",
+        "css-hover" => "CSS hover state",
         _ => source,
     };
 

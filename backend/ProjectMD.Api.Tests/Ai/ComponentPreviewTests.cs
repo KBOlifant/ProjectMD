@@ -293,4 +293,21 @@ public class ComponentPreviewTests
         Assert.True(request.JsonObjectMode);
         Assert.Equal("some-model", request.Model);
     }
+
+    // The new kinds (menu, link, tabs, footer) are accepted by the capture reader and the sanitiser.
+    [Theory]
+    [InlineData("menu")]
+    [InlineData("link")]
+    [InlineData("tabs")]
+    [InlineData("footer")]
+    public void New_component_kinds_are_accepted(string kind)
+    {
+        var json = "{\"items\":[{\"kind\":\"" + kind + "\",\"tag\":\"ul\",\"text\":\"Home | About\",\"styles\":{\"color\":\"#fff\"}}]}";
+
+        var item = Assert.Single(ComponentSample.TryParse(json)!.Items);
+        var preview = ComponentSanitizer.Clean(kind, "Menu", "<ul class=\"m\"><li>Home</li></ul>", ".m { color: #fff; }");
+
+        Assert.Equal(kind, item.Kind);
+        Assert.Equal(kind, preview!.Kind);
+    }
 }

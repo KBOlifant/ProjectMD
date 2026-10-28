@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { AdminUser } from "@/app/functions/data/admin-api";
 import { ROLES, type Role } from "@/app/functions/rbac/roles";
 import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { TechChip } from "@/components/ui/tech-chip";
 import { formatDate } from "@/lib/format";
 
@@ -85,14 +86,13 @@ function UserRow({
         {confirming ? (
           <span className="flex gap-2">
             <Button
-              variant="secondary"
+              variant="danger"
               aria-label={`Confirm delete ${user.email}`}
               disabled={deleting}
               onClick={() => {
                 setConfirming(false);
                 onDelete(user);
               }}
-              className="text-danger"
             >
               Confirm
             </Button>
@@ -101,15 +101,12 @@ function UserRow({
             </Button>
           </span>
         ) : (
-          <Button
-            variant="ghost"
-            aria-label={`Delete ${user.email}`}
+          <DeleteButton
+            label={user.email}
             disabled={isSelf || saving || deleting}
             title={isSelf ? "You can't delete your own account." : undefined}
             onClick={() => setConfirming(true)}
-          >
-            Delete
-          </Button>
+          />
         )}
       </td>
     </tr>

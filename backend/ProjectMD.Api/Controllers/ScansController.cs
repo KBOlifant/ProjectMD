@@ -204,6 +204,24 @@ public class ScansController : ControllerBase
         return NoContent();
     }
 
+    // DELETE /api/scans/{id}: removes one of the caller's scans from their history. Returns 204.
+    // Soft delete, for the same reason as Clear: the row is kept with DeletedAt = now so the scan
+    // still counts toward this month's allowance. A scan that does not exist, belongs to someone
+    // else or was already removed is the same 404 (the global query filter hides removed scans).
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.HistoryClear)]
+    public async Task<IActionResult> DeleteOne(Guid id, CancellationToken ct)
+    {
+        var user = await _userSync.GetOrCreateAsync(_currentUser, ct);
+
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var removed = await _db.Scans
+            .Where(s => s.Id == id && s.UserId == user.Id)
+            .ExecuteUpdateAsync(set => set.SetProperty(s => s.DeletedAt, now), ct);
+
+        return removed == 0 ? NotFound() : NoContent();
+    }
+
     // The response for a page that could not be extracted: 400 when the address itself is the
     // problem (a non-public address, not an HTML page), otherwise 502 (the site or our page
     // renderer failed). reason is "extract" and the detail is the exception's user-safe message.

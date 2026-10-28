@@ -10,7 +10,8 @@ namespace ProjectMD.Api.Services.Extraction.Visual;
 // is cut to a short length, control characters are removed, and lists are capped.
 public static partial class MotionEvidenceReader
 {
-    public const int MaxAnimations = 40;
+    public const int MaxAnimations = 60;
+    private const int MaxReadAnimations = 120;
     public const int MaxScrollTriggers = 20;
     private const int MaxJsonChars = 200_000;
     private const int MaxCssChars = 2_000_000;
@@ -90,6 +91,7 @@ public static partial class MotionEvidenceReader
         var signals = new List<string>();
 
         ReadScript(scriptJson, libraries, animations, triggers, signals);
+        animations = Interleave(animations).Take(MaxAnimations).ToList();
 
         foreach (var url in scriptUrls)
         {
@@ -124,8 +126,8 @@ public static partial class MotionEvidenceReader
         }
 
         var libraries = first.Libraries.Concat(second.Libraries).Distinct(StringComparer.Ordinal).ToList();
-        var animations = first.Animations.Concat(second.Animations)
-            .DistinctBy(a => (a.Source, a.Target, a.Name, a.DurationMs))
+        var animations = Interleave(first.Animations.Concat(second.Animations)
+                .DistinctBy(a => (a.Source, a.Target, a.Name, a.DurationMs)))
             .Take(MaxAnimations)
             .ToList();
         var triggers = first.ScrollTriggers.Concat(second.ScrollTriggers)
@@ -145,6 +147,45 @@ public static partial class MotionEvidenceReader
         }
 
         return new MotionEvidence(libraries, animations, triggers, signals);
+    }
+
+    // Adds hover states (the answer of HoverProbe) to the evidence. Returns the evidence unchanged
+    // when there are none.
+    public static MotionEvidence? WithHoverStates(MotionEvidence? evidence, string? hoverJson)
+    {
+        var hovers = new List<MeasuredAnimation>();
+        ReadAnimations(hoverJson, hovers);
+        if (hovers.Count == 0)
+        {
+            return evidence;
+        }
+
+        var existing = evidence?.Animations ?? [];
+        var animations = Interleave(existing.Concat(hovers).DistinctBy(a => (a.Source, a.Target, a.Name, a.DurationMs)))
+            .Take(MaxAnimations)
+            .ToList();
+        return new MotionEvidence(evidence?.Libraries ?? [], animations, evidence?.ScrollTriggers ?? [], evidence?.Signals ?? []);
+    }
+
+    // Mixes the sources so a long run of one kind (dozens of CSS transitions) cannot push every GSAP
+    // tween, hover state and text animation out of the capped list. Text animations come first within
+    // a source; the order inside each source is kept. The AI refers to animations by their position in
+    // this list, so every consumer must use this order.
+    internal static List<MeasuredAnimation> Interleave(IEnumerable<MeasuredAnimation> animations)
+    {
+        string[] order = ["gsap", "css-hover", "web-animation", "css-animation", "css-transition"];
+        var groups = animations
+            .GroupBy(a => Array.IndexOf(order, a.Source) is var i and >= 0 ? i : order.Length)
+            .OrderBy(g => g.Key)
+            .Select(g => g.OrderByDescending(a => a.OnText).ToList())
+            .ToList();
+        var result = new List<MeasuredAnimation>();
+        for (var round = 0; groups.Any(g => round < g.Count); round++)
+        {
+            result.AddRange(groups.Where(g => round < g.Count).Select(g => g[round]));
+        }
+
+        return result;
     }
 
     // The part of a signal after its leading number, so "3 <canvas> elements" and "5 <canvas>
@@ -196,18 +237,7 @@ public static partial class MotionEvidenceReader
 
             if (root.TryGetProperty("animations", out var list) && list.ValueKind == JsonValueKind.Array)
             {
-                foreach (var item in list.EnumerateArray())
-                {
-                    if (animations.Count >= MaxAnimations)
-                    {
-                        break;
-                    }
-
-                    if (ReadAnimation(item) is { } animation)
-                    {
-                        animations.Add(animation);
-                    }
-                }
+                ReadAnimationList(list, animations);
             }
 
             if (root.TryGetProperty("triggers", out var stList) && stList.ValueKind == JsonValueKind.Array)
@@ -239,6 +269,45 @@ public static partial class MotionEvidenceReader
         }
     }
 
+    // Reads {"animations":[...]} (the hover probe's answer); anything damaged adds nothing.
+    private static void ReadAnimations(string? json, List<MeasuredAnimation> animations)
+    {
+        if (string.IsNullOrWhiteSpace(json) || json.Length > MaxJsonChars)
+        {
+            return;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 });
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("animations", out var list) && list.ValueKind == JsonValueKind.Array)
+            {
+                ReadAnimationList(list, animations);
+            }
+        }
+        catch (JsonException)
+        {
+            // A broken answer just means no hover states.
+        }
+    }
+
+    private static void ReadAnimationList(JsonElement list, List<MeasuredAnimation> animations)
+    {
+        foreach (var item in list.EnumerateArray())
+        {
+            if (animations.Count >= MaxReadAnimations)
+            {
+                break;
+            }
+
+            if (ReadAnimation(item) is { } animation)
+            {
+                animations.Add(animation);
+            }
+        }
+    }
+
     // One animation entry, or null when it is not an object with a known source.
     private static MeasuredAnimation? ReadAnimation(JsonElement item)
     {
@@ -248,7 +317,7 @@ public static partial class MotionEvidenceReader
         }
 
         var source = Text(item, "source");
-        if (source is not ("css-animation" or "css-transition" or "web-animation" or "gsap"))
+        if (source is not ("css-animation" or "css-transition" or "web-animation" or "gsap" or "css-hover"))
         {
             return null;
         }
@@ -274,11 +343,13 @@ public static partial class MotionEvidenceReader
             Text(item, "easing"),
             Text(item, "repeat"),
             properties,
-            ReadValues(item));
+            ReadValues(item),
+            item.TryGetProperty("text", out var onText) && onText.ValueKind == JsonValueKind.True);
     }
 
     private static readonly HashSet<string> ValueProperties =
-        ["opacity", "transform", "translate", "scale", "rotate", "x", "y", "xPercent", "yPercent", "rotation"];
+        ["opacity", "transform", "translate", "scale", "rotate", "x", "y", "xPercent", "yPercent", "rotation",
+            "color", "background-color", "border-color", "box-shadow", "filter", "text-decoration-line"];
 
     // The start and end values of the properties that matter; unknown property names are dropped.
     private static List<MotionValue> ReadValues(JsonElement item)

@@ -7,16 +7,16 @@ namespace ProjectMD.Api.Services.Extraction.Components;
 // everything is checked again here: known kinds, known CSS property names, short plain values.
 public static class ComponentSample
 {
-    public const int MaxItems = 12;
+    public const int MaxItems = 24;
     private const int MaxValueChars = 200;
-    private const int MaxTextChars = 300;
+    private const int MaxTextChars = 400;
 
     // A plain #rrggbb colour: the only backdrop form kept.
     public static readonly Regex HexColour = new(@"^#[0-9a-fA-F]{6}$", RegexOptions.Compiled);
 
     // The kinds the script may report.
     public static readonly IReadOnlySet<string> Kinds =
-        new HashSet<string>(StringComparer.Ordinal) { "button", "input", "card", "nav", "heading", "badge" };
+        new HashSet<string>(StringComparer.Ordinal) { "button", "input", "card", "nav", "menu", "link", "tabs", "footer", "heading", "badge" };
 
     // The CSS properties the script reads (anything else is dropped).
     public static readonly IReadOnlySet<string> Properties = new HashSet<string>(StringComparer.Ordinal)

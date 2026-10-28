@@ -40,6 +40,7 @@
   --success-bg: #12291f;
   --warning: #e0a84a;
   --danger: #ef6a80;
+  --danger-strong: #8f1d2e; /* dark red fill for delete buttons */
 
   --shadow-glow: 0 0 24px 0 rgba(158, 74, 187, 0.35);
   --shadow-panel: 0px 24px 64px 12px rgba(0, 0, 0, 0.514);
@@ -74,6 +75,7 @@
   --color-success-bg: var(--success-bg);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
 
   --radius-sm: 4px;
   --radius-md: 6px;

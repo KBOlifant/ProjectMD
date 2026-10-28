@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 
 // primary = plum (every in-app action), accent = violet (the one hero call to action),
-// secondary = raised neutral, ghost = outline only.
-export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "custom1";
+// secondary = raised neutral, ghost = outline only, danger = dark red outline, no fill (delete actions).
+export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "custom1" | "danger";
 
 const base =
   "ts-mono-ui inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 cursor-pointer transition-[color,background-color,border-color,scale] hover:scale-[1.03] " +
@@ -15,7 +15,8 @@ const variants: Record<ButtonVariant, string> = {
   accent: "border-transparent bg-violet-500 text-on-primary hover:bg-violet-400 active:bg-violet-600",
   secondary: "border-border-strong bg-bg-surface text-ink-body hover:bg-bg-hover hover:text-ink-hover",
   ghost: "border-border-strong bg-transparent text-ink-muted hover:bg-bg-hover hover:text-ink-hover",
-  custom1: "border-transparent bg-plum-500 text-on-primary hover:bg-plum-400 active:bg-plum-400"
+  custom1: "border-transparent bg-plum-500 text-on-primary hover:bg-plum-400 active:bg-plum-400",
+  danger: "border-danger-strong bg-transparent text-danger-strong hover:border-[#a82438] hover:text-[#a82438] active:border-[#76172a] active:text-[#76172a]",
 };
 
 // Builds the CSS class string for a button style so buttons and links look the same. Stores nothing.

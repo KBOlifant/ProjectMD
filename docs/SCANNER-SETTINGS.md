@@ -56,7 +56,9 @@ The screenshots are kept in memory for that one scan only. They are never saved 
 | `ScreenshotQuality` | `60` | JPEG quality (1 to 100). Lower = smaller images. |
 | `SheetColumns` | `3` | Frames per row on a contact sheet (1 to 6). |
 | `SheetRows` | `2` | Rows per contact sheet (1 to 6). Frames per sheet = columns x rows. |
-| `CaptureTimeoutSeconds` | `20` | Time limit for all screenshots of one page (2 to 120). When it runs out, the frames taken so far are kept. |
+| `CaptureTimeoutSeconds` | `30` | Time limit for all screenshots of one page (2 to 120). When it runs out, the frames taken so far are kept. |
+| `HoverProbes` | `10` | How many differently-styled buttons, cards, links and images are hovered with the mouse to find hover states (0 to 30; 0 switches it off). Each takes about half a second. |
+| `HoverSettleMs` | `260` | How long to wait after the mouse arrives before reading the hover style, so the element's own transition can finish (0 to 2000). |
 
 ### Limits for images and fonts
 
@@ -72,7 +74,7 @@ The screenshots are kept in memory for that one scan only. They are never saved 
 | `VisionModel` | `qwen/qwen3.8-27b` | The Groq model that reads the screenshots. It must accept images. The text notes still use `Ai:FastModel`. |
 | `MaxImagesPerRequest` | `3` | Most images per request. Groq's `qwen/qwen3.8-27b` accepts 3. Image 1 is the first screen; the rest are contact sheets. |
 | `TokensPerImage` | `2048` | What Groq charges per image, in input tokens. Only used to check the daily budget before the call. |
-| `MaxOutputTokens` | `1800` | Longest answer the model may give. It holds the animation descriptions and the design breakdown. |
+| `MaxOutputTokens` | `3000` | Longest answer the model may give. It holds the animation descriptions and the design breakdown. |
 | `ResponseFormat` | `json_object` | `json_object` asks for any valid JSON and describes the shape in the prompt (Groq's vision docs show this working with images). `json_schema` uses strict schema decoding instead; try it only if answers come back badly shaped. |
 | `TimeoutSeconds` | `60` | How long to wait for the vision model. Reading images is slower than the text call. |
 | `ReasoningEffort` | `none` | How much the model thinks first: `none` (fastest, cheapest), `low`, `medium`, `high` or `default`. |

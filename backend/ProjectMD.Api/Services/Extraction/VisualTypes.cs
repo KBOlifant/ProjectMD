@@ -5,12 +5,14 @@ namespace ProjectMD.Api.Services.Extraction;
 // one scan only; they are never stored in the database or written into the Markdown.
 
 // One animation the browser itself reported, so its timing is MEASURED, not guessed.
-// Source is "css-animation", "css-transition", "web-animation" or "gsap". Target is a short
+// Source is "css-animation", "css-transition", "web-animation", "gsap" or "css-hover" (a hover state
+// found by moving the mouse over the element). Target is a short
 // description of the element such as "h1#title.hero-heading". Name is the @keyframes name (CSS
 // animations) or the property (CSS transitions). Properties are the CSS properties that change.
 // Values are the first and last keyframe values of the properties that matter for rebuilding it
 // (opacity, transform, translate, scale, rotate; for GSAP: opacity, x, y, xPercent, yPercent, scale,
-// rotation), or null when none were read.
+// rotation; for hover states also colours, shadow and filter), or null when none were read. OnText
+// is true when the animated element is, or sits inside, a piece of text (a text animation).
 public sealed record MeasuredAnimation(
     string Source,
     string Target,
@@ -20,7 +22,8 @@ public sealed record MeasuredAnimation(
     string? Easing,
     string? Repeat,
     IReadOnlyList<string> Properties,
-    IReadOnlyList<MotionValue>? Values = null);
+    IReadOnlyList<MotionValue>? Values = null,
+    bool OnText = false);
 
 // One property's start and end value as the page reported them, each null when not known (a GSAP
 // "to" tween has no start value in its settings). Raw page text: treat as untrusted.

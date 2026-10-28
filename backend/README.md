@@ -170,7 +170,8 @@ All timestamps are UTC: always write `DateTime.UtcNow`.
 
 ### Clearing history is a soft delete
 
-`DELETE /api/scans` does not remove rows. It sets `DeletedAt` to the current UTC time on the
+`DELETE /api/scans` does not remove rows (and neither does `DELETE /api/scans/{id}`, which does the same
+for one scan: `204`, or `404` for an unknown, foreign or already removed scan). It sets `DeletedAt` to the current UTC time on the
 caller's scans that are not cleared yet (a scan that was already cleared keeps its original
 `DeletedAt`). The monthly allowance is computed by counting `Scans` rows, so a hard delete would
 refund it and "create, clear, repeat" would get around the limit (only the rate limit would slow it

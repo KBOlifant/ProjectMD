@@ -142,7 +142,7 @@ public class MotionAiTests
         Assert.Null(request.JsonSchema);
         Assert.Contains(MotionPromptBuilder.ShapeInstructions, request.System);
         Assert.Equal(60, request.TimeoutSeconds);
-        Assert.Equal(1800, request.MaxOutputTokens);
+        Assert.Equal(3000, request.MaxOutputTokens);
         Assert.Equal("none", request.ReasoningEffort);
         Assert.NotNull(request.Images);
         Assert.Equal(2, request.Images.Count);

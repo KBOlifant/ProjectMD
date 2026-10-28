@@ -10,10 +10,10 @@ import { DownloadIcon } from "@/components/ui/icons";
 import { HistoryPreview } from "@/components/ui/history-preview";
 import { HistoryRow } from "@/components/ui/history-row";
 import { downloadAllScans, downloadScan } from "@/lib/download";
-import { clearHistory, reloadHistory, useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
+import { clearHistory, deleteScan, reloadHistory, useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 
 // /history page: lists every saved scan with a ".MD" download on each row, an "Export all" button
-// (one combined Markdown file) and a two-step "Clear history" button, shown only to accounts with
+// (one combined Markdown file) and a two-step "Clear history" button and a two-step "Delete" button on each row, shown only to accounts with
 // the "history:clear" permission. Downloads need the "scan:export" permission. Reads scans from the history store; clearing
 // wipes them (localStorage in static mode, the backend in api mode, where a failure keeps the list
 // and shows the error). If loading the list from the backend failed it shows the error with a
@@ -23,10 +23,12 @@ export default function HistoryPage() {
   const hydrated = useIsHydrated();
   const { error: loadError } = useHistoryStatus();
   const canExport = useCan("scan:export");
+  const canClear = useCan("history:clear");
   const [confirming, setConfirming] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Clears the history and closes the confirm step. A failure (api mode) leaves the list as it is
   // and shows the message under the header.
@@ -40,6 +42,19 @@ export default function HistoryPage() {
     }
     setClearing(false);
     setConfirming(false);
+  }
+
+  // Deletes one scan (the row already asked for confirmation). A failure (api mode) keeps the list
+  // and shows the message under the header.
+  async function removeScan(id: string) {
+    setDeletingId(id);
+    setClearError(null);
+    try {
+      await deleteScan(id);
+    } catch (err) {
+      setClearError(err instanceof Error ? err.message : "Could not delete that scan. Try again.");
+    }
+    setDeletingId(null);
   }
 
   return (
@@ -122,6 +137,8 @@ export default function HistoryPage() {
                 onDownload={() => downloadScan(scan)}
                 downloadDisabled={!canExport}
                 downloadHint="Your account cannot export scans."
+                onDelete={canClear ? () => void removeScan(scan.id) : undefined}
+                deleting={deletingId === scan.id}
                 onActivate={() => setActiveId(scan.id)}
               />
             ))}

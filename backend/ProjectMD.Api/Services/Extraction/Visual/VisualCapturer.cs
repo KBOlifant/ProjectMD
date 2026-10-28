@@ -9,7 +9,8 @@ namespace ProjectMD.Api.Services.Extraction.Visual;
 //     such as Lenis only react to those), waits Motion:FrameDelayMs, and takes the next screenshot,
 //     Motion:ScrollFrames times in all,
 //  4. reads the evidence again (scroll animations only exist once they are reached),
-//  5. lays the frames out on contact sheets in a separate, blank, script-free page.
+//  5. hovers a few elements to find hover states (HoverProbe),
+//  6. lays the frames out on contact sheets in a separate, blank, script-free page.
 // Everything has a time limit (Motion:CaptureTimeoutSeconds). Nothing here can fail a scan: on any
 // trouble, whatever was captured so far is kept, and with nothing at all the answer is null.
 public static class VisualCapturer
@@ -57,6 +58,9 @@ public static class VisualCapturer
                 }
 
                 afterScroll = await TryReadEvidenceAsync(page, scriptUrls, stylesheets, logger, token);
+
+                // Last, because hovering scrolls the page: the screenshots are already taken.
+                afterScroll = MotionEvidenceReader.WithHoverStates(afterScroll, await HoverProbe.TryProbeAsync(page, options, logger, token));
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

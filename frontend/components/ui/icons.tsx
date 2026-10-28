@@ -47,6 +47,9 @@ export const CopyIcon = (p: IconProps) => (
 export const DownloadIcon = (p: IconProps) => (
   <Icon {...p}><path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" /></Icon>
 );
+export const TrashIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M2.5 4h11M6 4V2.5h4V4M3.8 4l.7 9.5h7l.7-9.5M6.5 7v3.5M9.5 7v3.5" /></Icon>
+);
 export const CheckIcon = (p: IconProps) => (
   <Icon {...p}><path d="m3 8.5 3.2 3L13 4.5" /></Icon>
 );

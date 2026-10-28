@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { useState } from "react";
 import { formatDate, initials } from "@/lib/format";
 import type { Scan } from "@/lib/types";
+import { Button } from "./button";
+import { DeleteButton } from "./delete-button";
 import { DownloadIcon } from "./icons";
 import { ConfidenceBadge, TechTag } from "./tech-chip";
 
@@ -11,6 +14,10 @@ interface HistoryRowProps {
   // Disables that button (for accounts without export permission); `downloadHint` explains why.
   downloadDisabled?: boolean;
   downloadHint?: string;
+  // When given, a "Delete" button is shown after the download button. It asks for a second click
+  // ("Confirm" / "Keep") before calling this; `deleting` disables it while the request runs.
+  onDelete?: () => void;
+  deleting?: boolean;
   // Called when the pointer or keyboard focus enters the row.
   onActivate?: () => void;
 }
@@ -18,8 +25,17 @@ interface HistoryRowProps {
 // One row summarising a saved scan: site screenshot (initials tile when there is none), host with confidence badge, up to four tech
 // tags, scan date, page count and a ".MD" download button. The host is a real link to
 // /results/<scan.id> stretched over the whole row; the download button sits above that link so
-// the two never nest. Display only; stores nothing.
-export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloadHint, onActivate }: HistoryRowProps) {
+// the two never nest. The only state kept is whether the delete confirmation is open.
+export function HistoryRow({
+  scan,
+  onDownload,
+  downloadDisabled = false,
+  downloadHint,
+  onDelete,
+  deleting = false,
+  onActivate,
+}: HistoryRowProps) {
+  const [confirming, setConfirming] = useState(false);
   return (
     <div
       onMouseEnter={onActivate}
@@ -74,6 +90,33 @@ export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloa
             .MD
           </button>
         )}
+        {onDelete &&
+          (confirming ? (
+            <span className="relative z-10 flex gap-2">
+              <Button
+                variant="danger"
+                className="px-3 py-1.5"
+                aria-label={`Confirm delete ${scan.host}`}
+                disabled={deleting}
+                onClick={() => {
+                  setConfirming(false);
+                  onDelete();
+                }}
+              >
+                Confirm
+              </Button>
+              <Button variant="ghost" className="px-3 py-1.5" onClick={() => setConfirming(false)}>
+                Keep
+              </Button>
+            </span>
+          ) : (
+            <DeleteButton
+              label={scan.host}
+              className="relative z-10"
+              disabled={deleting}
+              onClick={() => setConfirming(true)}
+            />
+          ))}
       </div>
     </div>
   );

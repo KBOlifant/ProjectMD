@@ -1,0 +1,1 @@
+IF YOUR APP DOESNT WORK, PLEASE CHECKOUT: frontend/.next , this is where i build the application as it is built in next.js. THANK YOU!

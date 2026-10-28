@@ -7,7 +7,7 @@ namespace ProjectMD.Api.Services.Ai;
 // one with ComponentSanitizer. Anything damaged gives null; a bad entry is skipped.
 public static class ComponentPreviewsParser
 {
-    public const int MaxComponents = 8;
+    public const int MaxComponents = 16;
 
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 

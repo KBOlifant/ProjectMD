@@ -70,13 +70,13 @@ public sealed record ComponentNote(string Name, string Description, string Styli
 public static class MotionNotesLimits
 {
     public const int SummaryChars = 400;
-    public const int MaxAnimations = 12;
+    public const int MaxAnimations = 16;
     public const int SectionChars = 60;
     public const int NameChars = 80;
     public const int DescriptionChars = 500;
     public const int LibraryChars = 60;
     public const int RecreateChars = 200;
-    public const int MaxMeasuredRef = 25;
+    public const int MaxMeasuredRef = 32;
 
     public const int DesignOverviewChars = 500;
     public const int MaxTypography = 6;

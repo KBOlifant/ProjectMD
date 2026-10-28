@@ -12,7 +12,7 @@ public static class MotionScript
     // The script text, evaluated as one expression that yields the JSON string.
     public const string Source = """
         (() => {
-          const MAX_ANIMS = 40, MAX_TWEENS = 30, MAX_TRIGGERS = 20, MAX_SCAN = 1500;
+          const MAX_ANIMS = 30, MAX_TWEENS = 25, MAX_TRIGGERS = 20, MAX_SCAN = 1500;
           const w = window;
           const html = document.documentElement;
           const clip = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n) : s; };
@@ -27,6 +27,18 @@ public static class MotionScript
               if (el.classList && el.classList.length) { d += '.' + el.classList[0]; }
               return clip(d, 80);
             } catch (e) { return 'element'; }
+          };
+          // True when the element is, or sits inside, a piece of text (a heading, a paragraph, a link or a
+          // split-text letter, word or line), so the animation is a text animation.
+          const TEXT_TAGS = /^(H[1-6]|P|SPAN|A|LI|LABEL|STRONG|EM|B|I|SMALL|BLOCKQUOTE|FIGCAPTION)$/;
+          const TEXT_CLASS = /(^|[\s_-])(char|chars|word|words|line|lines|letter|letters|split|splitting|text|title|heading|headline)([\s_-]|$)/i;
+          const onText = (el) => {
+            try {
+              for (let n = el, i = 0; n && n.tagName && i < 3; n = n.parentElement, i++) {
+                if (TEXT_TAGS.test(n.tagName) || (typeof n.className === 'string' && TEXT_CLASS.test(n.className))) { return true; }
+              }
+            } catch (e) { }
+            return false;
           };
           const hasClass = (name) => { try { return !!html && html.classList.contains(name); } catch (e) { return false; } };
 
@@ -64,14 +76,30 @@ public static class MotionScript
 
           const animations = [];
           try {
+            // The browser often runs dozens of copies of the same animation (one per card, one per
+            // list item), so identical ones are merged first; otherwise they use up the whole list and
+            // the different animations never get reported. Text and endless animations come first.
             const list = document.getAnimations ? document.getAnimations() : [];
+            const seenAnims = new Set(), found = [];
             for (const a of list) {
-              if (animations.length >= MAX_ANIMS) { break; }
               const fx = a.effect;
               if (!fx || !fx.getTiming) { continue; }
               const t = fx.getTiming();
+              if (!(t.duration > 0)) { continue; }
               const type = a.constructor ? a.constructor.name : '';
               const source = type === 'CSSAnimation' ? 'css-animation' : (type === 'CSSTransition' ? 'css-transition' : 'web-animation');
+              const target = describe(fx.target);
+              const name = clip(a.animationName || a.transitionProperty || '', 60) || null;
+              const key = source + '|' + target + '|' + name + '|' + num(t.duration);
+              if (seenAnims.has(key)) { continue; }
+              seenAnims.add(key);
+              const text = onText(fx.target);
+              found.push({ a, fx, t, source, target, name, text, rank: (text ? 0 : 2) + (t.iterations === Infinity ? 0 : 1) });
+            }
+            found.sort((x, y) => x.rank - y.rank);
+            for (const f of found) {
+              if (animations.length >= MAX_ANIMS) { break; }
+              const { fx, t, source, target, name, text } = f;
               const props = new Set();
               const values = [];
               try {
@@ -92,14 +120,15 @@ public static class MotionScript
               } catch (e) { }
               animations.push({
                 source,
-                target: describe(fx.target),
-                name: clip(a.animationName || a.transitionProperty || '', 60) || null,
+                target,
+                name,
                 durationMs: num(t.duration),
                 delayMs: num(t.delay),
                 easing: clip(t.easing || '', 60) || null,
                 repeat: t.iterations === Infinity ? 'infinite' : (typeof t.iterations === 'number' ? String(t.iterations) : null),
                 props: Array.from(props).slice(0, 8),
-                values
+                values,
+                text
               });
             }
           } catch (e) { }
@@ -141,7 +170,8 @@ public static class MotionScript
                   easing: typeof v.ease === 'string' ? clip(v.ease, 40) : (v.ease ? 'custom' : null),
                   repeat: typeof v.repeat === 'number' ? (v.repeat < 0 ? 'infinite' : String(v.repeat)) : null,
                   props: Object.keys(v).filter(k => !skip.has(k) && k.indexOf('on') !== 0).slice(0, 8),
-                  values
+                  values,
+                  text: elements.some(onText)
                 });
                 tweens++;
               }

@@ -441,6 +441,73 @@ public class ScansApiTests : IClassFixture<DefaultScansApiFactory>
         Assert.Single(bobsList!);
     }
 
+    // Deleting one scan is a soft delete of just that scan: it leaves the list, the caller's other
+    // scans and everyone else's stay, and the row is kept (so it still counts toward usage).
+    [Fact]
+    public async Task Delete_one_soft_deletes_only_that_scan()
+    {
+        var alice = NewUid("alice");
+        var bob = NewUid("bob");
+        var doomed = await _factory.SeedScanAsync(alice, DateTime.UtcNow);
+        await _factory.SeedScanAsync(alice, DateTime.UtcNow.AddMinutes(-5));
+        await _factory.SeedScanAsync(bob, DateTime.UtcNow);
+        var client = _factory.CreateClientFor(alice);
+
+        var response = await client.DeleteAsync($"/api/scans/{doomed}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(1, await _factory.CountScansAsync(alice));
+        Assert.Equal(2, await _factory.CountAllScansAsync(alice));
+        Assert.DoesNotContain(doomed.ToString(), await ListedIdsAsync(client));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/scans/{doomed}")).StatusCode);
+        Assert.Equal(1, await _factory.CountScansAsync(bob));
+    }
+
+    // An unknown scan, someone else's scan and an already deleted scan are all the same 404, and
+    // someone else's scan is left alone.
+    [Fact]
+    public async Task Delete_one_is_404_for_unknown_foreign_and_repeated()
+    {
+        var alice = NewUid("alice");
+        var bob = NewUid("bob");
+        var mine = await _factory.SeedScanAsync(alice, DateTime.UtcNow);
+        var bobs = await _factory.SeedScanAsync(bob, DateTime.UtcNow);
+        var client = _factory.CreateClientFor(alice);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/scans/{Guid.NewGuid()}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/scans/{bobs}")).StatusCode);
+        Assert.Equal(1, await _factory.CountScansAsync(bob));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/scans/{mine}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/scans/{mine}")).StatusCode);
+    }
+
+    // Deleting one scan needs a token.
+    [Fact]
+    public async Task Delete_one_without_a_token_is_401()
+    {
+        using var client = _factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync($"/api/scans/{Guid.NewGuid()}")).StatusCode);
+    }
+
+    // Like clearing, deleting one scan must not refund the monthly allowance.
+    [Fact]
+    public async Task Delete_one_does_not_change_usage()
+    {
+        using var factory = new ScansApiFactory(monthlyLimit: 5, permitsPerMinute: 1000);
+        var client = factory.CreateClientFor(NewUid("alice"));
+        var created = await PostScanAsync(client, "one.example.com");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var id = (await JsonAsync(created)).GetProperty("id").GetString();
+        Assert.Equal(1, await UsedAsync(client));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/scans/{id}")).StatusCode);
+
+        Assert.Equal(1, await UsedAsync(client));
+        Assert.Empty(await ListedIdsAsync(client));
+    }
+
     // Clearing with nothing to clear is still 204.
     [Fact]
     public async Task Clear_with_no_scans_returns_204()

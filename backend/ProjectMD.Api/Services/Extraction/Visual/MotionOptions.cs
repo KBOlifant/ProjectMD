@@ -58,6 +58,14 @@ public sealed class MotionOptions
     // (Motion:CaptureTimeoutSeconds). When it runs out, whatever was captured so far is kept.
     public int CaptureTimeoutSeconds { get; set; } = 20;
 
+    // How many elements to hover with the mouse to find hover states, 0 to switch it off
+    // (Motion:HoverProbes). Each costs roughly half a second of the capture time.
+    public int HoverProbes { get; set; } = 10;
+
+    // How long to wait after the mouse arrives before reading the hover style, so the element's own
+    // transition can finish (Motion:HoverSettleMs).
+    public int HoverSettleMs { get; set; } = 260;
+
     // ---- AI (the vision model) -------------------------------------------------------------------
 
     // When true (and Scanner:Mode is ai with a Groq key), the screenshots and evidence are sent to
@@ -77,7 +85,7 @@ public sealed class MotionOptions
 
     // Hard cap on the answer length in tokens (Motion:MaxOutputTokens). The answer holds the
     // animation descriptions and the design breakdown, so it needs more room than the text notes.
-    public int MaxOutputTokens { get; set; } = 1800;
+    public int MaxOutputTokens { get; set; } = 3000;
 
     // How the answer's JSON is requested (Motion:ResponseFormat): "json_object" (default; any valid
     // JSON, the prompt describes the shape; Groq's vision docs show it working with images) or
@@ -105,6 +113,8 @@ public sealed class MotionOptions
         o.SheetColumns is >= 1 and <= 6 &&
         o.SheetRows is >= 1 and <= 6 &&
         o.CaptureTimeoutSeconds is >= 2 and <= 120 &&
+        o.HoverProbes is >= 0 and <= 30 &&
+        o.HoverSettleMs is >= 0 and <= 2000 &&
         o.MaxImagesPerRequest is >= 1 and <= 10 &&
         o.TokensPerImage is >= 0 and <= 20_000 &&
         o.MaxOutputTokens is >= 100 and <= 16_000 &&

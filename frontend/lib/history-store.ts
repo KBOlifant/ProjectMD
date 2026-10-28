@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { apiErrorMessage, apiFetch } from "@/app/functions/data/api-client";
+import { ApiError, apiErrorMessage, apiFetch } from "@/app/functions/data/api-client";
 import { isApiMode } from "@/app/functions/data/mode";
 import { refreshUsage, setUsageOwner } from "@/app/functions/data/usage-store";
 import type { Scan } from "./types";
@@ -10,7 +10,7 @@ import type { Scan } from "./types";
 //  - static (default): history lives in this browser's localStorage, one key per signed-in user.
 //  - api: the backend is the source of truth. Signing in loads GET /api/scans into the in-memory
 //    cache; addScan only updates the cache (the server already saved the scan); clearHistory calls
-//    DELETE /api/scans first. Nothing is written to localStorage in this mode.
+//    DELETE /api/scans first and deleteScan calls DELETE /api/scans/{id}. Nothing is written to localStorage in this mode.
 
 // localStorage key prefix (static mode). Each signed-in user's history is stored under
 // `projectmd.history.<uid>` as one JSON array of Scan objects, so two accounts in one browser never
@@ -178,6 +178,30 @@ export async function clearHistory(): Promise<void> {
   status = IDLE_STATUS;
   write([]);
   void refreshUsage();
+}
+
+// Deletes one saved scan for the current owner. Static mode drops it from their localStorage entry.
+// Api mode calls DELETE /api/scans/{id} first and only removes it from the list once the server
+// confirmed (a 404 counts as success: the scan is already gone). If that fails the list is kept and
+// the returned promise rejects with a message that is ready to show. No permission check here; the
+// UI gates it with RBAC ("history:clear").
+export async function deleteScan(id: string): Promise<void> {
+  if (!isApiMode) {
+    write(read().filter((s) => s.id !== id));
+    return;
+  }
+  const forOwner = owner;
+  if (forOwner === null) return;
+  try {
+    await apiFetch<void>(`/api/scans/${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 404)) {
+      throw new Error(apiErrorMessage(err, "Could not delete that scan. Try again."));
+    }
+  }
+  if (owner !== forOwner) return;
+  pendingAdds = pendingAdds.filter((s) => s.id !== id);
+  write(read().filter((s) => s.id !== id));
 }
 
 // Api mode: tries loading the scans from the backend again (for a "Retry" button after a failed
