@@ -1,8 +1,8 @@
 # Project MD
 
-**Paste a website's address and find out how it was built.**
+**Have you ever seen a design system on a website, or an element, styled so well that you would like to reuse it but didn't know where to start?**
 
-Project MD is for full-stack developers who look at a website and wonder how it was made. It opens the page in a real browser, works out the tech stack, API calls, design system, components and animations, and uses Groq AI to explain what it found. You get it all back as a single Markdown (`.md`) document.
+Project MD is for full-stack developers who look at a website and wonder how it was made. It opens the page in a temporary browser, works out the tech stack, API calls, design system, components and animations, and uses Groq AI to explain what it found. You get it all back as a single Markdown (`.md`) document.
 
 <p align="left">
   <img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,dotnet,cs,postgres,firebase" alt="Tech stack icons" />
@@ -166,18 +166,6 @@ curl "http://localhost:5080/api/health?db=true"
 ```
 
 **Changing the models later:** run `dotnet ef migrations add <Name> --project ProjectMD.Api --output-dir Data/Migrations`, review the result, then run `database update` again.
-
-### Testing the endpoints in Swagger
-
-Swagger only runs in Development, which is what `dotnet run` uses.
-
-1. Start the backend and open **http://localhost:5080/swagger**.
-2. `GET /api/health` needs no sign-in, so you can try it straight away.
-3. Every other endpoint needs a Firebase ID token. To get one:
-   1. Start the frontend with `npm run dev` (see below) and sign in.
-   2. Open the account menu (top right) and click **Copy API token**.
-   3. Back in Swagger, click **Authorize**, paste the token and confirm.
-4. Expand an endpoint, click **Try it out**, then **Execute**.
 
 Tokens last about an hour. If you start getting `401`, copy a fresh one.
 
@@ -453,11 +441,10 @@ ProjectMD/
 └── CHANGELOG.md
 ```
 
-Further reading:
+Further reading (What Claude Opus 5.5 wrote):
 - [backend/README.md](backend/README.md): every setting, the data model, the AI credit controls and the security notes
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): diagrams of the flow
 - [docs/how-it-works/](docs/how-it-works/): step-by-step and visual guides
-- [CHANGELOG.md](CHANGELOG.md): what has changed and why
 
 ---
 
