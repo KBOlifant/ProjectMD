@@ -1,4 +1,4 @@
-# Project MD
+# <img src="frontend/app/assets/favicon_io/android-chrome-192x192.png" alt="" width="40" align="center" /> Project MD
 
 **Have you ever seen a design system on a website, or an element, styled so well that you would like to reuse it but didn't know where to start?**
 
@@ -319,38 +319,14 @@ Error responses include a `reason` field that says what went wrong:
 
 ## Mockups
 
-> _Screenshots and mockups go here._
-
-<!--
-Put images in docs/mockups/ and uncomment the lines below.
-
-### Generate
-![Generate page](docs/mockups/generate.png)
-
 ### Processing
-![Processing page](docs/mockups/processing.png)
+![Processing page](frontend/app/assets/mockups/mockup3.png)
 
-### Results: Preview
-![Results preview tab](docs/mockups/results-preview.png)
+### Design tab
+![Design tab with export options](frontend/app/assets/mockups/mockup1.png)
 
-### Results: Design
-![Results design tab](docs/mockups/results-design.png)
-
-### Results: Components
-![Results components tab](docs/mockups/results-components.png)
-
-### Results: Animations
-![Results animations tab](docs/mockups/results-animations.png)
-
-### History
-![History page](docs/mockups/history.png)
-
-### Admin
-![Admin users page](docs/mockups/admin.png)
-
-### Sign in / Sign up
-![Auth pages](docs/mockups/auth.png)
--->
+### Scan history
+![Scan history page](frontend/app/assets/mockups/mockup2.png)
 
 ---
 
