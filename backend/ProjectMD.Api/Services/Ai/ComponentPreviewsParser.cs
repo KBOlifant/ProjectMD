@@ -45,7 +45,7 @@ public static class ComponentPreviewsParser
                 }
 
                 if (entry.ValueKind == JsonValueKind.Object
-                    && ComponentSanitizer.Clean(Text(entry, "kind"), Text(entry, "name"), Text(entry, "html"), Text(entry, "css")) is { } preview)
+                    && ComponentSanitizer.Clean(Text(entry, "kind"), Text(entry, "name"), Text(entry, "html"), Text(entry, "css"), Text(entry, "background")) is { } preview)
                 {
                     items.Add(preview);
                 }

@@ -39,6 +39,8 @@ export interface ComponentPreview {
   name: string;
   html: string;
   css: string;
+  // Hex colour behind the real component on the page; missing or "" on older scans.
+  background?: string;
 }
 
 export interface ComponentPreviews {

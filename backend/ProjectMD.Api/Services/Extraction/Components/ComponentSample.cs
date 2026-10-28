@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ProjectMD.Api.Services.Extraction.Components;
 
@@ -8,6 +9,10 @@ public static class ComponentSample
 {
     public const int MaxItems = 12;
     private const int MaxValueChars = 200;
+    private const int MaxTextChars = 300;
+
+    // A plain #rrggbb colour: the only backdrop form kept.
+    public static readonly Regex HexColour = new(@"^#[0-9a-fA-F]{6}$", RegexOptions.Compiled);
 
     // The kinds the script may report.
     public static readonly IReadOnlySet<string> Kinds =
@@ -94,6 +99,16 @@ public static class ComponentSample
             }
         }
 
-        return map.Count == 0 ? null : new ComponentStyle(kindText, tag.ToLowerInvariant(), map);
+        if (map.Count == 0)
+        {
+            return null;
+        }
+
+        var text = Text(entry, "text") is { } raw ? Ai.ComponentSanitizer.PlainText(raw, MaxTextChars) : string.Empty;
+        var backdrop = Text(entry, "backdrop") is { } b && HexColour.IsMatch(b) ? b.ToLowerInvariant() : string.Empty;
+        return new ComponentStyle(kindText, tag.ToLowerInvariant(), map, text, backdrop);
     }
+
+    private static string? Text(JsonElement entry, string name) =>
+        entry.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

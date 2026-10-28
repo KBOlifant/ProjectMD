@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CopyIcon, GridIcon } from "@/components/ui/icons";
 import type { ComponentPreview, ComponentPreviews } from "@/lib/types";
 import { CountBadge, TabHeader } from "./tab-header";
@@ -16,16 +15,40 @@ export function componentCode(item: ComponentPreview): string {
   return item.css ? `<style>\n${item.css}\n</style>\n\n${item.html}` : item.html;
 }
 
+const LIGHT = "#ffffff";
+const DARK = "#0b0b12";
+const HEX = /^#[0-9a-f]{6}$/i;
+
+// Relative brightness (0-1) of a #rgb/#rrggbb or rgb() colour, or null when it can't be read.
+function brightness(value: string): number | null {
+  const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  const rgb = hex
+    ? (hex.length === 3 ? [...hex].map((c) => c + c) : hex.match(/../g)!).map((h) => parseInt(h, 16))
+    : value.match(/^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i)?.slice(1).map(Number);
+  if (!rgb) return null;
+  const [r, g, b] = rgb.map((c) => c / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// The colour behind the real component when the scan measured it. Older scans don't have it, so
+// pick white or near-black against the first text colour in the CSS (light text gets the dark one).
+function frameBackground(item: ComponentPreview): string {
+  if (item.background && HEX.test(item.background)) return item.background;
+  const text = item.css.match(/(?:^|[\s;{])color:\s*([^;}]+)/)?.[1]?.trim();
+  const light = text ? brightness(text) : null;
+  return light !== null && light > 0.6 ? DARK : LIGHT;
+}
+
 // The page shown inside the preview frame. The server already cleaned the HTML and CSS; the frame
 // is a second layer: scripts, forms and same-origin access are off, and the policy allows nothing
 // except the inline style. "</" is broken up in the CSS so it can never close the style tag.
-function frameDocument(item: ComponentPreview, dark: boolean): string {
-  const background = dark ? "#0b0b12" : "#ffffff";
+// "safe center" keeps a component taller or wider than the frame from being cut off at the top.
+function frameDocument(item: ComponentPreview): string {
   const css = item.css.replaceAll("</", "<\\/");
   return (
     `<!doctype html><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">` +
-    `<style>html,body{margin:0}body{box-sizing:border-box;min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;background:${background};font-family:system-ui,sans-serif}</style>` +
+    `<style>html,body{margin:0}body{box-sizing:border-box;min-height:100vh;padding:24px;display:flex;align-items:safe center;justify-content:safe center;overflow:auto;background:${frameBackground(item)};font-family:system-ui,sans-serif}</style>` +
     `<style>${css}</style>${item.html}`
   );
 }
@@ -33,7 +56,7 @@ function frameDocument(item: ComponentPreview, dark: boolean): string {
 const SMALL_BUTTON =
   "ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-raised hover:text-ink";
 
-function Preview({ item, index, dark, onCopy }: { item: ComponentPreview; index: number; dark: boolean; onCopy: (text: string, label: string) => void }) {
+function Preview({ item, index, onCopy }: { item: ComponentPreview; index: number; onCopy: (text: string, label: string) => void }) {
   return (
     <li className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
@@ -57,7 +80,7 @@ function Preview({ item, index, dark, onCopy }: { item: ComponentPreview; index:
         title={`${item.name} preview`}
         sandbox=""
         referrerPolicy="no-referrer"
-        srcDoc={frameDocument(item, dark)}
+        srcDoc={frameDocument(item)}
         className="block h-48 w-full border-0"
       />
       <pre className="ts-code max-h-64 overflow-auto border-t border-border-subtle bg-bg-sidebar p-5 text-ink-body">{componentCode(item)}</pre>
@@ -66,11 +89,10 @@ function Preview({ item, index, dark, onCopy }: { item: ComponentPreview; index:
 }
 
 // The Components tab: small AI-written HTML/CSS versions of the site's main components, each with a
-// sandboxed live preview, its code and copy buttons. Only reads the scan; the background choice is
-// temporary UI state.
+// sandboxed live preview on the colour it sat on in the real site, its code and copy buttons. Only
+// reads the scan.
 export function ComponentsPanel({ components }: { components: ComponentPreviews }) {
   const { message, copy } = useCopy();
-  const [dark, setDark] = useState(false);
   const count = components.items.length;
   return (
     <div className="space-y-6">
@@ -80,23 +102,13 @@ export function ComponentsPanel({ components }: { components: ComponentPreviews 
         description="Patterns reconstructed from the scanned site, ready to copy."
         aside={<CountBadge icon={<GridIcon size={13} />}>{count} {count === 1 ? "component" : "components"} found</CountBadge>}
       />
-      <div className="flex flex-wrap items-center gap-4">
-        <p role="status" aria-live="polite" className="ts-mono-ui min-h-5 flex-1 text-success">{message}</p>
-        <button
-          type="button"
-          aria-pressed={dark}
-          onClick={() => setDark((d) => !d)}
-          className={SMALL_BUTTON}
-        >
-          {dark ? "Dark background" : "Light background"}
-        </button>
-      </div>
+      <p role="status" aria-live="polite" className="ts-mono-ui min-h-5 text-success">{message}</p>
       <p className="ts-small text-ink-muted">
         These are approximate, AI-written versions built from the styles measured on the page. Check them against the real site before using them.
       </p>
       <ol className="space-y-4">
         {components.items.map((item, i) => (
-          <Preview key={`${item.kind}-${i}`} item={item} index={i} dark={dark} onCopy={copy} />
+          <Preview key={`${item.kind}-${i}`} item={item} index={i} onCopy={copy} />
         ))}
       </ol>
     </div>
