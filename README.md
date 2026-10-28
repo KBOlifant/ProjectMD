@@ -435,11 +435,12 @@ Further reading (What Claude Opus 5.5 wrote):
 - [Playwright](https://playwright.dev/) for headless browser rendering
 - [Neu Prompter](https://www.1001fonts.com/) font, used under its EULA (see `frontend/app/assets/neu-prompter/`)
 - [shields.io](https://shields.io/) and [skillicons.dev](https://skillicons.dev/) for the badges and icons
-- _Lecturers / mentors: add names here_
-- _Tutorials, articles or resources that helped: add links here_
-- _Anyone else you would like to thank_
 
 ---
+
+### Demo Video
+
+[Demonstration Video](https://drive.google.com/file/d/1IZ0DKjaRPw0cJVvzqHTrv3Co_Dq2Pbum/view?usp=sharing)
 
 ## License
 
