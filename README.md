@@ -14,7 +14,6 @@ Project MD is for full-stack developers who look at a website and wonder how it 
 
 - [Project overview](#project-overview)
 - [Getting started](#getting-started)
-  - [Prerequisites](#prerequisites)
   - [Clone the repository](#clone-the-repository)
   - [Backend setup](#backend-setup)
   - [Database setup (hosted PostgreSQL)](#database-setup-hosted-postgresql)
@@ -38,17 +37,6 @@ Project MD is for full-stack developers who look at a website and wonder how it 
 
 Every website is a finished product, and the way it was built is hidden behind it. Project MD is for developers who want to know what is behind that: which framework it uses, which APIs it calls, which colours and fonts make up its design, and how its animations move. Paste in an address and Project MD scans the page and writes it up as a readable, well-organised `.md` file. Groq AI explains each finding in plain language, so you learn why the site is built that way as well as what is there.
 
-### Key features
-
-- **Website breakdown.** The tech stack (about 45 detectable technologies), architecture notes, first-party API endpoints with their response shapes, third-party services, page structure and developer tips.
-- **Design system capture.** The site's colours (with guessed roles), fonts, corner radii, shadows, spacing, CSS variables and breakpoints, shown as swatches and live font previews.
-- **Component previews.** Small HTML and CSS rebuilds of the page's buttons, inputs, cards, navigation bars, headings and badges, ready to copy.
-- **Animation analysis.** Each animation's trigger, a guess at the library behind it, and starter snippets for GSAP and Framer Motion.
-- **File generation.** Copy or download the whole breakdown as a `.md` file, and export the design system as Figma tokens, CSS variables or a Tailwind config.
-- **Scan history.** Every scan is saved to your account, with a screenshot preview of each one.
-- **Accounts and roles.** Firebase sign-in, email verification, and three roles (viewer, member and admin) with an admin screen for managing users.
-- **Cost controls.** AI answers are cached, every user has a daily token cap and there is a global one too, and if the AI is unavailable the scan still finishes with a basic document instead of failing.
-
 ### How a scan works
 
 1. **Fetch.** Playwright renders the page in headless Chromium. Every request the page makes goes through a guard that blocks private networks, which protects the server against SSRF.
@@ -67,18 +55,6 @@ The backend's `Scanner:Mode` setting controls how much of this runs:
 ---
 
 ## Getting started
-
-### Prerequisites
-
-| Tool | Notes |
-|---|---|
-| [.NET 10 SDK](https://dotnet.microsoft.com/download) | Backend |
-| [Node.js 20.9+](https://nodejs.org/) and npm | Frontend |
-| A hosted PostgreSQL database | For example [Neon](https://neon.tech) or [Supabase](https://supabase.com) |
-| A [Firebase](https://console.firebase.google.com/) project | Email/password sign-in |
-| A [Groq API key](https://console.groq.com/keys) | Needed for `ai` mode |
-| [Cloudinary](https://cloudinary.com/) account *(optional)* | Stores one screenshot per scan |
-| Google Chrome or Microsoft Edge *(optional)* | Can replace Playwright's own Chromium |
 
 ### Clone the repository
 
@@ -301,83 +277,23 @@ In Production, Swagger is switched off.
 
 **4. Add your domain to Firebase.** In Firebase console > Authentication > Settings > Authorized domains, add the frontend's domain.
 
-**Deploying to Vercel:** import the repository, set the root directory to `frontend`, add the `NEXT_PUBLIC_*` variables in the project settings, and deploy. Host the backend anywhere that runs .NET 10 and can install a browser for Playwright, and keep its secrets in that host's environment variables.
-
 ---
 
 ## Features and usage
 
-The app has a sidebar for navigation: **Generate**, **Processing**, **Results**, **History**, and **Admin** (admins only).
+Use the sidebar to move between **Generate**, **Processing**, **Results**, **History** and **Admin** (admins only).
 
-### Sign up and sign in
-
-1. Go to **Sign up** and create an account with your email and password.
-2. Check your inbox and click the verification link. **You need a verified email to run scans**, and until you verify, a banner reminds you.
-3. You can use **Log in** and **Reset password** at any time. The account menu in the top right shows your role, and has the **Copy API token** button (dev only) and sign-out.
-
-### Generate a scan
-
-1. On the **Generate** page, paste a website address (for example `https://tailwindcss.com`).
-2. Click **Analyze website**. If the address is invalid, you get a message right away.
-3. The usage meter shows how many scans you have made and how much AI budget you have used.
-
-### Processing
-
-You are taken to the **Processing** page, where a progress card steps through the scan stages. Click **Cancel** at any time to go back. When the scan is ready, open the results.
-
-### Website breakdown (Results)
-
-The Results page has two panes:
-
-- **Sidebar:** a screenshot thumbnail, a **tech fingerprint** (detected technologies, with the important ones highlighted) and scan details: pages crawled, scan time, technology count and a **confidence** score. Confidence estimates how much usable information the page gave; it is not a measured accuracy.
-- **Tabs:**
-
-| Tab | What it shows | How to use it |
-|---|---|---|
-| **Preview** | The rendered Markdown breakdown | Read the overview, stack, architecture, API endpoints, page structure and developer tips |
-| **Raw** | The Markdown source | Read or copy the exact file contents |
-| **Design** | Colour swatches, live font previews, radii, shadows, spacing and CSS variables | Click a swatch to copy its hex code. Copy font CSS or Google Fonts links. Use **Export** for design tokens |
-| **Components** | Sandboxed HTML/CSS previews of buttons, inputs, cards, nav bars, headings and badges | Switch between page, light and dark backgrounds. Copy the HTML, the CSS, or both |
-| **Animations** | Each animation's name, location, trigger (load, scroll, hover…) and AI description, plus the libraries found on the page | Switch between GSAP and Framer Motion and copy the starter snippet |
-
-Use the left and right arrow keys to move between tabs.
-
-### File generation
-
-- **Copy** puts the whole Markdown document on your clipboard.
-- **Download** saves it as `<host>.md`.
-- The document always follows the same layout:
-  - YAML front matter
-  - Overview
-  - Tech stack
-  - Architecture
-  - API endpoints (with response shapes and third-party services)
-  - Design system
-  - Page structure
-  - Developer tips
-  - Footer
-
-  Sections with no data are left out.
-- **Design export** (Design tab) offers three formats, each of which you can copy or download:
-  - **Figma tokens**: JSON in the Tokens Studio format
-  - **CSS variables**: a `:root` block
-  - **Tailwind config**: a v3 `tailwind.config.js`
-
-### History
-
-- The **History** page lists all your past scans, newest first. Hover over a scan to see its screenshot, and click it to open its results.
-- The Generate page also shows your most recent scans.
-- **Clear history** hides all your scans. They still count towards your usage, so clearing does not reset your limits.
-
-### Roles and admin
-
-| Role | Can do |
-|---|---|
-| **viewer** | Read and export scans |
-| **member** *(default)* | Everything a viewer can, plus run scans and clear history |
-| **admin** | Everything a member can, plus manage users |
-
-The server stores roles and is the only thing that can change them. Emails listed in `Auth__AdminEmails__*` become admin when they sign in with a verified email. On **Admin > Users**, an admin can see every user and change their role. Admins cannot change their own role or remove the last admin.
+- **Sign up / log in:** create an account with email and password, then verify your email. You can't run scans until your email is verified.
+- **Generate:** paste a URL and click **Analyze website**.
+- **Processing:** watch the scan's progress, then open the results. Click **Cancel** to stop.
+- **Website breakdown (Results):** the sidebar shows the tech fingerprint, scan time and confidence. The tabs are:
+  - **Preview / Raw:** the Markdown breakdown, rendered or as source.
+  - **Design:** colours, fonts, spacing and CSS variables. Click a swatch to copy it.
+  - **Components:** HTML and CSS previews of the page's elements, ready to copy.
+  - **Animations:** what each animation does and what triggers it, with GSAP and Framer Motion snippets.
+- **File generation:** **Copy** or **Download** the breakdown as `<host>.md`. In the Design tab, **Export** the design system as Figma tokens, CSS variables or a Tailwind config.
+- **History:** reopen past scans, with a screenshot preview when you hover over one. Clearing your history does not reset your usage.
+- **Roles:** a *viewer* can read and export scans. A *member* (the default) can also run scans. An *admin* can also change users' roles under **Admin > Users**.
 
 ---
 
@@ -563,27 +479,5 @@ Further reading:
 ## License
 
 This project is licensed under the MIT License.
-
-```
-MIT License
-
-Copyright (c) 2026 KBOlifant
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+Copyright (c) 2026 KBOlifant.
+You are free to use, copy, modify and distribute it, provided this notice is kept.
