@@ -118,7 +118,7 @@ export function ResultsView({ id }: { id?: string }) {
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as Format)}
-            className="cursor-pointer appearance-none rounded-sm border border-border-strong bg-bg-surface py-0.5 pl-2 pr-5 font-mono text-[10px] leading-4 text-ink-body"
+            className="cursor-pointer appearance-none rounded-sm border border-border-strong bg-bg-surface py-0.5 pl-2 pr-5 font-mono text-[11px] leading-4 text-ink-body"
           >
             <option value="md">.md</option>
             <option value="txt">.txt</option>
@@ -160,7 +160,7 @@ export function ResultsView({ id }: { id?: string }) {
                   tabIndex={tab === t ? 0 : -1}
                   onClick={() => setTab(t)}
                   className={`ts-mono-ui relative inline-flex h-[42px] items-center gap-1.5 whitespace-nowrap px-3 transition-colors ${
-                    tab === t ? "text-ink" : "text-ink-muted hover:text-ink"
+                    tab === t ? "text-ink" : "text-ink-muted hover:text-ink-hover"
                   }`}
                 >
                   {TAB_ICONS[t]}

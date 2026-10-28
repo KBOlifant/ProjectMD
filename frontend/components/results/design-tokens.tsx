@@ -49,7 +49,7 @@ export function DesignTokens({ design, onCopy }: Props) {
             {radii.map((r) => (
               <li key={r} className="flex items-center gap-2.5">
                 <div className="size-9 flex-none border border-border-strong bg-bg-raised" style={{ borderRadius: safeLength(r) }} />
-                <span className="font-mono text-[10px] text-ink-muted">{r}</span>
+                <span className="font-mono text-[11px] text-ink-muted">{r}</span>
               </li>
             ))}
           </ul>
@@ -59,7 +59,7 @@ export function DesignTokens({ design, onCopy }: Props) {
         <Group id="design-breakpoints" title="Breakpoints" meta={`${breakpoints.length} ranges`}>
           <ul className="divide-y divide-border-subtle">
             {breakpoints.map((b) => (
-              <li key={b} className="py-2 font-mono text-[11px] text-ink-body first:pt-0 last:pb-0">{b}</li>
+              <li key={b} className="py-2 font-mono text-[12px] text-ink-body first:pt-0 last:pb-0">{b}</li>
             ))}
           </ul>
         </Group>
@@ -84,7 +84,7 @@ export function DesignTokens({ design, onCopy }: Props) {
               const width = Number.isFinite(px) ? Math.min(Math.max(px, 2), MAX_BAR_PX) : 2;
               return (
                 <li key={s} className="flex items-center gap-3">
-                  <span className="font-mono text-[10px] w-14 flex-none text-ink-muted">{s}</span>
+                  <span className="font-mono text-[11px] w-14 flex-none text-ink-muted">{s}</span>
                   <span className="h-3 rounded-sm bg-plum-400" style={{ width }} />
                 </li>
               );

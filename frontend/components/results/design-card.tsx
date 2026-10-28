@@ -24,7 +24,7 @@ export function DesignCard({ id, title, meta, children, className = "", wide = f
         <h3 id={id} className="ts-h3 text-ink">
           {title}
         </h3>
-        {meta && <span className="font-mono text-[10px] text-ink-muted">{meta}</span>}
+        {meta && <span className="font-mono text-[11px] text-ink-muted">{meta}</span>}
       </header>
       {children}
     </motion.section>

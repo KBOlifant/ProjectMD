@@ -29,12 +29,12 @@ export function NavItem({ href, label, icon, active = false, count, layout = "ra
         className={`ts-mono-ui flex items-center gap-2 whitespace-nowrap rounded-md border px-3 py-2 transition-colors ${
           active
             ? "border-border-strong bg-bg-raised text-ink"
-            : "border-transparent text-ink-muted hover:bg-bg-surface hover:text-ink"
+            : "border-transparent text-ink-muted hover:bg-bg-hover hover:text-ink-hover"
         }`}
       >
         {icon}
         <span>{label}</span>
-        {hasCount && <span className="rounded-sm bg-plum-500 px-1.5 font-mono text-[10px] text-on-primary">{count}</span>}
+        {hasCount && <span className="rounded-sm bg-plum-500 px-1.5 font-mono text-[11px] text-on-primary">{count}</span>}
       </Link>
     );
   }
@@ -47,7 +47,7 @@ export function NavItem({ href, label, icon, active = false, count, layout = "ra
       className={`group relative grid size-11 place-items-center rounded-lg border transition-colors ${
         active
           ? "border-border-strong bg-bg-raised text-ink"
-          : "border-transparent text-ink-muted hover:bg-bg-surface hover:text-ink"
+          : "border-transparent text-ink-muted hover:bg-bg-hover hover:text-ink-hover"
       }`}
     >
       {icon}
@@ -64,7 +64,7 @@ export function NavItem({ href, label, icon, active = false, count, layout = "ra
       {hasCount && (
         <span
           aria-hidden="true"
-          className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-plum-500 px-1 font-mono text-[9px] leading-none text-on-primary"
+          className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-plum-500 px-1 font-mono text-[10px] leading-none text-on-primary"
         >
           {count}
         </span>

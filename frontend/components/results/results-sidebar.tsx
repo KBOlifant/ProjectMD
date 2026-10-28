@@ -42,7 +42,7 @@ function ScanThumbnail({ scan }: { scan: Scan }) {
       )}
       <div className="px-3.5 py-3">
         <p className="ts-mono-ui truncate font-semibold text-ink">{scan.host}</p>
-        <p className="font-mono text-[10px] leading-4 text-ink-muted">
+        <p className="font-mono text-[11px] leading-4 text-ink-muted">
           Scanned {formatDate(scan.createdAt)} · {formatSeconds(scan.durationMs)}
         </p>
       </div>
@@ -84,7 +84,7 @@ export function ResultsSidebar({ scan }: { scan: Scan }) {
           {details.map((d) => (
             <div key={d.label} className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2.5 last:border-b-0">
               <dt className="ts-small text-ink-muted">{d.label}</dt>
-              <dd className="font-mono text-[11px] text-ink">{d.value}</dd>
+              <dd className="font-mono text-[12px] text-ink">{d.value}</dd>
             </div>
           ))}
         </dl>

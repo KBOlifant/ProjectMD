@@ -59,7 +59,7 @@ export function LoginForm() {
       footer={
         <>
           New to Project MD?{" "}
-          <Link href="/signup" className="text-violet-400 hover:text-ink">
+          <Link href="/signup" className="text-violet-400 hover:text-ink-hover">
             Create an account
           </Link>
         </>
@@ -94,7 +94,7 @@ export function LoginForm() {
           error={touched.shown("password") ? errors.password : null}
         />
         <div className="-mt-2 text-right">
-          <Link href="/reset" className="ts-small text-violet-400 hover:text-ink">
+          <Link href="/reset" className="ts-small text-violet-400 hover:text-ink-hover">
             Forgot password?
           </Link>
         </div>

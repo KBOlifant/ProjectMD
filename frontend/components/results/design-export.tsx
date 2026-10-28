@@ -16,7 +16,7 @@ interface Props {
 
 const BLOCKED_REASON = "Your account cannot export scans.";
 
-const BUTTON = "ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-raised hover:text-ink disabled:cursor-not-allowed disabled:opacity-50";
+const BUTTON = "ts-mono-ui rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-hover hover:text-ink-hover disabled:cursor-not-allowed disabled:opacity-50";
 
 // The Export section of the Design tab: the design system as a Figma tokens file, CSS variables or a
 // Tailwind config, each to copy or download. Builds the text on click from the scan; stores nothing.

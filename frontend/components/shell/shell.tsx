@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import smallLogo from "@/app/assets/SmallLogo.png";
 import { VerifyBanner } from "@/components/auth-status/verify-banner";
 import { UserMenuCompact } from "@/components/auth-status/user-menu";
 import { MainNav } from "./main-nav";
@@ -12,9 +14,9 @@ function BrandTile() {
     <Link
       href="/"
       aria-label="Project MD home"
-      className="grid size-[38px] flex-none place-items-center rounded-lg border border-violet-500/50 bg-violet-700 font-mono text-[11px] font-bold text-ink"
+      className="grid size-[38px] flex-none place-items-center rounded-lg border border-violet-500/50 bg-bg-base"
     >
-      MD
+      <Image src={smallLogo} alt="" className="h-auto w-[26px]" />
     </Link>
   );
 }

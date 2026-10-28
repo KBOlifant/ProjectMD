@@ -21,7 +21,7 @@ export function ServerNotice() {
           type="button"
           onClick={() => void reloadMe()}
           disabled={busy}
-          className="ts-mono-ui rounded-sm text-violet-400 hover:text-ink disabled:text-ink-dim"
+          className="ts-mono-ui rounded-sm text-violet-400 hover:text-ink-hover disabled:text-ink-dim"
         >
           {busy ? "Retrying…" : "Retry"}
         </button>

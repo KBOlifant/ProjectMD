@@ -54,16 +54,16 @@ function frameDocument(item: ComponentPreview): string {
 }
 
 const SMALL_BUTTON =
-  "ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-raised hover:text-ink";
+  "ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-hover hover:text-ink-hover";
 
 function Preview({ item, index, onCopy }: { item: ComponentPreview; index: number; onCopy: (text: string, label: string) => void }) {
   return (
     <li className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
-        <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
+        <span aria-hidden="true" className="font-mono text-[11px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
         <div className="min-w-0 flex-1 basis-40">
           <h3 className="ts-mono-ui truncate font-semibold text-ink">{item.name}</h3>
-          <p className="font-mono text-[10px] leading-4 text-ink-muted">{item.kind}</p>
+          <p className="font-mono text-[11px] leading-4 text-ink-muted">{item.kind}</p>
         </div>
         <button type="button" onClick={() => onCopy(item.html, `${item.name} HTML`)} className={SMALL_BUTTON}>
           Copy HTML

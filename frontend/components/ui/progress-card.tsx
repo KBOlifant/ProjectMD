@@ -21,7 +21,7 @@ const STATUS_TONE: Record<CardStatus, string> = {
 export function ScanCardFrame({ children, glowing = false }: { children: ReactNode; glowing?: boolean }) {
   return (
     <div className={`relative w-full max-w-[720px] rounded-xl ${glowing ? "glow-border" : ""}`}>
-      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface neumorphic-panel">{children}</div>
+      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-bg-surface bg-trneumorphic-panel">{children}</div>
     </div>
   );
 }
@@ -30,12 +30,12 @@ export function ScanCardFrame({ children, glowing = false }: { children: ReactNo
 export function ScanCardHeader({ host, url, status }: { host: string; url: string; status: CardStatus }) {
   return (
     <div className="flex items-center gap-4 border-b border-border-subtle px-7 py-5">
-      <span className="grid size-12 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[13px] font-semibold text-ink">
+      <span className="grid size-12 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[14px] font-semibold text-ink">
         {initials(host)}
       </span>
       <div className="min-w-0">
-        <p className="ts-mono-ui truncate text-[15px] font-semibold text-ink">{host}</p>
-        <p className="truncate font-mono text-[11px] leading-4 text-ink-muted">{url}</p>
+        <p className="ts-mono-ui truncate text-[16px] font-semibold text-ink">{host}</p>
+        <p className="truncate font-mono text-[12px] leading-4 text-ink-muted">{url}</p>
       </div>
       <span className={`ts-label ml-auto inline-flex flex-none items-center gap-1.5 rounded-pill border px-2.5 py-1 ${STATUS_TONE[status]}`}>
         {status === "scanning" && <span aria-hidden="true" className="size-1.5 rounded-full bg-plum-400" />}

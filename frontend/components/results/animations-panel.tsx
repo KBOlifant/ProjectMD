@@ -41,7 +41,7 @@ export function hasAnimationData(report: AnimationReport | null | undefined): re
   return Boolean(report && (report.items?.length > 0 || report.libraries?.length > 0));
 }
 
-const CHIP = "rounded-sm border border-border-strong px-2 py-0.5 font-mono text-[10px] leading-4 text-ink-muted";
+const CHIP = "rounded-sm border border-border-strong px-2 py-0.5 font-mono text-[11px] leading-4 text-ink-muted";
 
 function Card({
   item,
@@ -61,17 +61,17 @@ function Card({
   return (
     <motion.li variants={STAGGER_ITEM} className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-3.5">
-        <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
+        <span aria-hidden="true" className="font-mono text-[11px] text-plum-300">{String(index + 1).padStart(2, "0")}</span>
         <div className="min-w-0 flex-1 basis-40">
           <h3 className="ts-mono-ui truncate font-semibold text-ink">{item.name || "Animation"}</h3>
-          <p className="font-mono text-[10px] leading-4 text-ink-muted">
+          <p className="font-mono text-[11px] leading-4 text-ink-muted">
             {[TRIGGER_LABELS[item.trigger] ?? TRIGGER_LABELS.unknown, item.section].filter(Boolean).join(" · ")}
           </p>
         </div>
         <button
           type="button"
           onClick={() => onCopy(code, `${meta.label} code`)}
-          className="ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-raised hover:text-ink"
+          className="ts-mono-ui inline-flex items-center gap-1.5 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-hover hover:text-ink-hover"
         >
           <CopyIcon size={13} />
           {meta.copy}
@@ -121,8 +121,8 @@ export function AnimationsPanel({ report }: { report: AnimationReport }) {
                 type="button"
                 aria-pressed={flavour === f.id}
                 onClick={() => setFlavour(f.id)}
-                className={`rounded-md px-3 py-1.5 font-mono text-[10px] transition-colors ${
-                  flavour === f.id ? "bg-bg-raised text-ink" : "text-ink-muted hover:text-ink"
+                className={`rounded-md px-3 py-1.5 font-mono text-[11px] transition-colors ${
+                  flavour === f.id ? "bg-bg-raised text-ink" : "text-ink-muted hover:text-ink-hover"
                 }`}
               >
                 {f.label}

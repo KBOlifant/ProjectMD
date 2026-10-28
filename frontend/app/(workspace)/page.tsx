@@ -1,9 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import bigLogo from "@/app/assets/BigLogo.png";
 import { PermissionError } from "@/app/functions/rbac/errors";
 import { useCan, useDenyReason } from "@/app/functions/rbac/useCan";
 import { ScanBlockedNotice } from "@/components/auth-status/scan-blocked-notice";
@@ -84,11 +86,10 @@ export default function GeneratePage() {
               <span aria-hidden="true" className="size-1.5 rounded-full bg-violet-500 dot-blink" />
               AI website intelligence
             </motion.span>
-            <motion.h1 variants={STAGGER_ITEM} className="ts-hero mt-5 text-ink">
-              <span className="block"><ScrambleText text="Project" /></span>
-              <span className="-mt-1 block text-violet-400"><ScrambleText text="MD" delay={320} /></span>
+            <motion.h1 variants={STAGGER_ITEM} className="mt-5">
+              <Image src={bigLogo} alt="Project MD" priority className="mx-auto h-auto w-[300px] md:w-[520px]" />
             </motion.h1>
-            <motion.p variants={STAGGER_ITEM} className="mx-auto mt-8 max-w-[620px] text-[17px] leading-[30px] text-ink-body">
+            <motion.p variants={STAGGER_ITEM} className="mx-auto mt-8 max-w-[620px] text-[18px] leading-[30px] text-ink-body">
               Enter a URL and Project MD will inspect the stack, content, components, design tokens, and motion—then
               package everything for your team.
             </motion.p>
@@ -126,7 +127,7 @@ export default function GeneratePage() {
                 variants={STAGGER_ITEM}
                 className="flex min-h-[190px] flex-col justify-between gap-8 border-b border-border-subtle p-6 last:border-b-0 md:border-b-0"
               >
-                <span aria-hidden="true" className="font-mono text-[10px] text-plum-300">
+                <span aria-hidden="true" className="font-mono text-[11px] text-plum-300">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div>
@@ -154,7 +155,7 @@ export default function GeneratePage() {
             {n > 3 && (
               <Link
                 href="/history"
-                className="ts-mono-ui group inline-flex items-center gap-1.5 rounded-md border border-transparent px-3.5 py-2 text-[14px] text-violet-400 transition-colors duration-300 hover:border-violet-500 hover:text-ink"
+                className="ts-mono-ui group inline-flex items-center gap-1.5 rounded-md border border-transparent px-3.5 py-2 text-[14px] text-violet-400 transition-colors duration-300 hover:border-violet-500 hover:text-ink-hover"
               >
                 View all
                 <ArrowRightIcon className="-ml-1 w-0 -translate-x-2 opacity-0 transition-all duration-300 group-hover:ml-0 group-hover:w-4 group-hover:translate-x-0 group-hover:opacity-100" />

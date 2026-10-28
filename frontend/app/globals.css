@@ -31,6 +31,8 @@
   --ink-body: #d3c6ca;
   --ink-muted: #a89ca2;
   --ink-dim: #7c7278;
+  --ink-hover: #dadcf0; /* hover text: slightly bluer instead of whiter */
+  --bg-hover: #2a2a36; /* hover fill: slightly bluer than bg-raised */
   --on-primary: #fbf3f6;
 
   /* Status */
@@ -65,6 +67,8 @@
   --color-ink-body: var(--ink-body);
   --color-ink-muted: var(--ink-muted);
   --color-ink-dim: var(--ink-dim);
+  --color-ink-hover: var(--ink-hover);
+  --color-bg-hover: var(--bg-hover);
   --color-on-primary: var(--on-primary);
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -81,7 +85,7 @@
   --shadow-panel: var(--shadow-panel);
 
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-mono: var(--font-neu-prompter), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Soft violet glow behind the sign-in screens. The home hero uses a photo instead. */
@@ -99,71 +103,71 @@
 }
 @utility ts-display {
   font-family: var(--font-mono);
-  font-size: 44px;
-  line-height: 48px;
+  font-size: 46px;
+  line-height: 50px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 @utility ts-h1 {
   font-family: var(--font-mono);
-  font-size: 26px;
-  line-height: 34px;
+  font-size: 28px;
+  line-height: 36px;
   font-weight: 700;
 }
 @utility ts-h2 {
   font-family: var(--font-mono);
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 22px;
+  line-height: 30px;
   font-weight: 600;
 }
 @utility ts-h3 {
   font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 15px;
+  line-height: 24px;
   font-weight: 600;
 }
 @utility ts-stat {
   font-family: var(--font-mono);
-  font-size: 22px;
-  line-height: 28px;
+  font-size: 24px;
+  line-height: 30px;
   font-weight: 600;
 }
 @utility ts-body {
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 15px;
+  line-height: 24px;
   font-weight: 400;
 }
 @utility ts-body-strong {
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 15px;
+  line-height: 24px;
   font-weight: 600;
 }
 @utility ts-small {
   font-family: var(--font-sans);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
   font-weight: 400;
 }
 @utility ts-label {
   font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 @utility ts-mono-ui {
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 22px;
   font-weight: 500;
 }
 @utility ts-code {
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 19px;
+  font-size: 13px;
+  line-height: 21px;
   font-weight: 400;
 }
 
@@ -171,8 +175,8 @@ body {
   background: var(--bg-base);
   color: var(--ink-body);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 15px;
+  line-height: 24px;
 }
 
 :focus-visible {

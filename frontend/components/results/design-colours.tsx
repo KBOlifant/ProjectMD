@@ -30,12 +30,12 @@ export function DesignColours({ colors, onCopy }: Props) {
               aria-label={`Copy ${c.hex}${describe(c) ? `, ${describe(c)}` : ""}`}
               className="group block w-full overflow-hidden rounded-lg border border-border-strong text-left"
             >
-              <span style={{ backgroundColor: c.hex, color: readableTextOn(c.hex) }} className="block h-20 px-3 py-2 font-mono text-[10px]">
+              <span style={{ backgroundColor: c.hex, color: readableTextOn(c.hex) }} className="block h-20 px-3 py-2 font-mono text-[11px]">
                 <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Click to copy</span>
               </span>
               <span className="flex items-center justify-between gap-2 bg-bg-raised px-3 py-2">
-                <span className="ts-mono-ui truncate text-[11px] font-semibold text-ink">{c.role ?? c.hex}</span>
-                <span className="font-mono text-[10px] uppercase text-ink-muted">{c.hex}</span>
+                <span className="ts-mono-ui truncate text-[12px] font-semibold text-ink">{c.role ?? c.hex}</span>
+                <span className="font-mono text-[11px] uppercase text-ink-muted">{c.hex}</span>
               </span>
             </button>
           </li>
@@ -50,12 +50,12 @@ export function DesignColours({ colors, onCopy }: Props) {
                 onClick={() => onCopy(c.hex, c.hex)}
                 aria-label={`Copy ${c.hex}${describe(c) ? `, ${describe(c)}` : ""}`}
                 title={`${c.hex}${describe(c) ? ` · ${describe(c)}` : ""}`}
-                className="flex w-full items-center gap-2.5 rounded-lg border border-border-subtle px-2.5 py-2 text-left transition-colors hover:bg-bg-raised"
+                className="flex w-full items-center gap-2.5 rounded-lg border border-border-subtle px-2.5 py-2 text-left transition-colors hover:bg-bg-hover"
               >
                 <span style={{ backgroundColor: c.hex }} className="size-5 flex-none rounded-sm border border-border-strong" />
                 <span className="min-w-0">
-                  <span className="block truncate font-mono text-[10px] leading-4 text-ink">{c.role ?? "Colour"}</span>
-                  <span className="block font-mono text-[10px] uppercase leading-4 text-ink-muted">{c.hex}</span>
+                  <span className="block truncate font-mono text-[11px] leading-4 text-ink">{c.role ?? "Colour"}</span>
+                  <span className="block font-mono text-[11px] uppercase leading-4 text-ink-muted">{c.hex}</span>
                 </span>
               </button>
             </li>

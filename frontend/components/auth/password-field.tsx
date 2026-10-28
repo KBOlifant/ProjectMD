@@ -21,7 +21,7 @@ export function PasswordField(props: PasswordFieldProps) {
           type="button"
           onClick={() => setVisible((v) => !v)}
           aria-label={`${visible ? "Hide" : "Show"} ${props.label.toLowerCase()}`}
-          className="ts-mono-ui rounded-sm text-ink-muted transition-colors hover:text-ink"
+          className="ts-mono-ui rounded-sm text-ink-muted transition-colors hover:text-ink-hover"
         >
           {visible ? "Hide" : "Show"}
         </button>

@@ -17,7 +17,7 @@ export function UsageMeter() {
   return (
     <div title={text} className="flex w-11 flex-col items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface py-2.5">
       <ScanIcon size={14} aria-hidden="true" className="text-ink-dim" />
-      <span aria-live="polite" aria-label={text} className="font-mono text-[10px] leading-none text-ink">
+      <span aria-live="polite" aria-label={text} className="font-mono text-[11px] leading-none text-ink">
         {loading ? "–" : used}
       </span>
     </div>

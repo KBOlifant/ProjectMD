@@ -53,7 +53,7 @@ export function ResetForm() {
       title="Reset your password"
       subtitle="Enter your email and we will send you a link to choose a new password."
       footer={
-        <Link href="/login" className="text-violet-400 hover:text-ink">
+        <Link href="/login" className="text-violet-400 hover:text-ink-hover">
           Back to sign in
         </Link>
       }

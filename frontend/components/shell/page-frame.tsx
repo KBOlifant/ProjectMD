@@ -15,5 +15,5 @@ export function PageFrame({ children, size = "list" }: { children: ReactNode; si
 
 // Small plum label above a page heading (e.g. "Archive"), as in the wireframes. Stores nothing.
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return <p className="ts-label text-[13px] leading-5 text-plum-300">{children}</p>;
+  return <p className="ts-label text-[14px] leading-5 text-plum-300">{children}</p>;
 }

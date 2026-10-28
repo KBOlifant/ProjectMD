@@ -24,7 +24,7 @@ export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloa
     <div
       onMouseEnter={onActivate}
       onFocus={onActivate}
-      className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3.5 transition-colors focus-within:border-border-strong hover:border-border-strong hover:bg-bg-raised">
+      className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3.5 transition-colors focus-within:border-border-strong hover:border-border-strong hover:bg-bg-hover">
       {scan.screenshotUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- small remote thumbnail; Cloudinary already serves it sized
         <img
@@ -34,7 +34,7 @@ export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloa
           className="h-10 w-16 flex-none rounded-md border border-border-strong object-cover object-top"
         />
       ) : (
-        <span className="grid size-10 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink">
+        <span className="grid size-10 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[12px] font-semibold text-ink">
           {initials(scan.host)}
         </span>
       )}
@@ -56,8 +56,8 @@ export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloa
       </div>
       <div className="flex flex-none items-center gap-4">
         <div className="text-right">
-          <p className="font-mono text-[11px] leading-4 text-ink-body">{formatDate(scan.createdAt)}</p>
-          <p className="font-mono text-[10px] leading-4 text-ink-muted">
+          <p className="font-mono text-[12px] leading-4 text-ink-body">{formatDate(scan.createdAt)}</p>
+          <p className="font-mono text-[11px] leading-4 text-ink-muted">
             {scan.pages} {scan.pages === 1 ? "page" : "pages"}
           </p>
         </div>
@@ -68,7 +68,7 @@ export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloa
             disabled={downloadDisabled}
             title={downloadDisabled ? downloadHint : `Download ${scan.host}.md`}
             aria-label={`Download ${scan.host} as .md`}
-            className="ts-mono-ui relative z-10 inline-flex items-center gap-2 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-base hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            className="ts-mono-ui relative z-10 inline-flex items-center gap-2 rounded-md border border-border-strong px-3 py-1.5 text-ink-body transition-colors hover:bg-bg-base hover:text-ink-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <DownloadIcon size={13} />
             .MD

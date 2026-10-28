@@ -24,7 +24,7 @@ export function TechChip({ name, highlighted = false }: { name: string; highligh
       }`}
     >
       <span className="grid size-5 flex-none place-items-center rounded-sm bg-bg-raised text-plum-300">{techGlyph(name)}</span>
-      <span className="min-w-0 break-words font-mono text-[10px] leading-[14px] text-ink-body">
+      <span className="min-w-0 break-words font-mono text-[11px] leading-[14px] text-ink-body">
         {name}
       </span>
     </span>
@@ -34,7 +34,7 @@ export function TechChip({ name, highlighted = false }: { name: string; highligh
 // Plain outlined tag for dense lists (History rows). No glyph. Stores nothing.
 export function TechTag({ name }: { name: string }) {
   return (
-    <span className="inline-block rounded-sm border border-border-strong px-1.5 py-px font-mono text-[10px] leading-4 text-ink-muted">
+    <span className="inline-block rounded-sm border border-border-strong px-1.5 py-px font-mono text-[11px] leading-4 text-ink-muted">
       {name}
     </span>
   );
@@ -47,7 +47,7 @@ export function ConfidenceBadge({ value }: { value: number }) {
   return (
     <span
       title={`${value}% confidence`}
-      className={`inline-block rounded-sm border px-1.5 py-px font-mono text-[10px] leading-4 ${tone}`}
+      className={`inline-block rounded-sm border px-1.5 py-px font-mono text-[11px] leading-4 ${tone}`}
     >
       <span aria-hidden="true">{value}%</span>
       <span className="sr-only">{value}% confidence</span>

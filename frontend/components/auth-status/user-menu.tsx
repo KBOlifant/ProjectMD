@@ -20,7 +20,7 @@ function Avatar({ email }: { email: string | null }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-9 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[11px] font-semibold text-ink"
+      className="grid size-9 flex-none place-items-center rounded-md border border-violet-500/40 bg-violet-700 font-mono text-[12px] font-semibold text-ink"
     >
       {emailInitials(email)}
     </span>

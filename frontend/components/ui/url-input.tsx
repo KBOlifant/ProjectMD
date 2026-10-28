@@ -64,7 +64,7 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
             value={value}
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
-            className="ts-mono-ui min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none! placeholder:text-zinc-200 disabled:cursor-not-allowed"
+            className="ts-mono-ui min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none! placeholder:text-zinc-200 disabled:cursor-not-allowed"
           />
         </label>
         <motion.button
@@ -73,7 +73,7 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
           initial="rest"
           whileHover="hover"
           animate="rest"
-          className={buttonClass("accent", "h-12 flex-none px-5")}
+          className={buttonClass("custom1", "h-12 flex-none px-5")}
         >
           Analyze website
           <motion.span variants={ARROW_VARIANTS} transition={{ type: "spring", stiffness: 400, damping: 20 }} className="inline-flex">
@@ -86,7 +86,7 @@ export function UrlInput({ value, onChange, onSubmit, error, disabled = false, n
           {error}
         </p>
       ) : (
-        <div id={hintId} className="ts-small mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 font-mono text-[11px] text-ink-muted">
+        <div id={hintId} className="ts-small mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 font-mono text-[12px] text-ink-muted">
           {notice ??
             HINTS.map((h) => (
               <span key={h.text} className="inline-flex items-center gap-1.5">

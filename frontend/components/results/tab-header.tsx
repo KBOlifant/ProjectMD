@@ -26,7 +26,7 @@ export function TabHeader({ eyebrow, title, description, aside }: TabHeaderProps
 // Outlined count badge with an icon, used as the `aside` of a TabHeader. Stores nothing.
 export function CountBadge({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex flex-none items-center gap-2 rounded-lg border border-border-strong bg-bg-surface px-3 py-2 font-mono text-[10px] text-ink-body">
+    <span className="inline-flex flex-none items-center gap-2 rounded-lg border border-border-strong bg-bg-surface px-3 py-2 font-mono text-[11px] text-ink-body">
       <span className="text-plum-300">{icon}</span>
       {children}
     </span>

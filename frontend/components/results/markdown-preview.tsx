@@ -60,7 +60,7 @@ function inline(text: string, inTable = false): ReactNode[] {
       flush();
       let code = text.slice(i + ticks, end).trim();
       if (inTable) code = code.replaceAll("\\|", "|");
-      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 font-mono text-[12px] text-ink">{code}</code>);
+      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 font-mono text-[13px] text-ink">{code}</code>);
       i = end + ticks;
     } else if (c === "*") {
       const marker = text.startsWith("**", i) ? "**" : "*";
@@ -200,7 +200,7 @@ export function MarkdownPreview({ source }: { source: string }) {
       const level = line.indexOf(" ");
       const text = inline(line.slice(level + 1));
       if (level === 1) out.push(<h1 key={key} className="ts-h1 text-ink">{text}</h1>);
-      else if (level === 2) out.push(<h2 key={key} className="ts-h3 border-b border-border-subtle pb-2 pt-5 text-[15px] text-ink">{text}</h2>);
+      else if (level === 2) out.push(<h2 key={key} className="ts-h3 border-b border-border-subtle pb-2 pt-5 text-[16px] text-ink">{text}</h2>);
       else out.push(<h3 key={key} className="ts-body-strong text-ink">{text}</h3>);
       i++;
     } else if (line.trim() === "---") {
@@ -224,7 +224,7 @@ export function MarkdownPreview({ source }: { source: string }) {
       }
       out.push(renderList(items, key));
     } else if (line.trim()) {
-      out.push(<p key={key} className="ts-body break-words text-[14px] leading-[26px]">{inline(line)}</p>);
+      out.push(<p key={key} className="ts-body break-words text-[15px] leading-[26px]">{inline(line)}</p>);
       i++;
     } else {
       i++;
