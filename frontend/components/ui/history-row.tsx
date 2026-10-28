@@ -11,15 +11,20 @@ interface HistoryRowProps {
   // Disables that button (for accounts without export permission); `downloadHint` explains why.
   downloadDisabled?: boolean;
   downloadHint?: string;
+  // Called when the pointer or keyboard focus enters the row.
+  onActivate?: () => void;
 }
 
 // One row summarising a saved scan: site screenshot (initials tile when there is none), host with confidence badge, up to four tech
 // tags, scan date, page count and a ".MD" download button. The host is a real link to
 // /results/<scan.id> stretched over the whole row; the download button sits above that link so
 // the two never nest. Display only; stores nothing.
-export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloadHint }: HistoryRowProps) {
+export function HistoryRow({ scan, onDownload, downloadDisabled = false, downloadHint, onActivate }: HistoryRowProps) {
   return (
-    <div className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3.5 transition-colors focus-within:border-border-strong hover:border-border-strong hover:bg-bg-raised">
+    <div
+      onMouseEnter={onActivate}
+      onFocus={onActivate}
+      className="relative flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3.5 transition-colors focus-within:border-border-strong hover:border-border-strong hover:bg-bg-raised">
       {scan.screenshotUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- small remote thumbnail; Cloudinary already serves it sized
         <img

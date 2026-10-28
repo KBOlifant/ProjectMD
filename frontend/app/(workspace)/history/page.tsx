@@ -7,6 +7,7 @@ import { Eyebrow, PageFrame } from "@/components/shell/page-frame";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DownloadIcon } from "@/components/ui/icons";
+import { HistoryPreview } from "@/components/ui/history-preview";
 import { HistoryRow } from "@/components/ui/history-row";
 import { downloadAllScans, downloadScan } from "@/lib/download";
 import { clearHistory, reloadHistory, useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
@@ -25,6 +26,7 @@ export default function HistoryPage() {
   const [confirming, setConfirming] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Clears the history and closes the confirm step. A failure (api mode) leaves the list as it is
   // and shows the message under the header.
@@ -41,7 +43,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <PageFrame>
+    <PageFrame size="wide">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <Eyebrow>Archive</Eyebrow>
@@ -105,16 +107,28 @@ export default function HistoryPage() {
           No scans yet. Analyze your first website to see it here.
         </EmptyState>
       ) : (
-        <div className="space-y-3">
-          {history.map((scan) => (
-            <HistoryRow
-              key={scan.id}
-              scan={scan}
-              onDownload={() => downloadScan(scan)}
-              downloadDisabled={!canExport}
-              downloadHint="Your account cannot export scans."
-            />
-          ))}
+        <div
+          onMouseLeave={() => setActiveId(null)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setActiveId(null);
+          }}
+          className="grid items-start gap-8 xl:grid-cols-[minmax(0,960px)_minmax(0,1fr)]"
+        >
+          <div className="max-w-[960px] space-y-3">
+            {history.map((scan) => (
+              <HistoryRow
+                key={scan.id}
+                scan={scan}
+                onDownload={() => downloadScan(scan)}
+                downloadDisabled={!canExport}
+                downloadHint="Your account cannot export scans."
+                onActivate={() => setActiveId(scan.id)}
+              />
+            ))}
+          </div>
+          <div className="hidden self-stretch xl:block">
+            <HistoryPreview scan={history.find((s) => s.id === activeId) ?? null} />
+          </div>
         </div>
       )}
     </PageFrame>
