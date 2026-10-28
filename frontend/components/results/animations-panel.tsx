@@ -121,11 +121,19 @@ export function AnimationsPanel({ report }: { report: AnimationReport }) {
                 type="button"
                 aria-pressed={flavour === f.id}
                 onClick={() => setFlavour(f.id)}
-                className={`rounded-md px-3 py-1.5 font-mono text-[11px] transition-colors ${
-                  flavour === f.id ? "bg-bg-raised text-ink" : "text-ink-muted hover:text-ink-hover"
+                className={`relative rounded-md px-3 py-1.5 font-mono text-[11px] transition-colors ${
+                  flavour === f.id ? "text-ink" : "text-ink-muted hover:text-ink-hover"
                 }`}
               >
-                {f.label}
+                {flavour === f.id && (
+                  <motion.span
+                    layoutId="flavour-pill"
+                    aria-hidden="true"
+                    transition={{ type: "spring", stiffness: 500, damping: 38 }}
+                    className="absolute inset-0 rounded-md bg-bg-raised"
+                  />
+                )}
+                <span className="relative">{f.label}</span>
               </button>
             ))}
           </div>

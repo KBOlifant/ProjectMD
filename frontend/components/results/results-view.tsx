@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { isApiMode } from "@/app/functions/data/mode";
 import { useCan } from "@/app/functions/rbac/useCan";
@@ -32,6 +33,10 @@ const TAB_ICONS: Partial<Record<Tab, ReactNode>> = {
   animations: <MotionIcon size={13} />,
 };
 type Format = "md" | "txt";
+
+// The active-tab underline glides between tabs on this spring; the panel fades and rises in.
+const TAB_SPRING = { type: "spring", stiffness: 500, damping: 38 } as const;
+const PANEL_FADE = { duration: 0.22, ease: "easeOut" } as const;
 
 // Text shown inside a tab when the scan has nothing for it. Stores nothing.
 function TabNote({ children }: { children: ReactNode }) {
@@ -144,6 +149,7 @@ export function ResultsView({ id }: { id?: string }) {
           <ResultsSidebar scan={scan} />
         </aside>
 
+        <MotionConfig reducedMotion="user">
         <section className="flex min-w-0 flex-1 flex-col md:min-h-0">
           <div className="flex items-center gap-4 border-b border-border-subtle px-2 md:px-7">
             <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 overflow-hidden">
@@ -165,7 +171,14 @@ export function ResultsView({ id }: { id?: string }) {
                 >
                   {TAB_ICONS[t]}
                   {TAB_LABELS[t]}
-                  {tab === t && <span aria-hidden="true" className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500" />}
+                  {tab === t && (
+                    <motion.span
+                      layoutId="results-tab-underline"
+                      aria-hidden="true"
+                      transition={TAB_SPRING}
+                      className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500"
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -179,7 +192,15 @@ export function ResultsView({ id }: { id?: string }) {
             tabIndex={0}
             className="pane-scroll min-h-0 flex-1 px-4 py-7 md:overflow-y-auto md:px-12 md:py-9"
           >
-            <div className={tab === "preview" || tab === "raw" ? "max-w-[760px]" : "max-w-[1024px]"}>
+            <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={PANEL_FADE}
+              className={tab === "preview" || tab === "raw" ? "max-w-[760px]" : "max-w-[1024px]"}
+            >
               {tab === "preview" && <MarkdownPreview source={sections.document} />}
               {tab === "design" &&
                 (hasDesignData(scan.analysis?.design) ? (
@@ -218,9 +239,11 @@ export function ResultsView({ id }: { id?: string }) {
               {tab === "raw" && (
                 <pre className="ts-code overflow-x-auto rounded-lg border border-border-subtle bg-bg-sidebar p-5 text-ink-body">{scan.markdown}</pre>
               )}
-            </div>
+            </motion.div>
+            </AnimatePresence>
           </div>
         </section>
+        </MotionConfig>
       </div>
     </div>
   );
