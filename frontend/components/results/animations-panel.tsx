@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CopyIcon } from "@/components/ui/icons";
 import { STAGGER_ITEM, STAGGER_LIST } from "@/lib/motion";
 import type { AnimationItem, AnimationReport } from "@/lib/types";
+import { Preview, previewKind } from "./animation-preview";
 import { TabHeader } from "./tab-header";
 import { useCopy } from "./use-copy";
 
@@ -42,58 +43,6 @@ export function hasAnimationData(report: AnimationReport | null | undefined): re
 
 const CHIP = "rounded-sm border border-border-strong px-2 py-0.5 font-mono text-[10px] leading-4 text-ink-muted";
 
-type PreviewKind = "blur" | "locomotive" | "cube";
-
-// Picks a canned preview from whatever text the AI already gave us for this animation (its library
-// hint, description, rebuild note) and the libraries measured on the page as a whole. No new data,
-// just pattern-matching on what's already there. Falls back to the generic cube.
-function previewKind(item: AnimationItem, libraries: readonly string[]): PreviewKind {
-  const text = `${item.library} ${item.description} ${item.recreate}`.toLowerCase();
-  const pageLibraries = libraries.join(" ").toLowerCase();
-  if (text.includes("locomotive") || pageLibraries.includes("locomotive")) return "locomotive";
-  if (text.includes("blur")) return "blur";
-  return "cube";
-}
-
-// A small looping preview that stands in for the real captured animation: a blurred tile sharpening
-// for "blur", three bars drifting up like an inertia-scrolled page for "locomotive", and a sliding,
-// spinning square otherwise.
-function Preview({ kind }: { kind: PreviewKind }) {
-  if (kind === "blur") {
-    return (
-      <motion.div
-        aria-hidden="true"
-        className="size-10 rounded-md bg-violet-500"
-        animate={{ filter: ["blur(0px)", "blur(10px)", "blur(0px)"] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-      />
-    );
-  }
-  if (kind === "locomotive") {
-    return (
-      <div aria-hidden="true" className="flex h-16 items-end gap-2 overflow-hidden">
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="w-3 rounded-sm bg-violet-500"
-            style={{ height: 14 + i * 10 }}
-            animate={{ y: [24, -24] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }}
-          />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="size-8 rounded-md bg-violet-500"
-      animate={{ x: [-80, 80, -80], rotate: [0, 180, 360] }}
-      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-    />
-  );
-}
-
 function Card({
   item,
   index,
@@ -130,7 +79,7 @@ function Card({
       </div>
       {/* Placeholder preview until real captured animations are rendered here; the kind is picked
           from the AI's own description, see previewKind. */}
-      <div className="grid h-24 place-items-center border-b border-border-subtle bg-bg-base px-8">
+      <div aria-hidden="true" className="grid h-24 place-items-center border-b border-border-subtle bg-bg-base px-8">
         <Preview kind={previewKind(item, libraries)} />
       </div>
       <div className="space-y-3 px-5 py-4">
