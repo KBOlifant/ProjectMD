@@ -48,6 +48,7 @@ export const MOCK_ANALYSIS: ScanAnalysis = {
         gsap: 'gsap.from(".target", {\n  opacity: 0,\n  y: 40,\n  duration: 0.6,\n  ease: "power2.out",\n});',
         framerMotion:
           '<motion.div\n  initial={{ opacity: 0, y: 40 }}\n  animate={{ opacity: 1, y: 0 }}\n  transition={{ duration: 0.6, ease: "easeOut" }}\n/>',
+        css: "@keyframes reveal {\n  from { opacity: 0; transform: translateY(40px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n.target {\n  animation: reveal 0.6s ease-out forwards;\n}",
       },
       {
         section: "Features",
@@ -61,6 +62,7 @@ export const MOCK_ANALYSIS: ScanAnalysis = {
         gsap: 'gsap.registerPlugin(ScrollTrigger);\n\ngsap.from(".target", {\n  opacity: 0,\n  y: 40,\n  duration: 0.6,\n  ease: "power2.out",\n  scrollTrigger: { trigger: ".target", start: "top 80%" },\n});',
         framerMotion:
           '<motion.div\n  initial={{ opacity: 0, y: 40 }}\n  whileInView={{ opacity: 1, y: 0 }}\n  viewport={{ once: true, amount: 0.3 }}\n  transition={{ duration: 0.6, ease: "easeOut" }}\n/>',
+        css: "@keyframes reveal {\n  from { opacity: 0; transform: translateY(40px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n.target {\n  animation: reveal 0.6s ease-out both;\n}",
       },
     ],
   },

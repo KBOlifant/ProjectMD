@@ -6,7 +6,7 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 
 ## Source of truth
 
-1. **Design system artifact**: https://claude.ai/artifact/P5okfTXdafYjV4u2jySAPw. Read its `project/README.md`, then `project/tokens.json` and `project/components/<Name>/README.md`. If it disagrees with the code, the artifact wins.
+1. **Wireframes v2** (`Project MD Web Application*.png`, 8 screens): icon rail, hero, processing card, two-pane Results with Design/Components/Animations tabs, History. They win over everything else. The older design-system artifact (https://claude.ai/artifact/P5okfTXdafYjV4u2jySAPw, deep-violet v1) is **stale**; use it only for component behaviour, never for colours or layout. Tokens live in `00-foundation-tokens.md`.
 2. **`frontend/AGENTS.md`**: this is not the Next.js you know. Read the matching guide in `frontend/node_modules/next/dist/docs/` before writing routing, fonts, metadata or data code.
 
 ## The skills
@@ -17,10 +17,10 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 | 01 | [01-app-shell.md](01-app-shell.md) | `components/shell/*`, `app/layout.tsx` body | 00 |
 | 02 | [02-ui-components.md](02-ui-components.md) | `components/ui/*` | 00 |
 | 03 | [03-data-and-state.md](03-data-and-state.md) | `lib/*`, `components/scan-provider.tsx` | none |
-| 04 | [04-screen-generate.md](04-screen-generate.md) | `app/page.tsx` | 01, 02, 03 |
-| 05 | [05-screen-processing.md](05-screen-processing.md) | `app/processing/*` | 01, 02, 03 |
-| 06 | [06-screen-results.md](06-screen-results.md) | `app/results/*`, `components/results/*` | 01, 02, 03 |
-| 07 | [07-screen-history.md](07-screen-history.md) | `app/history/*` | 01, 02, 03 |
+| 04 | [04-screen-generate.md](04-screen-generate.md) | `app/(workspace)/page.tsx`, hero backdrop | 01, 02, 03 |
+| 05 | [05-screen-processing.md](05-screen-processing.md) | `app/(workspace)/processing/*` | 01, 02, 03 |
+| 06 | [06-screen-results.md](06-screen-results.md) | `app/(workspace)/results/*`, `components/results/*` | 01, 02, 03 |
+| 07 | [07-screen-history.md](07-screen-history.md) | `app/(workspace)/history/*`, `lib/download.ts` | 01, 02, 03 |
 | 08 | [08-qa-review.md](08-qa-review.md) | read-only, reports defects | all |
 | 09 | [09-auth-firebase.md](09-auth-firebase.md) | `app/functions/{firebase,auth}`, `app/layout.tsx`, route groups, `.env.example` | none |
 | 10 | [10-rbac.md](10-rbac.md) | `app/functions/rbac/*` | contract with 09 |
@@ -38,6 +38,8 @@ Project MD turns a public URL into structured Markdown documentation. The fronte
 | 23 | [23-backend-api-capture.md](23-backend-api-capture.md) | record the page's API calls (no secrets or values) | 18 |
 | 24 | [24-backend-design-capture.md](24-backend-design-capture.md) | extract colours, fonts, spacing, CSS variables | 18 |
 | 25 | [25-backend-structured-output.md](25-backend-structured-output.md) | Groq returns structured JSON, server renders the Markdown | 19, 22, contract from 23-24 |
+
+**Design v2 note:** the hero photo is a placeholder; put the real image at `frontend/public/hero.jpg`.
 
 Extraction waves: 18 and 19 in parallel (19 codes to 18's contract).
 

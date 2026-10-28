@@ -5,7 +5,7 @@ namespace ProjectMD.Api.Services.Pipeline;
 
 // One animation for the website's Animations tab: the AI's description (Section, Name, Description,
 // Trigger, Evidence, Library, Recreate), our estimate of the library that most likely runs it
-// ("GSAP", "Framer Motion" or "CSS"), and ready-to-copy code for GSAP and for Framer Motion.
+// ("GSAP", "Framer Motion" or "CSS"), and ready-to-copy code for GSAP, Framer Motion and plain CSS.
 public sealed record AnimationItem(
     string Section,
     string Name,
@@ -16,7 +16,8 @@ public sealed record AnimationItem(
     string Recreate,
     string Estimate,
     string Gsap,
-    string FramerMotion);
+    string FramerMotion,
+    string Css);
 
 // The animations of a scan: the AI's one-line summary, the libraries the browser measured on the
 // page, and the animations with their estimates and code.
@@ -24,8 +25,7 @@ public sealed record AnimationReport(string Summary, IReadOnlyList<string> Libra
 
 // Builds the AnimationReport from the AI's motion notes and the browser's measured evidence. Free
 // (no AI call) and pure. The estimate is a guess and the code is a starting point; both are labelled
-// that way on the website. The code uses the browser's measured values for the animation the model
-// matched (or the model's own numbers), so it differs per animation.
+// that way on the website.
 public static class AnimationReportBuilder
 {
     public const string EstimateGsap = "GSAP";
@@ -44,18 +44,18 @@ public static class AnimationReportBuilder
 
         var duration = TypicalDurationMs(evidence);
         var items = animations
-            .Select(a => (Note: a, Spec: MotionSpecBuilder.Build(a, evidence)))
-            .Select(x => new AnimationItem(
-                x.Note.Section,
-                x.Note.Name,
-                x.Note.Description,
-                x.Note.Trigger,
-                x.Note.Evidence,
-                x.Note.Library,
-                x.Note.Recreate,
-                Estimate(x.Note, libraries),
-                AnimationSnippets.Gsap(x.Note.Trigger, x.Spec, duration),
-                AnimationSnippets.FramerMotion(x.Note.Trigger, x.Spec, duration)))
+            .Select(a => new AnimationItem(
+                a.Section,
+                a.Name,
+                a.Description,
+                a.Trigger,
+                a.Evidence,
+                a.Library,
+                a.Recreate,
+                Estimate(a, libraries),
+                AnimationSnippets.Gsap(a.Trigger, duration),
+                AnimationSnippets.FramerMotion(a.Trigger, duration),
+                AnimationSnippets.Css(a.Trigger, duration)))
             .ToList();
         return new AnimationReport(notes?.Summary ?? string.Empty, libraries, items);
     }

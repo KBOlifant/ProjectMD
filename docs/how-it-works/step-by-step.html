@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project MD Walkthrough</title>
+<style>
+  :root {
+    --bg: #f7f6fb; --surface: #ffffff; --surface-2: #f0eef7; --ink: #1c1830; --muted: #5d5874;
+    --line: #dcd8ea; --accent: #6d4aff; --accent-soft: #ece7ff; --warn: #9a6400; --warn-soft: #fdf0d5;
+    --you: #475569; --fe: #2f6fe0; --fb: #d97706; --be: #6d4aff; --pw: #b0367a; --ai: #c2410c; --db: #0f8a7a;
+    --code-bg: #f3f1f9;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --sans: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f0d17; --surface: #18151f; --surface-2: #221e2d; --ink: #ece9f5; --muted: #a39fb8;
+      --line: #322c42; --accent: #9b85ff; --accent-soft: #2a2245; --warn: #f2b84b; --warn-soft: #3a2c10;
+      --you: #a3b1c6; --fe: #6ea0ff; --fb: #fbbf24; --be: #9b85ff; --pw: #f07ab8; --ai: #ff9a5c; --db: #4fd1c0;
+      --code-bg: #120f1a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0d17; --surface: #18151f; --surface-2: #221e2d; --ink: #ece9f5; --muted: #a39fb8;
+    --line: #322c42; --accent: #9b85ff; --accent-soft: #2a2245; --warn: #f2b84b; --warn-soft: #3a2c10;
+    --you: #a3b1c6; --fe: #6ea0ff; --fb: #fbbf24; --be: #9b85ff; --pw: #f07ab8; --ai: #ff9a5c; --db: #4fd1c0;
+    --code-bg: #120f1a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--sans); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--surface-2); padding: .08em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  .layout { max-width: 1240px; margin: 0 auto; padding: 0 16px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 32px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 0; } aside { position: static !important; max-height: none !important; } }
+  aside { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 24px 0; }
+  aside .brand { font: 700 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  aside ol { list-style: none; margin: 0; padding: 0; counter-reset: c; }
+  aside li { counter-increment: c; }
+  aside a { display: flex; gap: 8px; text-decoration: none; color: var(--muted); font-size: 13.5px; padding: 5px 8px; border-radius: 8px; line-height: 1.35; }
+  aside a::before { content: counter(c, decimal-leading-zero); font: 600 11px/1.6 var(--mono); color: var(--line); flex: none; }
+  aside a:hover, aside a.on { background: var(--surface); color: var(--ink); }
+  aside a.on::before { color: var(--accent); }
+  main { padding: 32px 0 80px; min-width: 0; }
+  h1 { font-size: clamp(28px, 4.6vw, 42px); line-height: 1.12; margin: 6px 0 12px; letter-spacing: -.02em; }
+  .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .lede { color: var(--muted); font-size: 17.5px; max-width: 760px; margin: 0 0 18px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 18px 0; }
+  .panel h2 { font-size: 19px; margin: 0 0 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); padding: 5px 8px; border-radius: 6px; letter-spacing: .04em; white-space: nowrap; }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .l-you { color: var(--you); background: color-mix(in srgb, var(--you) 14%, transparent); }
+  .l-fe { color: var(--fe); background: color-mix(in srgb, var(--fe) 14%, transparent); }
+  .l-fb { color: var(--fb); background: color-mix(in srgb, var(--fb) 14%, transparent); }
+  .l-be { color: var(--be); background: color-mix(in srgb, var(--be) 14%, transparent); }
+  .l-pw { color: var(--pw); background: color-mix(in srgb, var(--pw) 14%, transparent); }
+  .l-ai { color: var(--ai); background: color-mix(in srgb, var(--ai) 14%, transparent); }
+  .l-db { color: var(--db); background: color-mix(in srgb, var(--db) 14%, transparent); }
+  dl.gloss { display: grid; grid-template-columns: minmax(120px, 170px) 1fr; gap: 8px 14px; margin: 0; font-size: 14.5px; }
+  dl.gloss dt { font-weight: 600; }
+  dl.gloss dd { margin: 0; color: var(--muted); }
+  @media (max-width: 560px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 6px; } }
+  pre.chain { margin: 0; font: 12.5px/1.55 var(--mono); overflow-x: auto; color: var(--ink); background: var(--code-bg); padding: 14px; border-radius: 10px; }
+  pre.chain .hl { color: var(--accent); font-weight: 700; }
+  pre.chain .dim { color: var(--muted); }
+
+  .chapter { margin-top: 46px; }
+  .chapter > header { border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 16px; }
+  .chapter h2 { font-size: 24px; margin: 4px 0 4px; letter-spacing: -.01em; }
+  .chapter .intro { color: var(--muted); margin: 0; max-width: 800px; }
+  .step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; position: relative; padding-bottom: 14px; }
+  .step::after { content: ""; position: absolute; left: 21px; top: 44px; bottom: 0; width: 2px; background: var(--line); }
+  .step:last-child::after { display: none; }
+  .num { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 700 14px var(--mono); background: var(--surface); border: 2px solid currentColor; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .card h3 { font-size: 16.5px; margin: 0; flex: 1 1 260px; }
+  .card p.plain { margin: 0 0 10px; }
+  .who { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; }
+  .who span.lbl { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 2px; }
+  .who code { font-size: 12.5px; background: var(--accent-soft); color: var(--ink); }
+  .ev { border-top: 1px dashed var(--line); padding-top: 8px; }
+  .ev .lbl { font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .ev-item { margin-top: 6px; }
+  .ev-item a { font: 600 12.5px var(--mono); text-decoration: none; overflow-wrap: anywhere; }
+  .ev-item a:hover { text-decoration: underline; }
+  .ev-item pre { margin: 4px 0 0; font: 12.5px/1.5 var(--mono); background: var(--code-bg); padding: 8px 10px; border-radius: 8px; overflow-x: auto; white-space: pre; }
+  .tip { margin-top: 10px; font-size: 14px; background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 8px 12px; border-radius: 0 8px 8px 0; }
+  .handoff { margin: 4px 0 18px 58px; font: 600 12.5px var(--mono); color: var(--muted); }
+  @media (max-width: 560px) { .step { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; } .num { width: 34px; height: 34px; font-size: 12px; } .step::after { left: 16px; top: 34px; } .handoff { margin-left: 44px; } }
+  footer { color: var(--muted); font-size: 13px; padding-top: 30px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside aria-label="Chapters">
+    <div class="brand">Walkthrough</div>
+    <ol id="toc"></ol>
+  </aside>
+
+  <main>
+    <div class="eyebrow">Project MD · step by step with evidence · Testing branch, 26 Oct 2026</div>
+    <h1>One scan, every step, with the line of code that does it</h1>
+    <p class="lede">Follow a single scan from the moment you sign in to the moment the Results page shows up.
+      Each step says what happens in plain words, names the component or service doing it, and quotes the exact
+      file and line. Click a file name to open it, or press <code>Ctrl+P</code> in VS Code and paste the path.
+      For the big-picture diagrams see <a href="visual-guide.html">visual-guide.html</a>.</p>
+
+    <div class="panel">
+      <h2>Colour key: where each step runs</h2>
+      <div class="legend">
+        <span class="chip l-you">YOUR SCREEN</span>
+        <span class="chip l-fe">FRONTEND CODE</span>
+        <span class="chip l-fb">FIREBASE</span>
+        <span class="chip l-be">BACKEND</span>
+        <span class="chip l-pw">PLAYWRIGHT / CHROMIUM</span>
+        <span class="chip l-ai">GROQ AI</span>
+        <span class="chip l-db">DATABASE</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Words used on this page</h2>
+      <dl class="gloss">
+        <dt>Component</dt><dd>A piece of the screen written in React (a <code>.tsx</code> file), for example the URL bar.</dd>
+        <dt>Provider / context</dt><dd>Shared memory that many screens can read, for example who is signed in.</dd>
+        <dt>Service</dt><dd>A C# class that does one job. ASP.NET hands it to whoever needs it ("dependency injection").</dd>
+        <dt>Middleware</dt><dd>A checkpoint on the server. Every request walks through all of them, in order.</dd>
+        <dt>Controller / endpoint</dt><dd>The C# method that answers one web address, like <code>POST /api/scans</code>.</dd>
+        <dt>Token (JWT)</dt><dd>A signed pass from Firebase that proves who you are. It expires after 1 hour and is renewed automatically.</dd>
+        <dt>Playwright</dt><dd>A library that lets code drive a real web browser: open pages, click, scroll, take screenshots.</dd>
+        <dt>Chromium (headless)</dt><dd>The open-source browser behind Chrome. "Headless" means it runs with no window.</dd>
+        <dt>Browser context</dt><dd>A brand-new private window with its own cookies. Made for one scan, then thrown away.</dd>
+        <dt>Route / intercept</dt><dd>Catching each request the page wants to make before it leaves the browser.</dd>
+        <dt>evaluate</dt><dd>Running a small piece of JavaScript inside the loaded page and reading back the answer.</dd>
+        <dt>SSRF</dt><dd>A trick where a website makes our server fetch private addresses. The proxy blocks this.</dd>
+        <dt>Prompt</dt><dd>The text sent to the AI. The system prompt holds the fixed rules; the user message holds the facts about this page.</dd>
+        <dt>Transaction</dt><dd>A group of database steps that either all happen or none do.</dd>
+      </dl>
+    </div>
+
+    <div class="panel">
+      <h2>The whole call chain on one screen</h2>
+      <p style="margin:0 0 10px; color: var(--muted)">Read top to bottom. Each line is a function calling the next one. Backend paths start at <code>backend/ProjectMD.Api/</code>.</p>
+<pre class="chain"><span class="dim">YOU press "Analyze website"</span>
+└─ UrlInput &lt;form onSubmit&gt;                      frontend/components/ui/url-input.tsx:34
+   └─ submit()                                    frontend/app/(workspace)/page.tsx:47
+      ├─ parseUrl(value)                          frontend/lib/url.ts:8
+      ├─ startScan(url)                           frontend/components/scan-provider.tsx:72
+      │  ├─ assertCan(user, "scan:create")        frontend/app/functions/rbac/errors.ts:34
+      │  └─ setInterval (3 s progress)            frontend/components/scan-provider.tsx:81
+      │     └─ scanProvider.generate(url)         frontend/components/scan-provider.tsx:94
+      │        └─ apiScanProvider.generate        frontend/app/functions/data/api-provider.ts:14
+      │           └─ apiFetch POST /api/scans     frontend/app/functions/data/api-client.ts:98
+      │              ├─ getIdToken()              frontend/app/functions/auth/auth-service.ts:68
+      │              └─ fetch() + Bearer token    frontend/app/functions/data/api-client.ts:88
+      └─ router.push("/processing")               frontend/app/(workspace)/page.tsx:57
+
+<span class="dim">BACKEND receives POST /api/scans</span>
+├─ UseCors                                        Program.cs:145
+├─ UseAuthentication (Firebase token check)       Auth/ConfigureFirebaseJwtBearer.cs:22
+│  └─ DbRoleClaimsTransformation.TransformAsync   Auth/DbRoleClaimsTransformation.cs:43
+├─ UseAuthorization (PermissionHandler)           Auth/PermissionHandler.cs:13
+├─ UseRateLimiter ("scan-create")                 Services/ScanRateLimiting.cs:40
+└─ ScansController.Create                         Controllers/ScansController.cs:104
+   ├─ UrlValidator.Validate                       Services/UrlValidator.cs:82
+   ├─ UserSync.GetOrCreateAsync                   Auth/UserSync.cs:31
+   ├─ UsageService.GetAsync                       Services/UsageService.cs:36
+   ├─ <span class="hl">_generator.GenerateAsync   ◄ scan is triggered</span>  Controllers/ScansController.cs:132
+   │  └─ PipelineScanGenerator.GenerateAsync      Services/Pipeline/PipelineScanGenerator.cs:75
+   │     ├─ ExtractionService.ExtractAsync        Services/Extraction/ExtractionService.cs:24
+   │     │  ├─ PlaywrightPageFetcher.FetchAsync   Services/Extraction/PlaywrightPageFetcher.cs:91
+   │     │  │  ├─ GetBrowserAsync
+   │     │  │  │  └─ <span class="hl">Chromium.LaunchAsync  ◄ Chromium starts</span>  PlaywrightPageFetcher.cs:477
+   │     │  │  ├─ browser.NewContextAsync         PlaywrightPageFetcher.cs:162
+   │     │  │  ├─ context.RouteAsync → proxy      PlaywrightPageFetcher.cs:178
+   │     │  │  ├─ page.GotoAsync(url)             PlaywrightPageFetcher.cs:270
+   │     │  │  ├─ DesignCapture, ComponentCapture PlaywrightPageFetcher.cs:224-225
+   │     │  │  └─ VisualCapturer (screenshots)    PlaywrightPageFetcher.cs:233
+   │     │  ├─ BlockDetector.LooksBlocked         Services/Extraction/ExtractionService.cs:29
+   │     │  └─ HtmlReducer.Reduce                 Services/Extraction/ExtractionService.cs:41
+   │     ├─ TechFingerprinter.Detect              PipelineScanGenerator.cs:81
+   │     ├─ Groq call 1: WriteNotesAsync          PipelineScanGenerator.cs:83
+   │     ├─ Groq call 2: MotionAnalyzer           PipelineScanGenerator.cs:84
+   │     ├─ Groq call 3: ComponentAnalyzer        PipelineScanGenerator.cs:85
+   │     └─ MarkdownDocumentBuilder.Build         PipelineScanGenerator.cs:90
+   ├─ ScanRecorder.TryRecordAsync → PostgreSQL    Controllers/ScansController.cs:175
+   └─ return 201 with the scan                    Controllers/ScansController.cs:183</pre>
+    </div>
+
+    <div id="chapters"></div>
+
+    <footer>Line numbers checked against the working tree on 26 Oct 2026. If you edit a file, the numbers below it may shift by a few lines.</footer>
+  </main>
+</div>
+
+<script>
+// Step data. L = layer, t = title, p = plain explanation, who = components/services involved,
+// ev = evidence: [path, line, exact code], n = optional note.
+const F = (p) => "frontend/" + p;
+const B = (p) => "backend/ProjectMD.Api/" + p;
+
+const CHAPTERS = [
+{
+  id: "signin", title: "Before you can scan: signing in",
+  intro: "You have to be signed in before the Generate page will even show. Firebase checks your password; our backend then gives you a role.",
+  steps: [
+    { L: "you", t: "You type your email and password on /login",
+      p: "The login screen is the <code>LoginForm</code> component. When you press Sign in it calls <code>signIn()</code>.",
+      who: ["LoginForm", "signIn()"],
+      ev: [[F("components/auth/login-form.tsx"), 46, `await signIn(email.trim(), password);`]] },
+    { L: "fb", t: "Firebase checks your password",
+      p: "<code>signIn()</code> hands the email and password to Firebase. Firebase answers with your account and a token. The Firebase SDK itself is set up once in <code>getFirebaseAuth()</code>.",
+      who: ["auth-service.ts", "getFirebaseAuth()"],
+      ev: [[F("app/functions/auth/auth-service.ts"), 33, `await signInWithEmailAndPassword(getFirebaseAuth(), email, password);`],
+           [F("app/functions/firebase/client.ts"), 46, `const auth = getAuth(getFirebaseApp());`]] },
+    { L: "fb", t: "Your browser remembers you (this is where \"logged in\" lives)",
+      p: "The Firebase SDK saves your session in the browser's <b>IndexedDB</b>, in a database called <code>firebaseLocalStorageDb</code>. That is why a refresh keeps you signed in. Our code never stores it itself: this is Firebase's default \"local\" persistence, and the app never changes it.",
+      who: ["Firebase SDK", "IndexedDB"],
+      ev: [[F("app/functions/firebase/client.ts"), 35, `return getApps().length > 0 ? getApp() : initializeApp(readConfig());`]],
+      n: "See it: DevTools → Application → IndexedDB → firebaseLocalStorageDb. Signing out deletes it." },
+    { L: "fe", t: "AuthProvider notices you are signed in",
+      p: "<code>AuthProvider</code> wraps the whole app and listens to Firebase. When a user appears, it tells the me-store and the history-store whose data to load.",
+      who: ["AuthProvider", "onAuthStateChanged", "setMeOwner", "setHistoryOwner"],
+      ev: [[F("app/layout.tsx"), 30, `<AuthProvider>`],
+           [F("app/functions/auth/AuthProvider.tsx"), 68, `const unsubscribe = onAuthStateChanged(getFirebaseAuth(), (fbUser) => {`],
+           [F("app/functions/auth/AuthProvider.tsx"), 79, `setMeOwner(fbUser.uid);`]] },
+    { L: "be", t: "The app asks the server \"who am I?\" (GET /api/me)",
+      p: "The me-store calls <code>GET /api/me</code> with your token. <code>MeController</code> finds or creates your row in the <code>AppUsers</code> table. New users get the default role <b>member</b>. It sends back your role and how many scans you have left.",
+      who: ["me-store", "MeController", "UserSync"],
+      ev: [[F("app/functions/data/me-store.ts"), 107, `const me = parseMe(await apiFetch<unknown>("/api/me"));`],
+           [B("Controllers/MeController.cs"), 34, `var appUser = await _userSync.GetOrCreateAsync(_currentUser, cancellationToken);`],
+           [B("Auth/UserSync.cs"), 44, `Role = _options.ResolvedDefaultRole,`]] },
+    { L: "fe", t: "RequireAuth lets you into the workspace",
+      p: "Every page under <code>(workspace)</code> is wrapped in <code>RequireAuth</code>. Signed out? You are sent to /login. Signed in? You see the <code>Shell</code> (side bar) and the page.",
+      who: ["RequireAuth", "Shell"],
+      ev: [[F("app/(workspace)/layout.tsx"), 9, `<RequireAuth>`],
+           [F("app/functions/auth/guards.tsx"), 38, `router.replace("/login?next=" + encodeURIComponent(path));`]] },
+  ] },
+{
+  id: "input", title: "Typing the address (the input)",
+  intro: "The input box lives on the Generate page, which is the home page \"/\".",
+  steps: [
+    { L: "you", t: "The Generate page holds what you type",
+      p: "<code>GeneratePage</code> keeps the typed text in a piece of state called <code>value</code>, and draws the <code>UrlInput</code> component.",
+      who: ["GeneratePage", "UrlInput"],
+      ev: [[F("app/(workspace)/page.tsx"), 40, `const [value, setValue] = useState("");`],
+           [F("app/(workspace)/page.tsx"), 88, `<UrlInput`],
+           [F("app/(workspace)/page.tsx"), 91, `onSubmit={submit}`]] },
+    { L: "you", t: "UrlInput: the actual text box and button",
+      p: "<code>UrlInput</code> is a small form: a text box and the violet \"Analyze website\" button. Pressing the button or Enter runs the form's submit, which calls the page's <code>submit()</code>.",
+      who: ["UrlInput"],
+      ev: [[F("components/ui/url-input.tsx"), 48, `<input\n  type="text"`],
+           [F("components/ui/url-input.tsx"), 34, `onSubmit={(e) => {\n  e.preventDefault();\n  onSubmit();`]] },
+    { L: "fe", t: "parseUrl: a quick check in the browser",
+      p: "<code>parseUrl</code> adds <code>https://</code> if you left it out, allows only http and https, and refuses local addresses like <code>localhost</code> or <code>192.168.x.x</code>. If it fails, the message shows under the box and nothing else happens.",
+      who: ["parseUrl"],
+      ev: [[F("app/(workspace)/page.tsx"), 48, `const parsed = parseUrl(value);`],
+           [F("lib/url.ts"), 12, `const withScheme = /^[a-z][a-z0-9+.-]*:\\/\\//i.test(raw) ? raw : \`https://\${raw}\`;`],
+           [F("lib/url.ts"), 3, `const PRIVATE_HOST = /^(localhost|127\\.|10\\.|192\\.168\\.|169\\.254\\.|172\\.(1[6-9]|2\\d|3[01])\\.|0\\.)/i;`]] },
+    { L: "fe", t: "startScan: may you scan? (frontend role check)",
+      p: "<code>startScan</code> lives in <code>ScanProvider</code>. First it calls <code>assertCan(user, \"scan:create\")</code>. If you are a viewer or your email is not verified, it throws and the page shows why. This check only makes the screen friendlier: the server checks again later.",
+      who: ["ScanProvider", "startScan", "assertCan", "PermissionError"],
+      ev: [[F("app/(workspace)/page.tsx"), 52, `startScan(parsed.url);`],
+           [F("components/scan-provider.tsx"), 74, `assertCan(user, "scan:create");`],
+           [F("app/functions/rbac/errors.ts"), 39, `if (reason) throw new PermissionError(permission, reason);`]] },
+    { L: "you", t: "You are sent to /processing",
+      p: "If the checks pass, the page moves you to the Processing screen.",
+      who: ["GeneratePage", "router"],
+      ev: [[F("app/(workspace)/page.tsx"), 57, `router.push("/processing");`]] },
+  ] },
+{
+  id: "wait", title: "The waiting screen",
+  intro: "The four progress steps you see are a timed animation. They do not report what the server is doing.",
+  steps: [
+    { L: "fe", t: "A timer ticks every 100 ms for 3 seconds",
+      p: "<code>startScan</code> starts a timer. The four steps add up to 3000 ms (300 + 600 + 900 + 1200).",
+      who: ["ScanProvider", "PIPELINE_STEPS", "TOTAL_MS"],
+      ev: [[F("components/scan-provider.tsx"), 81, `const timer = setInterval(() => {`],
+           [F("lib/scan.ts"), 22, `export const TOTAL_MS = PIPELINE_STEPS.reduce((sum, s) => sum + s.ms, 0);`]] },
+    { L: "you", t: "ProcessingPage draws the ProgressCard",
+      p: "<code>ProcessingPage</code> reads the elapsed time and turns it into done / current / queued for each step.",
+      who: ["ProcessingPage", "ProgressCard", "stepStates"],
+      ev: [[F("app/(workspace)/processing/page.tsx"), 52, `const states = stepStates(session.elapsed);`],
+           [F("app/(workspace)/processing/page.tsx"), 78, `<ProgressCard`]] },
+    { L: "fe", t: "Only when the timer ends does the real request start",
+      p: "After 3 seconds the timer stops and <code>scanProvider.generate()</code> is called. The last step stays \"current\" while the server works.",
+      who: ["ScanProvider"],
+      ev: [[F("components/scan-provider.tsx"), 84, `if (elapsed < TOTAL_MS) {`],
+           [F("components/scan-provider.tsx"), 94, `scanProvider.generate(next, { getToken: getIdToken }).then(`]],
+      n: "This means every scan waits about 3 seconds longer than it needs to." },
+  ] },
+{
+  id: "send", title: "Sending the request to the server",
+  intro: "The frontend has two possible data sources. In \"api\" mode it talks to the backend; otherwise it makes a fake scan in the browser.",
+  steps: [
+    { L: "fe", t: "Which scan provider? (frontend switch)",
+      p: "<code>scanProvider</code> is picked once, from the setting <code>NEXT_PUBLIC_SCAN_PROVIDER</code>. <code>api</code> means the real backend. Anything else means the mock in <code>static/static-provider.ts</code>, and no server is involved at all.",
+      who: ["scanProvider", "apiScanProvider", "staticScanProvider", "isApiMode"],
+      ev: [[F("app/functions/data/mode.ts"), 4, `export const isApiMode: boolean = process.env.NEXT_PUBLIC_SCAN_PROVIDER === "api";`],
+           [F("app/functions/data/scan-provider.ts"), 26, `export const scanProvider: ScanProvider = isApiMode ? apiScanProvider : staticScanProvider;`]] },
+    { L: "fe", t: "apiScanProvider.generate sends POST /api/scans",
+      p: "It puts your URL in a small JSON body <code>{ url }</code> and calls <code>apiFetch</code>.",
+      who: ["apiScanProvider"],
+      ev: [[F("app/functions/data/api-provider.ts"), 16, `return await apiFetch<Scan>("/api/scans", { method: "POST", body: JSON.stringify({ url }) });`]] },
+    { L: "fb", t: "apiFetch gets your token from Firebase",
+      p: "<code>apiFetch</code> asks Firebase for your current ID token. Firebase renews it automatically when it is close to expiring.",
+      who: ["apiFetch", "readToken", "getIdToken"],
+      ev: [[F("app/functions/data/api-client.ts"), 99, `let token = await readToken(false);`],
+           [F("app/functions/auth/auth-service.ts"), 70, `return user ? user.getIdToken(forceRefresh) : null;`]] },
+    { L: "fe", t: "The request leaves the browser with the token attached",
+      p: "The token goes in the <code>Authorization</code> header, never in the URL. The server address defaults to <code>http://localhost:5080</code>.",
+      who: ["send()", "fetch"],
+      ev: [[F("app/functions/data/api-client.ts"), 86, `if (token) headers.set("Authorization", \`Bearer \${token}\`);`],
+           [F("app/functions/data/api-client.ts"), 88, `return await fetch(API_URL + path, { ...init, headers });`],
+           [F("app/functions/data/api-client.ts"), 9, `const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080").replace(/\\/+$/, "");`]] },
+    { L: "fe", t: "If the server says 401, try once more with a fresh token",
+      p: "A 401 means \"I don't accept this token\". <code>apiFetch</code> forces a new token and retries exactly once.",
+      who: ["apiFetch"],
+      ev: [[F("app/functions/data/api-client.ts"), 101, `if (res.status === 401 && token !== null) {\n    token = await readToken(true);`]] },
+  ] },
+{
+  id: "startup", title: "Server start-up: wiring things together",
+  intro: "This happens once, when you run dotnet run. It decides which classes will handle requests later.",
+  steps: [
+    { L: "db", t: "Connect the database",
+      p: "<code>Program.cs</code> registers <code>AppDbContext</code> using PostgreSQL. The connection string comes from <code>backend/.env</code>.",
+      who: ["Program.cs", "AppDbContext"],
+      ev: [[B("Program.cs"), 32, `builder.Services.AddDbContext<AppDbContext>(options =>\n    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));`]] },
+    { L: "be", t: "Register the auth pieces",
+      p: "<code>AddFirebaseAuth</code> sets up the Firebase token check, one permission rule per permission, the role swap, and the 403 message writer.",
+      who: ["AddFirebaseAuth", "ConfigureFirebaseJwtBearer", "PermissionHandler", "DbRoleClaimsTransformation", "ProblemDetailsAuthorizationResultHandler"],
+      ev: [[B("Program.cs"), 97, `ProjectMD.Api.Auth.AuthServiceCollectionExtensions.AddFirebaseAuth(builder.Services);`],
+           [B("Auth/AuthServiceCollectionExtensions.cs"), 21, `services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();`],
+           [B("Auth/AuthServiceCollectionExtensions.cs"), 33, `options.AddPolicy(permission, policy => policy`],
+           [B("Auth/AuthServiceCollectionExtensions.cs"), 44, `services.AddSingleton<IAuthorizationHandler, PermissionHandler>();`],
+           [B("Auth/AuthServiceCollectionExtensions.cs"), 59, `services.Replace(ServiceDescriptor.Scoped<IClaimsTransformation, DbRoleClaimsTransformation>());`]] },
+    { L: "be", t: "Pick the scan generator (backend switch)",
+      p: "<code>AddScanServices</code> reads <code>Scanner:Mode</code>. <b>static</b> = a mock generator. <b>extract</b> or <b>ai</b> = the real <code>PipelineScanGenerator</code>. The Groq client is only registered in ai mode when an API key is set.",
+      who: ["AddScanServices", "StaticScanGenerator", "PipelineScanGenerator", "GroqLlmClient"],
+      ev: [[B("Program.cs"), 105, `ProjectMD.Api.Services.ScanServiceCollectionExtensions.AddScanServices(builder.Services, builder.Configuration);`],
+           [B("Services/ScanServiceCollectionExtensions.cs"), 33, `var mode = ScannerModeOptions.Parse(configuration["Scanner:Mode"]);`],
+           [B("Services/ScanServiceCollectionExtensions.cs"), 62, `if (mode == ScannerMode.Ai && !string.IsNullOrWhiteSpace(configuration["Ai:ApiKey"]))`],
+           [B("Services/ScanServiceCollectionExtensions.cs"), 85, `services.AddSingleton<IScanGenerator, StaticScanGenerator>();`],
+           [B("Services/ScanServiceCollectionExtensions.cs"), 90, `services.AddScoped<IScanGenerator, PipelineScanGenerator>();`]],
+      n: "appsettings.json ships with \"Mode\": \"static\". Real scans need Scanner__Mode=ai in backend/.env." },
+    { L: "pw", t: "Register Playwright (but do not start Chromium yet)",
+      p: "<code>AddExtraction</code> registers <code>PlaywrightPageFetcher</code> as a singleton: one copy for the whole app. Chromium is <b>not</b> started here; it starts on the first scan.",
+      who: ["AddExtraction", "PlaywrightPageFetcher", "HtmlReducer", "TechFingerprinter", "ExtractionService"],
+      ev: [[B("Services/ScanServiceCollectionExtensions.cs"), 89, `services.AddExtraction(configuration);`],
+           [B("Services/Extraction/ExtractionServiceCollectionExtensions.cs"), 26, `services.TryAddSingleton<IPageFetcher, PlaywrightPageFetcher>();`]] },
+  ] },
+{
+  id: "gates", title: "Server checkpoints: where the auth happens",
+  intro: "Every request walks through these checkpoints in Program.cs, in this order. Any one can stop it.",
+  steps: [
+    { L: "be", t: "CORS: is the request from our website?",
+      p: "Only the origins listed in <code>Cors:AllowedOrigins</code> (http://localhost:3000) may call the API from a browser.",
+      who: ["UseCors"],
+      ev: [[B("Program.cs"), 145, `app.UseCors("Frontend");`]] },
+    { L: "be", t: "Authentication: is the token real?",
+      p: "<code>UseAuthentication</code> reads the <code>Bearer</code> token and checks it with Google's public keys: right signature, issued by our Firebase project, for our project, not expired. A bad token stops here with <b>401</b>.",
+      who: ["UseAuthentication", "ConfigureFirebaseJwtBearer"],
+      ev: [[B("Program.cs"), 150, `app.UseAuthentication();`],
+           [B("Auth/ConfigureFirebaseJwtBearer.cs"), 36, `var issuer = $"https://securetoken.google.com/{projectId}";`],
+           [B("Auth/ConfigureFirebaseJwtBearer.cs"), 45, `options.Authority = issuer;`],
+           [B("Auth/ConfigureFirebaseJwtBearer.cs"), 65, `OnTokenValidated = RejectTokensWithoutUid,`]] },
+    { L: "db", t: "Role swap: use the database role, not the token's",
+      p: "<code>DbRoleClaimsTransformation</code> runs right after the token is accepted. It looks up your role in <code>AppUsers</code> (kept in memory for 30 s), creates your row if it is missing, promotes you to admin if your verified email is on the admin list, then throws away any role inside the token and puts the database role in its place.",
+      who: ["DbRoleClaimsTransformation", "UserSync", "IMemoryCache"],
+      ev: [[B("Auth/DbRoleClaimsTransformation.cs"), 57, `if (!_cache.TryGetValue(key, out string? role) || role is null)`],
+           [B("Auth/DbRoleClaimsTransformation.cs"), 80, `var row = await _userSync.GetOrCreateAsync(new CurrentUser(uid, email, emailVerified, Roles.Viewer));`],
+           [B("Auth/DbRoleClaimsTransformation.cs"), 82, `if (emailVerified && _options.IsBootstrapAdmin(email) && row.Role != Roles.Admin)`],
+           [B("Auth/DbRoleClaimsTransformation.cs"), 104, `clone.RemoveClaim(claim);`],
+           [B("Auth/DbRoleClaimsTransformation.cs"), 109, `clone.AddClaim(new Claim(FirebaseClaims.Role, role));`]] },
+    { L: "be", t: "Authorization: may this role do this? (RBAC)",
+      p: "The <code>Create</code> method is marked <code>[Authorize(Policy = \"scan:create\")]</code>. <code>PermissionHandler</code> asks <code>PermissionRules.DenyReason</code>, which looks the role up in the table in <code>Permissions.cs</code>. Creating a scan also needs a verified email.",
+      who: ["UseAuthorization", "PermissionHandler", "PermissionRules", "Permissions"],
+      ev: [[B("Program.cs"), 151, `app.UseAuthorization();`],
+           [B("Controllers/ScansController.cs"), 101, `[Authorize(Policy = Permissions.ScanCreate)]`],
+           [B("Auth/PermissionHandler.cs"), 23, `var reason = PermissionRules.DenyReason(user.Role, user.EmailVerified, requirement.Permission);`],
+           [B("Auth/PermissionRules.cs"), 28, `if (permission == Permissions.ScanCreate && !emailVerified)`],
+           [B("Auth/Permissions.cs"), 32, `[Roles.Member] = new HashSet<string> { ScanRead, ScanExport, ScanCreate, HistoryClear },`]] },
+    { L: "be", t: "If refused: a 403 with a reason",
+      p: "A refusal becomes a 403 with <code>reason: \"role\"</code> or <code>\"unverified\"</code>, so the frontend can show the right message.",
+      who: ["ProblemDetailsAuthorizationResultHandler"],
+      ev: [[B("Auth/PermissionHandler.cs"), 30, `context.Fail(new AuthorizationFailureReason(this, reason));`],
+           [B("Auth/ProblemDetailsAuthorizationResultHandler.cs"), 44, `var reason = ReasonFrom(authorizeResult);`]] },
+    { L: "be", t: "Rate limit: not too fast",
+      p: "At most 5 new scans per minute per user. More gives <b>429</b>.",
+      who: ["UseRateLimiter", "ScanRateLimiting"],
+      ev: [[B("Program.cs"), 157, `app.UseRateLimiter();`],
+           [B("Controllers/ScansController.cs"), 102, `[EnableRateLimiting(ScanRateLimiting.PolicyName)]`],
+           [B("Services/ScanRateLimiting.cs"), 40, `return RateLimitPartition.GetFixedWindowLimiter(PartitionKey(httpContext), _ =>`]] },
+    { L: "be", t: "Hand the request to the controller",
+      p: "<code>MapControllers</code> matches <code>POST /api/scans</code> to <code>ScansController.Create</code>.",
+      who: ["MapControllers", "ScansController"],
+      ev: [[B("Program.cs"), 160, `app.MapControllers();`],
+           [B("Controllers/ScansController.cs"), 23, `[Route("api/scans")]`],
+           [B("Controllers/ScansController.cs"), 104, `public async Task<ActionResult<ScanDto>> Create([FromBody] CreateScanRequest request, CancellationToken ct)`]] },
+  ] },
+{
+  id: "controller", title: "The scans controller: where the scan is triggered",
+  intro: "ScansController.Create does the last checks and then starts the scan.",
+  steps: [
+    { L: "be", t: "Check the URL again, properly",
+      p: "<code>UrlValidator</code> is the real check (the browser one was only for a quick message). Bad URL → 400.",
+      who: ["UrlValidator"],
+      ev: [[B("Controllers/ScansController.cs"), 106, `var validation = _urlValidator.Validate(request?.Url);`],
+           [B("Services/UrlValidator.cs"), 82, `public UrlValidationResult Validate(string? input)`]] },
+    { L: "db", t: "Find your user row and check this month's allowance",
+      p: "Default allowance is 10 scans a month. Used up → 429 \"quota\". Cleared scans still count.",
+      who: ["UserSync", "UsageService"],
+      ev: [[B("Controllers/ScansController.cs"), 118, `var user = await _userSync.GetOrCreateAsync(_currentUser, ct);`],
+           [B("Controllers/ScansController.cs"), 124, `if (usage.Used >= usage.Limit)`],
+           [B("Services/UsageService.cs"), 43, `.IgnoreQueryFilters()`]] },
+    { L: "be", t: "TRIGGER: the scan starts here",
+      p: "This one line starts all the real work. <code>_generator</code> is whichever generator was picked at start-up: <code>PipelineScanGenerator</code> (extract/ai) or <code>StaticScanGenerator</code> (static mock).",
+      who: ["IScanGenerator", "PipelineScanGenerator"],
+      ev: [[B("Controllers/ScansController.cs"), 132, `generated = await _generator.GenerateAsync(validation.Uri!, ct);`]] },
+    { L: "be", t: "If the page could not be read",
+      p: "A blocked, broken or non-HTML page becomes a friendly 400 or 502. No AI is called in that case.",
+      who: ["ExtractionException", "BudgetExceededException"],
+      ev: [[B("Controllers/ScansController.cs"), 134, `catch (ExtractionException ex)`],
+           [B("Controllers/ScansController.cs"), 140, `catch (BudgetExceededException ex)`]] },
+  ] },
+{
+  id: "conductor", title: "The pipeline conductor",
+  intro: "PipelineScanGenerator.GenerateAsync runs every stage in order. Chapters 8 to 15 open up each line.",
+  steps: [
+    { L: "be", t: "GenerateAsync: the to-do list",
+      p: "1) open and read the page (free), 2) detect the tech stack (free), 3) three AI jobs, 4) build the Markdown and the data for the tabs.",
+      who: ["PipelineScanGenerator"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 80, `var digest = await _extraction.ExtractAsync(url, ct);`],
+           [B("Services/Pipeline/PipelineScanGenerator.cs"), 81, `var tech = _fingerprinter.Detect(digest);`],
+           [B("Services/Pipeline/PipelineScanGenerator.cs"), 83, `var (notes, basis) = await WriteNotesAsync(digest, tech, ct);\nvar motionNotes = await WriteMotionNotesAsync(digest, ct);\nvar componentPreviews = await WriteComponentPreviewsAsync(digest, ct);`],
+           [B("Services/Pipeline/PipelineScanGenerator.cs"), 90, `var markdown = MarkdownDocumentBuilder.Build(`]] },
+    { L: "be", t: "ExtractionService: open the page, then shrink it",
+      p: "<code>ExtractionService</code> asks the Playwright fetcher for the page, refuses bot-check and error pages, then shrinks the HTML.",
+      who: ["ExtractionService", "IPageFetcher"],
+      ev: [[B("Services/Extraction/ExtractionService.cs"), 26, `var raw = await _fetcher.FetchAsync(url, ct);`]] },
+  ] },
+{
+  id: "playwright", title: "Playwright: opening the site",
+  intro: "Everything in this chapter is in PlaywrightPageFetcher.cs unless it says otherwise. This is exactly what Playwright does, in order.",
+  steps: [
+    { L: "pw", t: "Check the URL one more time, and wait for a free slot",
+      p: "Only a few pages render at once (<code>Scanner:MaxConcurrentFetches</code>). If all slots are busy for too long, you get \"busy, try again\".",
+      who: ["PlaywrightPageFetcher.FetchAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 95, `var check = _validator.Validate(url.AbsoluteUri);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 103, `var gotSlot = await _slots.WaitAsync(TimeSpan.FromSeconds(_options.QueueWaitSeconds), ct);`]] },
+    { L: "pw", t: "Start a stopwatch for the whole page",
+      p: "The whole fetch must finish within <code>Scanner:OverallTimeoutSeconds</code> (75 s).",
+      who: ["FetchAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 112, `overall.CancelAfter(TimeSpan.FromSeconds(_options.OverallTimeoutSeconds));`]] },
+    { L: "pw", t: "CHROMIUM LAUNCHES HERE (first scan only)",
+      p: "<code>GetBrowserAsync</code> checks if a browser is already running. If not, it starts the Playwright driver and launches headless Chromium. Later scans reuse the same browser. The <code>--host-resolver-rules</code> flag stops the browser from looking up any website address by itself, so it can only reach what our proxy fetches for it.",
+      who: ["GetBrowserAsync", "Playwright.CreateAsync", "Chromium.LaunchAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 144, `var browser = await GetBrowserAsync(token);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 444, `if (current is { IsConnected: true })`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 475, `_playwright ??= await Playwright.CreateAsync();`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 477, `_browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 479, `Headless = true,`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 486, `"--host-resolver-rules=MAP * ~NOTFOUND",`]] },
+    { L: "pw", t: "Build the safety kit for this scan",
+      p: "A fresh <code>GuardedHttpClient</code> (does the real downloads), an <code>ApiRecorder</code> (notes the page's API calls) and a <code>PageRequestProxy</code> (decides about every request).",
+      who: ["GuardedHttpClient", "ApiRecorder", "PageRequestProxy"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 147, `using var client = new GuardedHttpClient(guard);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 148, `var apiRecorder = new ApiRecorder();`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 150, `var proxy = new PageRequestProxy(`]] },
+    { L: "pw", t: "Open a brand-new private window (browser context)",
+      p: "No cookies, no saved data, a desktop-sized window (1440 × 900), our own user-agent name, service workers blocked, downloads refused.",
+      who: ["browser.NewContextAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 162, `context = await browser.NewContextAsync(new BrowserNewContextOptions`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 34, `private const string UserAgent = "ProjectMD-Scanner/1.0";`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 167, `ServiceWorkers = ServiceWorkerPolicy.Block,`]] },
+    { L: "pw", t: "Catch every request the page will make",
+      p: "<code>RouteAsync(\"**/*\")</code> means: every request (the page, scripts, styles, API calls, fonts, images) is sent to <code>HandleRouteAsync</code> instead of the internet. WebSockets are simply closed.",
+      who: ["context.RouteAsync", "HandleRouteAsync", "RouteWebSocketAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 178, `await context.RouteAsync("**/*", route => HandleRouteAsync(route, proxy, state, token)).WaitAsync(token);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 181, `await context.RouteWebSocketAsync("**/*", socket => Observe(socket.CloseAsync())).WaitAsync(token);`]] },
+    { L: "pw", t: "Open a tab and switch off pop-ups, dialogs and downloads",
+      p: "Alert boxes are dismissed, downloads cancelled, any pop-up window closed.",
+      who: ["context.NewPageAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 183, `var page = await context.NewPageAsync().WaitAsync(token);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 184, `page.Dialog += (_, dialog) => Observe(dialog.DismissAsync());`]] },
+    { L: "pw", t: "Go to the website and wait until it goes quiet",
+      p: "<code>GotoAsync</code> loads the page and waits for \"network idle\" (no requests for a moment), so JavaScript sites finish drawing. A page that redirects is loaded again at the new address so the guard checks that too.",
+      who: ["NavigateAsync", "page.GotoAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 200, `await NavigateAsync(page, target, state, navigationMs, token);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 270, `await page.GotoAsync(next.AbsoluteUri, new PageGotoOptions`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 272, `WaitUntil = WaitUntilState.NetworkIdle,`]] },
+    { L: "pw", t: "Meanwhile: each request goes through the proxy",
+      p: "For each caught request, <code>PageRequestProxy.HandleAsync</code> runs. Videos and similar are skipped. <code>RequestGuard</code> looks up the address and only allows public internet addresses on safe ports. <code>GuardedHttpClient</code> downloads it, connecting only to the exact address that was checked, with no automatic redirects. The answer is handed back to Chromium.",
+      who: ["PageRequestProxy", "RequestGuard", "GuardedHttpClient", "route.FulfillAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 324, `var outcome = await proxy.HandleAsync(`],
+           [B("Services/Extraction/PageRequestProxy.cs"), 101, `if (SkippedTypes.Contains(request.ResourceType) && !visual)`],
+           [B("Services/Extraction/PageRequestProxy.cs"), 124, `var decision = await _guard.CheckAsync(current.AbsoluteUri, hops, ct);`],
+           [B("Services/Extraction/PageRequestProxy.cs"), 135, `using var response = await _client.SendAsync(message, timeout.Token);`],
+           [B("Services/Extraction/GuardedHttpClient.cs"), 47, `AllowAutoRedirect = false,`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 341, `await route.FulfillAsync(new RouteFulfillOptions`]] },
+    { L: "pw", t: "Meanwhile: API calls are written down",
+      p: "Every answered request is shown to <code>ApiRecorder</code>, which keeps the method, path and the shape of JSON answers (not the data). That becomes the \"API endpoints\" section.",
+      who: ["ApiRecorder"],
+      ev: [[B("Services/Extraction/PageRequestProxy.cs"), 197, `_recorder.Record(new ApiObservation(`]] },
+    { L: "pw", t: "Read the finished HTML",
+      p: "Once the page is drawn, a tiny script reads the whole page's HTML out of the browser (size capped).",
+      who: ["page.EvaluateAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 207, `"n => (document.documentElement ? document.documentElement.outerHTML : '').slice(0, n)",`]] },
+  ] },
+{
+  id: "styles", title: "Playwright: reading the design and the components",
+  intro: "Still in the same open tab. Small scripts run inside the page and read computed styles; they never read your text, cookies or forms.",
+  steps: [
+    { L: "pw", t: "DesignCapture: colours, fonts, radii, shadows, spacing",
+      p: "<code>DesignScript</code> runs <code>getComputedStyle</code> on up to 800 visible elements and counts values. <code>DesignAnalyzer</code> merges similar colours, guesses their jobs, and adds CSS variables and breakpoints from the stylesheets the proxy already downloaded. Result: a <code>DesignSystem</code> for the Design tab.",
+      who: ["DesignCapture", "DesignScript", "DesignAnalyzer", "CssAnalyzer"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 224, `var design = await Design.DesignCapture.TryCaptureAsync(page, styleTexts, html, _logger, token);`],
+           [B("Services/Extraction/Design/DesignCapture.cs"), 32, `var json = await page.EvaluateAsync<string>(DesignScript.Source).WaitAsync(limit.Token);`],
+           [B("Services/Extraction/Design/DesignScript.cs"), 18, `const MAX_ELEMENTS = 800, MAX_ENTRIES = 150, MAX_CLASSES = 12, SEP = '\\u0001';`],
+           [B("Services/Extraction/Design/DesignCapture.cs"), 41, `return DesignAnalyzer.Build(sample, sheets);`]] },
+    { L: "pw", t: "ComponentCapture: what buttons, cards, inputs look like",
+      p: "<code>ComponentScript</code> checks up to 1500 elements and keeps 2 differently styled examples of each kind: button, input, card, nav, heading, badge. For each it saves 22 CSS values (colours turned into hex).",
+      who: ["ComponentCapture", "ComponentScript", "ComponentSample"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 225, `var components = await Components.ComponentCapture.TryCaptureAsync(page, _logger, token);`],
+           [B("Services/Extraction/Components/ComponentCapture.cs"), 17, `var json = await page.EvaluateAsync<string>(ComponentScript.Source).WaitAsync(limit.Token);`],
+           [B("Services/Extraction/Components/ComponentScript.cs"), 13, `const MAX_CHECK = 1500, PER_KIND = 2;`]] },
+  ] },
+{
+  id: "shots", title: "Playwright: screenshots and animation evidence",
+  intro: "Done last, because scrolling changes the page. Everything here is in Visual/VisualCapturer.cs and has a 20 second limit.",
+  steps: [
+    { L: "pw", t: "Start the visual capture",
+      p: "Only when <code>Motion:Enabled</code> is on and the page is not a bot-check page.",
+      who: ["VisualCapturer"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 233, `visual = await Visual.VisualCapturer.TryCaptureAsync(page, _motion, scripts, styleTexts, _logger, token);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 38, `limit.CancelAfter(TimeSpan.FromSeconds(options.CaptureTimeoutSeconds));`]] },
+    { L: "pw", t: "Read animation evidence (first time, on load)",
+      p: "<code>MotionScript</code> runs in the page. It checks for animation libraries (GSAP, Lenis, Lottie, Three.js, Framer…) and asks the browser which animations are running, with their real durations and easing.",
+      who: ["MotionScript", "MotionEvidenceReader"],
+      ev: [[B("Services/Extraction/Visual/VisualCapturer.cs"), 42, `onLoad = await TryReadEvidenceAsync(page, scriptUrls, stylesheets, logger, token);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 113, `json = await page.EvaluateAsync<string>(MotionScript.Source).WaitAsync(EvidenceTimeout, token);`],
+           [B("Services/Extraction/Visual/MotionScript.cs"), 35, `libs.gsap = !!(w.gsap || w.TweenMax || w.TweenLite);`],
+           [B("Services/Extraction/Visual/MotionScript.cs"), 67, `const list = document.getAnimations ? document.getAnimations() : [];`]] },
+    { L: "pw", t: "Screenshot 1: the first screen",
+      p: "The mouse is moved to the middle of the window, then a JPEG of the visible window only (not the whole page), quality 60.",
+      who: ["page.Mouse.MoveAsync", "page.ScreenshotAsync"],
+      ev: [[B("Services/Extraction/Visual/VisualCapturer.cs"), 45, `await page.Mouse.MoveAsync(options.ViewportWidth / 2f, options.ViewportHeight / 2f).WaitAsync(token);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 46, `frames.Add(await ShootAsync(page, options, token));`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 98, `FullPage = false,`]] },
+    { L: "pw", t: "Scroll, wait, screenshot (5 more times)",
+      p: "Real mouse-wheel scrolls of 760 px (smooth-scroll libraries only react to real wheel events), wait 700 ms for animations to play, take a screenshot. 6 screenshots in total.",
+      who: ["page.Mouse.WheelAsync"],
+      ev: [[B("Services/Extraction/Visual/VisualCapturer.cs"), 48, `for (var i = 1; i < options.ScrollFrames; i++)`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 50, `await page.Mouse.WheelAsync(0, options.ScrollStepPixels).WaitAsync(token);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 53, `await Task.Delay(options.FrameDelayMs, token);`]] },
+    { L: "pw", t: "Read animation evidence again, and merge",
+      p: "Scroll animations only exist once you scroll to them, so <code>MotionScript</code> runs a second time. Both readings are cleaned and merged.",
+      who: ["MotionEvidenceReader.Merge"],
+      ev: [[B("Services/Extraction/Visual/VisualCapturer.cs"), 59, `afterScroll = await TryReadEvidenceAsync(page, scriptUrls, stylesheets, logger, token);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 72, `var motion = MotionEvidenceReader.Merge(onLoad, afterScroll);`]] },
+    { L: "pw", t: "Stitch the 6 screenshots into one \"contact sheet\"",
+      p: "<code>ContactSheet.BuildHtml</code> writes our own little web page: a 3 × 2 grid of the screenshots with captions like \"Frame 3 - scrolled 1520 px - 1.4 s\". It is opened in a second private window with <b>JavaScript switched off</b> and photographed as one image. The AI accepts only a few images, so 6 frames become 1.",
+      who: ["ContactSheet", "SetContentAsync"],
+      ev: [[B("Services/Extraction/Visual/VisualCapturer.cs"), 154, `JavaScriptEnabled = false,`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 167, `var html = ContactSheet.BuildHtml(frames, indexes, options);`],
+           [B("Services/Extraction/Visual/VisualCapturer.cs"), 178, `FullPage = true,`],
+           [B("Services/Extraction/Visual/ContactSheet.cs"), 34, `public static string Caption(int index, MotionOptions options)`]] },
+    { L: "pw", t: "Pack everything up and close the window",
+      p: "HTML, headers, script and style addresses, API calls, design, components and screenshots go into one <code>RawPage</code>. The private window is closed. Chromium itself stays running for the next scan. Screenshots stay in memory only and are never saved.",
+      who: ["RawPage", "context.CloseAsync"],
+      ev: [[B("Services/Extraction/PlaywrightPageFetcher.cs"), 242, `return new RawPage(finalUrl, main.Status, html, headers, scripts, styles, Api: apiRecorder.Build(), Design: design, Visual: visual, Components: components);`],
+           [B("Services/Extraction/PlaywrightPageFetcher.cs"), 250, `await context.CloseAsync().WaitAsync(TimeSpan.FromSeconds(5));`]] },
+  ] },
+{
+  id: "reduce", title: "Cleaning up the page (no AI)",
+  intro: "Back in ExtractionService and the pipeline. Free work, no credits.",
+  steps: [
+    { L: "be", t: "Refuse bot-check pages and error pages",
+      p: "A Cloudflare \"checking your browser\" page, or a 404/500, is not documented.",
+      who: ["BlockDetector"],
+      ev: [[B("Services/Extraction/ExtractionService.cs"), 29, `if (BlockDetector.LooksBlocked(raw.StatusCode, raw.Headers, raw.Html))`],
+           [B("Services/Extraction/ExtractionService.cs"), 34, `if (_options.RejectHttpErrors && raw.StatusCode >= 400)`]] },
+    { L: "be", t: "HtmlReducer: shrink the page by 90%",
+      p: "Throws away scripts, styles, cookie banners and hidden parts, keeps the title, description, headings, links and main text, and makes a fingerprint (<code>ContentHash</code>) of the result. The fingerprint is how the AI cache recognises the same page later. Result: a <code>PageDigest</code>.",
+      who: ["HtmlReducer", "PageDigest"],
+      ev: [[B("Services/Extraction/ExtractionService.cs"), 41, `return _reducer.Reduce(raw, new ReduceOptions(_options.MaxTextChars, _options.MaxLinks, _options.MaxHeadings));`],
+           [B("Services/Extraction/HtmlReducer.cs"), 166, `var contentHash = TextTools.Sha256Hex(TextTools.ScrubVolatile(hashInput) + (captureForm.Length == 0 ? string.Empty : "\\ncapture:\\n" + captureForm));`]] },
+    { L: "be", t: "TechFingerprinter: what is the site built with?",
+      p: "Compares the page against fixed rules in <code>TechRules.json</code> (script names, headers, markers) to find things like Next.js, React, Vercel, Tailwind. At most 8.",
+      who: ["TechFingerprinter", "TechRules.json"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 81, `var tech = _fingerprinter.Detect(digest);`],
+           [B("Services/Extraction/TechFingerprinter.cs"), 35, `public IReadOnlyList<ScanTech> Detect(PageDigest digest)`]] },
+  ] },
+{
+  id: "groq1", title: "Groq call 1: the written notes",
+  intro: "Only in ai mode. Groq writes the short explanations; code still writes all the facts.",
+  steps: [
+    { L: "ai", t: "Build the prompt (this is where Groq's prompt comes from)",
+      p: "<code>PromptBuilder.Build</code> takes the fixed rules (<code>SystemPrompt</code>) and adds the page facts between <code>&lt;&lt;&lt;FACTS</code> and <code>FACTS&gt;&gt;&gt;</code>: title, description, tech, API endpoints, design summary, headings, a short text excerpt. Never the raw HTML or your details.",
+      who: ["PromptBuilder", "SystemPrompt"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 150, `request = _prompts.Build(digest, tech, options);`],
+           [B("Services/Ai/PromptBuilder.cs"), 36, `"You write short documentation notes about a public website, using only facts extracted from one of its pages.\\n" +`],
+           [B("Services/Ai/PromptBuilder.cs"), 94, `var user = FactsOpen + "\\n" + facts + "\\n" + FactsClose;`]] },
+    { L: "db", t: "Seen this exact page before? Use the saved answer",
+      p: "The cache key is page fingerprint + prompt version + model. A hit costs nothing.",
+      who: ["ExtractionCache"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 165, `var cached = AiDocumentParser.Parse(await TryCacheAsync(digest.ContentHash, request.Model, ct), knownIds);`],
+           [B("Services/Ai/ExtractionCache.cs"), 44, `public async Task<string?> TryGetAsync(string contentHash, int promptVersion, string model, CancellationToken ct)`]] },
+    { L: "db", t: "Enough budget left today?",
+      p: "<code>LlmBudgetGuard</code> adds up today's tokens in the <code>LlmUsage</code> table. Over the daily limit → skip the AI and use the basic document.",
+      who: ["LlmBudgetGuard"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 179, `await _budget.EnsureAsync(userId, estimatedTokens, ct);`],
+           [B("Services/Ai/LlmBudgetGuard.cs"), 43, `public async Task EnsureAsync(Guid userId, int estimatedTokens, CancellationToken ct)`]] },
+    { L: "ai", t: "Send it to Groq",
+      p: "<code>GroqLlmClient</code> builds the JSON body with two messages (system + user), adds the API key in the header, and posts to Groq's chat endpoint. It asks for strict JSON in a fixed shape.",
+      who: ["GroqLlmClient.CompleteAsync", "BuildBody", "SendOnceAsync"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 191, `result = await CompleteWithOneRetryAsync(request, options, ct);`],
+           [B("Services/Ai/GroqLlmClient.cs"), 67, `var url = options.BaseUrl.TrimEnd('/') + "/chat/completions";`],
+           [B("Services/Ai/AiOptions.cs"), 43, `public string BaseUrl { get; set; } = "https://api.groq.com/openai/v1";`],
+           [B("Services/Ai/GroqLlmClient.cs"), 130, `new Dictionary<string, object> { ["role"] = "system", ["content"] = request.System },\nnew Dictionary<string, object> { ["role"] = "user", ["content"] = UserContent(request) },`],
+           [B("Services/Ai/GroqLlmClient.cs"), 219, `message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);`],
+           [B("Services/Ai/GroqLlmClient.cs"), 223, `using var response = await http.SendAsync(message, HttpCompletionOption.ResponseContentRead, timeout.Token);`]] },
+    { L: "ai", t: "Check the answer, save it, log the cost",
+      p: "The answer must be valid JSON in the right shape, or it is thrown away. A good answer is cached for 7 days and the real token count is written to <code>LlmUsage</code>.",
+      who: ["AiDocumentParser", "ExtractionCache.StoreAsync", "LlmBudgetGuard.RecordAsync"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 208, `var notes = AiDocumentParser.Parse(result.Text, knownIds);`],
+           [B("Services/Pipeline/PipelineScanGenerator.cs"), 211, `await StoreCacheAsync(digest.ContentHash, request.Model, AiDocumentParser.ToJson(notes), ct);`],
+           [B("Services/Pipeline/PipelineScanGenerator.cs"), 214, `await RecordAsync(userId, result, cacheHit: false, ct);`]] },
+  ] },
+{
+  id: "groq2", title: "Groq call 2: reading the screenshots",
+  intro: "The vision model looks at the pictures plus the measured facts and describes the animations and the design.",
+  steps: [
+    { L: "ai", t: "MotionAnalyzer starts",
+      p: "Skipped if motion AI is off or no screenshots were taken.",
+      who: ["MotionAnalyzer"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 230, `return await _motion.AnalyzeAsync(digest, ct);`],
+           [B("Services/Ai/MotionAnalyzer.cs"), 74, `request = _prompts.Build(digest.Visual!, digest.Design, options);`]] },
+    { L: "ai", t: "Pick the pictures and write the prompt",
+      p: "<code>PickImages</code> takes the first screenshot plus the contact sheet (max 3 images, so 2 by default). The facts go between <code>&lt;&lt;&lt;VISUAL</code> and <code>VISUAL&gt;&gt;&gt;</code>.",
+      who: ["MotionPromptBuilder", "PickImages"],
+      ev: [[B("Services/Ai/MotionPromptBuilder.cs"), 79, `var images = PickImages(visual, options.MaxImagesPerRequest);`],
+           [B("Services/Ai/MotionPromptBuilder.cs"), 38, `"You are a senior web designer and front-end developer. You look at one web page and write two things for a developer who wants to understand or rebuild it: " +`]] },
+    { L: "ai", t: "How the images are sent (how they are \"read\")",
+      p: "Each JPEG is turned into text (base64) and sent as an <code>image_url</code> part next to the text part. The vision model (<code>qwen/qwen3.8-27b</code>) reads them and compares the numbered frames to spot what moved.",
+      who: ["GroqLlmClient.UserContent"],
+      ev: [[B("Services/Ai/MotionAnalyzer.cs"), 115, `result = await _llm.CompleteAsync(request, ct);`],
+           [B("Services/Ai/GroqLlmClient.cs"), 198, `["url"] = "data:" + image.MediaType + ";base64," + Convert.ToBase64String(image.Data),`]] },
+    { L: "ai", t: "Check, cache and log, same as call 1",
+      p: "The answer becomes <code>MotionNotes</code>: a summary, a list of animations, and a design breakdown.",
+      who: ["MotionNotesParser"],
+      ev: [[B("Services/Ai/MotionAnalyzer.cs"), 127, `var notes = MotionNotesParser.Parse(result.Text);`],
+           [B("Services/Ai/MotionAnalyzer.cs"), 136, `await StoreCacheAsync(digest.ContentHash, request.Model, MotionNotesParser.ToJson(notes), ct);`]] },
+  ] },
+{
+  id: "groq3", title: "Groq call 3: rebuilding the components",
+  intro: "The text model turns the measured button/card/input styles into small HTML and CSS snippets for the Components tab.",
+  steps: [
+    { L: "ai", t: "Build the request from the measured styles",
+      p: "One line of CSS values per component between <code>&lt;&lt;&lt;COMPONENTS</code> and <code>COMPONENTS&gt;&gt;&gt;</code>.",
+      who: ["ComponentAnalyzer", "BuildRequest"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 118, `return await _components.AnalyzeAsync(digest, ct);`],
+           [B("Services/Ai/ComponentAnalyzer.cs"), 87, `var request = BuildRequest(digest.Components, model);`],
+           [B("Services/Ai/ComponentAnalyzer.cs"), 35, `"You are a senior front-end developer. You get the measured computed styles of a few real components from one website " +`]] },
+    { L: "ai", t: "Ask Groq (at most 2 tries)",
+      p: "The model sometimes writes broken JSON, so it may try one more time. Each try is budget-checked first.",
+      who: ["ComponentAnalyzer"],
+      ev: [[B("Services/Ai/ComponentAnalyzer.cs"), 105, `for (var attempt = 1; attempt <= MaxAttempts; attempt++)`],
+           [B("Services/Ai/ComponentAnalyzer.cs"), 120, `result = await _llm.CompleteAsync(request, ct);`]] },
+    { L: "ai", t: "Clean the AI's HTML and CSS",
+      p: "The answer is not trusted. <code>ComponentSanitizer</code> rebuilds it using only allowed tags and CSS properties. Scripts, links, images and anything odd are removed.",
+      who: ["ComponentPreviewsParser", "ComponentSanitizer"],
+      ev: [[B("Services/Ai/ComponentAnalyzer.cs"), 137, `var previews = ComponentPreviewsParser.Parse(result.Text);`],
+           [B("Services/Ai/ComponentSanitizer.cs"), 57, `public static ComponentPreview? Clean(string? kind, string? name, string? html, string? css)`]] },
+  ] },
+{
+  id: "assemble", title: "Putting the document together",
+  intro: "Back in PipelineScanGenerator.GenerateAsync. No AI here.",
+  steps: [
+    { L: "be", t: "Confidence score",
+      p: "A rough 0 to 100 score for how much useful information the page gave.",
+      who: ["ConfidenceEstimator"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 87, `var confidence = ConfidenceEstimator.Estimate(digest, tech);`]] },
+    { L: "be", t: "Write the .md file",
+      p: "<code>MarkdownDocumentBuilder</code> writes the sections (Overview, Architecture, Tech stack, API endpoints, Design system, Design breakdown, Motion and animation, Page structure, Developer tips). Facts come from code; prose from Groq.",
+      who: ["MarkdownDocumentBuilder"],
+      ev: [[B("Services/Pipeline/MarkdownDocumentBuilder.cs"), 65, `public static string Build(ScanFacts facts, AiDocument? ai, MotionNotes? motion = null)`]] },
+    { L: "be", t: "Animation report: library guess and code snippet",
+      p: "For each animation the AI described, <code>AnimationReportBuilder</code> guesses GSAP, Framer Motion or CSS, and <code>AnimationSnippets</code> fills a fixed code template using only the trigger word and a duration.",
+      who: ["AnimationReportBuilder", "AnimationSnippets"],
+      ev: [[B("Services/Pipeline/PipelineScanGenerator.cs"), 104, `digest, componentPreviews, AnimationReportBuilder.Build(motionNotes, digest.Visual?.Motion)));`],
+           [B("Services/Pipeline/AnimationReport.cs"), 63, `internal static string Estimate(DetectedAnimation animation, IReadOnlyList<string> pageLibraries)`],
+           [B("Services/Pipeline/AnimationSnippets.cs"), 15, `public static string Gsap(string trigger, int durationMs)`]] },
+    { L: "be", t: "Data for the tabs",
+      p: "<code>ScanAnalysisJson.FromDigest</code> bundles design, API calls, component previews and the animation report. It is stored next to the Markdown.",
+      who: ["ScanAnalysisJson"],
+      ev: [[B("Services/ScanAnalysisJson.cs"), 57, `public static ScanAnalysis? FromDigest(PageDigest digest, ComponentPreviews? components = null, AnimationReport? animations = null)`]] },
+  ] },
+{
+  id: "save", title: "Saving to the database",
+  intro: "Back in ScansController.Create.",
+  steps: [
+    { L: "be", t: "Build the Scan row",
+      p: "A document over 1 MB is refused. Otherwise a new <code>Scan</code> is filled in: id, your user id, URL, host, time, tech, Markdown, analysis.",
+      who: ["ScansController", "Scan"],
+      ev: [[B("Controllers/ScansController.cs"), 148, `if (Encoding.UTF8.GetByteCount(generated.Markdown) > MaxMarkdownBytes)`],
+           [B("Controllers/ScansController.cs"), 160, `var scan = new Scan`]] },
+    { L: "db", t: "Save it inside a transaction, re-checking the allowance",
+      p: "Two scans at the same moment could both pass the early quota check. <code>ScanRecorder</code> locks your user row, counts again, and only then saves.",
+      who: ["ScanRecorder", "AppDbContext"],
+      ev: [[B("Controllers/ScansController.cs"), 175, `if (!await _recorder.TryRecordAsync(scan, ct))`],
+           [B("Services/ScanRecorder.cs"), 43, `await using var transaction = await _db.Database.BeginTransactionAsync(ct);`],
+           [B("Services/ScanRecorder.cs"), 61, `_db.Scans.Add(scan);\nawait _db.SaveChangesAsync(ct);\nawait transaction.CommitAsync(ct);`],
+           [B("Data/AppDbContext.cs"), 21, `public DbSet<Scan> Scans => Set<Scan>();`]] },
+    { L: "be", t: "Send the scan back: 201 Created",
+      p: "The browser gets the whole scan as JSON.",
+      who: ["ScansController"],
+      ev: [[B("Controllers/ScansController.cs"), 183, `return CreatedAtAction(nameof(GetById), new { id = scan.Id }, scan.ToDto());`]] },
+  ] },
+{
+  id: "back", title: "Back in your browser: showing the results",
+  intro: "The promise from chapter 3 finally resolves.",
+  steps: [
+    { L: "fe", t: "ScanProvider receives the scan and saves it to history",
+      p: "<code>addScan</code> puts it at the top of the history list in memory (the server already saved it). The usage meter is refreshed. The session now has a <code>scanId</code>.",
+      who: ["ScanProvider", "history-store", "addScan", "refreshUsage"],
+      ev: [[F("components/scan-provider.tsx"), 98, `addScan(scan);\nvoid refreshUsage();\nsetSession({ url: next, elapsed: TOTAL_MS, scanId: scan.id });`],
+           [F("lib/history-store.ts"), 155, `write([scan, ...read()]);`]] },
+    { L: "you", t: "\"View results\" unlocks",
+      p: "With a <code>scanId</code>, the Processing page gives the ProgressCard a link to <code>/results/&lt;id&gt;</code>.",
+      who: ["ProcessingPage", "ProgressCard"],
+      ev: [[F("app/(workspace)/processing/page.tsx"), 84, `resultsHref={complete ? \`/results/\${session.scanId}\` : null}`],
+           [F("components/ui/progress-card.tsx"), 119, `<ButtonLink href={resultsHref}>\n  View results`]] },
+    { L: "fe", t: "ResultsView finds the scan",
+      p: "The route <code>/results/[id]</code> renders <code>ResultsView</code>, which looks the id up in the history list and splits the Markdown into the Preview part and the Design part.",
+      who: ["ResultPage", "ResultsView", "splitDesignSections"],
+      ev: [[F("app/(workspace)/results/[id]/page.tsx"), 6, `return <ResultsView id={id} />;`],
+           [F("components/results/results-view.tsx"), 61, `const scan = hydrated ? (id ? history.find((s) => s.id === id) : history[0]) : undefined;`],
+           [F("components/results/results-view.tsx"), 62, `const sections = useMemo(() => splitDesignSections(scan?.markdown ?? ""), [scan?.markdown]);`]] },
+    { L: "you", t: "The five tabs",
+      p: "Preview → <code>MarkdownPreview</code>. Raw → the .md text. Design → <code>DesignPanel</code> (colours, fonts, tokens, export). Components → <code>ComponentsPanel</code> (each preview in a locked-down iframe). Animations → <code>AnimationsPanel</code> (one card per animation with a GSAP / Framer Motion switch).",
+      who: ["ResultsSidebar", "MarkdownPreview", "DesignPanel", "ComponentsPanel", "AnimationsPanel"],
+      ev: [[F("components/results/results-view.tsx"), 183, `{tab === "preview" && <MarkdownPreview source={sections.document} />}`],
+           [F("components/results/results-view.tsx"), 186, `<DesignPanel design={scan.analysis.design} canExport={canExport} />`],
+           [F("components/results/results-view.tsx"), 202, `<ComponentsPanel components={scan.analysis.components} />`],
+           [F("components/results/results-view.tsx"), 211, `<AnimationsPanel report={scan.analysis.animations} />`]] },
+  ] },
+];
+
+const LAYER_NAME = { you: "YOUR SCREEN", fe: "FRONTEND", fb: "FIREBASE", be: "BACKEND", pw: "PLAYWRIGHT", ai: "GROQ", db: "DATABASE" };
+
+function el(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+const root = document.getElementById("chapters");
+const toc = document.getElementById("toc");
+let n = 0;
+CHAPTERS.forEach((ch, ci) => {
+  const li = el("li");
+  const a = el("a");
+  a.href = "#" + ch.id;
+  a.textContent = ch.title;
+  li.appendChild(a);
+  toc.appendChild(li);
+
+  const sec = el("section", "chapter");
+  sec.id = ch.id;
+  const head = el("header");
+  head.appendChild(el("div", "eyebrow", "Chapter " + String(ci + 1).padStart(2, "0")));
+  head.appendChild(el("h2", null, ch.title));
+  head.appendChild(el("p", "intro", ch.intro));
+  sec.appendChild(head);
+
+  ch.steps.forEach((s) => {
+    n += 1;
+    const row = el("div", "step");
+    const num = el("div", "num l-" + s.L);
+    num.textContent = n;
+    num.style.background = "var(--surface)";
+    row.appendChild(num);
+
+    const card = el("div", "card");
+    const top = el("div", "top");
+    top.appendChild(el("h3", null, s.t));
+    const chip = el("span", "chip l-" + s.L);
+    chip.textContent = LAYER_NAME[s.L];
+    top.appendChild(chip);
+    card.appendChild(top);
+    card.appendChild(el("p", "plain", s.p));
+
+    const who = el("div", "who");
+    who.appendChild(el("span", "lbl", "Who"));
+    s.who.forEach((w) => { const c = el("code"); c.textContent = w; who.appendChild(c); });
+    card.appendChild(who);
+
+    const ev = el("div", "ev");
+    ev.appendChild(el("span", "lbl", "Evidence"));
+    s.ev.forEach(([path, line, code]) => {
+      const item = el("div", "ev-item");
+      const link = el("a");
+      link.href = "../../" + path;
+      link.textContent = path + ":" + line;
+      item.appendChild(link);
+      if (code) { const pre = el("pre"); pre.textContent = code; item.appendChild(pre); }
+      ev.appendChild(item);
+    });
+    card.appendChild(ev);
+    if (s.n) card.appendChild(el("div", "tip", s.n));
+    row.appendChild(card);
+    sec.appendChild(row);
+  });
+  root.appendChild(sec);
+});
+
+// Highlight the chapter in view.
+const links = [...toc.querySelectorAll("a")];
+const watch = new IntersectionObserver((entries) => {
+  entries.forEach((e) => {
+    if (!e.isIntersecting) return;
+    links.forEach((l) => l.classList.toggle("on", l.getAttribute("href") === "#" + e.target.id));
+  });
+}, { rootMargin: "-20% 0px -70% 0px" });
+document.querySelectorAll(".chapter").forEach((c) => watch.observe(c));
+</script>
+</body>
+</html>

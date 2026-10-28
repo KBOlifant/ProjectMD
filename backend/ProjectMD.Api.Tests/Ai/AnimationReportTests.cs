@@ -63,7 +63,9 @@ public class AnimationReportTests
         Assert.Contains("duration: 0.4", report.Items[0].Gsap);
         Assert.Contains("scrollTrigger", report.Items[0].Gsap);
         Assert.Contains("whileInView", report.Items[0].FramerMotion);
+        Assert.Contains("animation", report.Items[0].Css);
         Assert.Contains("mouseenter", report.Items[1].Gsap);
+        Assert.Contains(":hover", report.Items[1].Css);
     }
 
     // Libraries alone (no AI notes) still give a report with no items.
@@ -97,6 +99,7 @@ public class AnimationReportTests
 
         Assert.DoesNotContain("EVIL_NAME", item.Gsap);
         Assert.DoesNotContain("EVIL_NAME", item.FramerMotion);
+        Assert.DoesNotContain("EVIL_NAME", item.Css);
     }
 
     // Every trigger gives code for both libraries, and the JSX braces are doubled correctly.
@@ -115,5 +118,6 @@ public class AnimationReportTests
         var framer = AnimationSnippets.FramerMotion(trigger, 600);
         Assert.Contains("motion.", framer);
         Assert.DoesNotContain("{{{", framer);
+        Assert.Contains(".target", AnimationSnippets.Css(trigger, 600));
     }
 }

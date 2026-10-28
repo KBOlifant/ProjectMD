@@ -1,25 +1,25 @@
 ---
 name: screen-processing
-description: Build the Project MD Processing screen that shows a scan moving through its pipeline steps.
+description: Build the Project MD Processing screen (wireframes v2): centred scan card with a numbered 4-step pipeline.
 ---
 
 # Screen: Processing (`/processing`)
 
-**Owns:** `frontend/app/processing/*`.
+**Owns:** `frontend/app/(workspace)/processing/*`.
 
 ## Read first
-- Artifact `components/ProgressCard/README.md` and `preview.html`.
+Wireframe v2 "Processing". Components: `ScanCardFrame`, `ScanCardHeader`, `ProgressCard` (see 02).
 
 ## Build
-- Centre a `ProgressCard` on `bg-base`, driven by `session` from the provider.
-- Derive from `elapsed` and `PIPELINE_STEPS`: each step is done, current or queued; progress is `elapsed / TOTAL_MS`.
-- Cancel calls `cancelScan()` and returns to `/`. When every step is done, View Results → links to `/results/<scanId>`; before that it is disabled.
-- No active session: `EmptyState` "Nothing is scanning. Paste a URL on Generate to start." with a link to `/`.
+- Page is vertically and horizontally centred (`min-h-screen`, flex), card 520px max.
+- Header: tile, host, full URL, status pill Scanning / Complete / Failed.
+- Progress: "Analysis progress" and %, 3px plum bar, four numbered steps: **Fetching website**, **Rendering client-side code**, **Fingerprinting design and stack**, **Writing documentation**. Done steps show a check and `<what> in <seconds>`, the current step has a ringed number and live text, queued steps are dim.
+- Footer: ghost **Cancel**, primary **View results** (disabled until complete).
+- Failure: same frame, status Failed, the error message in `role="alert"`, buttons "Try again" and "Back".
+- With no scan in progress, redirect to `/` or show the last result link.
 
 ## Rules
-- Announce progress politely: `aria-live="polite"` on the current step text, and `role="progressbar"` with values on the track.
-- Respect `prefers-reduced-motion`: no animated transitions on the fill.
-- The card is presentational; this page only maps provider state to props.
+- Progress is announced politely (`aria-live="polite"`), not on every tick. Percent comes from real step state, not a fake timer in server mode.
 
 ## Done when
-A scan started on Generate runs to completion on this page and the button unlocks exactly when the last step finishes.
+A scan walks through all four steps, completes, and View results opens `/results/<id>`; cancel and failure paths work.

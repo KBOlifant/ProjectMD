@@ -1,5 +1,5 @@
 import type { Scan, Tech } from "@/lib/types";
-import { TOTAL_MS } from "@/lib/scan";
+import { MOCK_DURATION_MS } from "@/lib/scan";
 import { MOCK_ANALYSIS } from "./mock-analysis";
 import { buildMockMarkdown } from "./mock-markdown";
 import { MOCK_STACKS } from "./mock-stacks";
@@ -30,7 +30,7 @@ export function buildScan(url: string): Scan {
     url,
     host,
     createdAt,
-    durationMs: TOTAL_MS,
+    durationMs: MOCK_DURATION_MS,
     confidence,
     pages,
     tech,

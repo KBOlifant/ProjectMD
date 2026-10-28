@@ -39,6 +39,8 @@ export interface ComponentPreview {
   name: string;
   html: string;
   css: string;
+  // Hex colour behind the real component on the page; missing or "" on older scans.
+  background?: string;
 }
 
 export interface ComponentPreviews {
@@ -57,6 +59,7 @@ export interface AnimationItem {
   estimate: string;
   gsap: string;
   framerMotion: string;
+  css: string;
 }
 
 export interface AnimationReport {
@@ -85,4 +88,6 @@ export interface Scan {
   tech: Tech[];
   markdown: string;
   analysis?: ScanAnalysis | null;
+  // https address of the site's first-screen screenshot (Cloudinary), or null/missing when none.
+  screenshotUrl?: string | null;
 }

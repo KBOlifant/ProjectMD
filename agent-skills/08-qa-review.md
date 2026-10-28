@@ -1,6 +1,6 @@
 ---
 name: qa-review
-description: Review the finished Project MD frontend against the design system and report defects. Read-only.
+description: Review the finished Project MD frontend against the v2 wireframes and design tokens and report defects. Read-only.
 ---
 
 # QA and design review
@@ -8,13 +8,13 @@ description: Review the finished Project MD frontend against the design system a
 **Owns:** nothing. Report defects; do not fix them.
 
 ## Check
-1. **Tokens**: grep for raw hex, `px` colour or radius values, and arbitrary Tailwind values outside `globals.css`. Each is a defect.
-2. **Design rules** (artifact README "Usage rules"): one primary button per view; no `violet-500` text on `bg-base`; `ink-dim` only on hints; sentence-case buttons; no emoji or exclamation marks.
-3. **Components vs previews**: open each `preview.html` next to the built component.
-4. **Flows**: Generate -> Processing -> Results -> History, plus invalid URL, cancel mid-scan, reload on every route, unknown result id, storage blocked.
-5. **Accessibility**: tab order, focus ring on every control, `aria-current`, progressbar semantics, tab arrows, labels on icon buttons.
-6. **Responsive**: 360, 768, 1440px. No horizontal page scroll.
-7. **Build health**: `npm run lint` and `npm run build` in `frontend/`.
+1. **Wireframes v2** (8 PNGs): compare each screen at 1440 and 390px: rail, hero, what-you'll-get, processing card, results panes, the three data tabs, history.
+2. **Tokens (00):** only token classes, no raw hex; plum for actions, violet for brand; small text never in `violet-500` or `plum-500`.
+3. **Accessibility:** contrast 4.5:1, visible focus ring, labels on icon-only buttons (the rail!), tabs with arrow keys, `role="alert"` on errors, no nested interactive elements, reduced motion.
+4. **Behaviour:** URL validation, permission gating (`scan:create`, `scan:export`, `history:clear`), static and api modes, empty/loading/error states, Copy/Download/Export all produce the right text.
+5. **Known placeholders:** `public/hero.jpg` is supplied later; with it missing the hero must still look intentional. Results thumbnail is an illustration by design. Do not report these as defects.
+6. **Honesty:** no invented numbers. Scan details show only real fields.
+7. Run `npm run lint` and `npm run build` and quote their results; do not claim checks you did not run.
 
 ## Report
-A table of defects with file, line, what is wrong, and the rule it breaks, ordered by severity. State which checks you ran and which you could not.
+A table: severity (blocker, major, minor), screen, what is wrong, where (file), expected per wireframe or token.

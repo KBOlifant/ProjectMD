@@ -15,7 +15,7 @@ export function VerifyBanner() {
       <div className="mx-auto flex w-full max-w-[1040px] flex-wrap items-center gap-x-3 gap-y-1">
         <span aria-hidden="true" className="size-1.5 flex-none rounded-full bg-warning" />
         <p className="ts-body text-ink-body">Verify your email to start scans.</p>
-        <Link href="/verify-email" className="ts-mono-ui text-rose-400 hover:text-ink">
+        <Link href="/verify-email" className="ts-mono-ui text-violet-400 hover:text-ink-hover">
           Verify email →
         </Link>
       </div>

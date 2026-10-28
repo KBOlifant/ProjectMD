@@ -60,7 +60,7 @@ function inline(text: string, inTable = false): ReactNode[] {
       flush();
       let code = text.slice(i + ticks, end).trim();
       if (inTable) code = code.replaceAll("\\|", "|");
-      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 ts-code text-ink">{code}</code>);
+      out.push(<code key={out.length} className="rounded-sm bg-bg-raised px-1 font-mono text-[13px] text-ink">{code}</code>);
       i = end + ticks;
     } else if (c === "*") {
       const marker = text.startsWith("**", i) ? "**" : "*";
@@ -141,10 +141,10 @@ function renderTable(header: string[], rows: string[][], key: number): ReactNode
 // A bullet list whose items may be indented (two spaces per level).
 function renderList(items: { depth: number; text: string }[], key: number): ReactNode {
   return (
-    <ul key={key} className="ts-body space-y-1">
+    <ul key={key} className="ts-body space-y-1.5 pl-1">
       {items.map((item, j) => (
         <li key={j} className="flex gap-2" style={{ paddingLeft: `${Math.min(item.depth, 5) * 1.25}rem` }}>
-          <span aria-hidden="true" className="text-rose-400">•</span>
+          <span aria-hidden="true" className="text-plum-300">•</span>
           <span className="min-w-0 break-words">{inline(item.text)}</span>
         </li>
       ))}
@@ -155,7 +155,7 @@ function renderList(items: { depth: number; text: string }[], key: number): Reac
 // A code block: monospace, scrolls sideways, text only.
 function renderCode(lines: string[], key: number): ReactNode {
   return (
-    <pre key={key} className="ts-code overflow-x-auto rounded-lg border border-border-subtle bg-bg-base p-4 font-mono text-ink-body">
+    <pre key={key} className="ts-code overflow-x-auto rounded-lg border border-border-subtle bg-bg-sidebar p-5 font-mono text-ink-body">
       {lines.join("\n")}
     </pre>
   );
@@ -199,8 +199,8 @@ export function MarkdownPreview({ source }: { source: string }) {
     } else if (/^#{1,4} /.test(line)) {
       const level = line.indexOf(" ");
       const text = inline(line.slice(level + 1));
-      if (level === 1) out.push(<h1 key={key} className="ts-h2 text-ink">{text}</h1>);
-      else if (level === 2) out.push(<h2 key={key} className="ts-h3 pt-2 text-ink">{text}</h2>);
+      if (level === 1) out.push(<h1 key={key} className="ts-h1 text-ink">{text}</h1>);
+      else if (level === 2) out.push(<h2 key={key} className="ts-h3 border-b border-border-subtle pb-2 pt-5 text-[16px] text-ink">{text}</h2>);
       else out.push(<h3 key={key} className="ts-body-strong text-ink">{text}</h3>);
       i++;
     } else if (line.trim() === "---") {
@@ -224,7 +224,7 @@ export function MarkdownPreview({ source }: { source: string }) {
       }
       out.push(renderList(items, key));
     } else if (line.trim()) {
-      out.push(<p key={key} className="ts-body break-words">{inline(line)}</p>);
+      out.push(<p key={key} className="ts-body break-words text-[15px] leading-[26px]">{inline(line)}</p>);
       i++;
     } else {
       i++;

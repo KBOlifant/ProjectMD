@@ -1,37 +1,53 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { isApiMode } from "@/app/functions/data/mode";
 import { useCan } from "@/app/functions/rbac/useCan";
+import { PageFrame } from "@/components/shell/page-frame";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CheckIcon, CopyIcon, DownloadIcon } from "@/components/ui/icons";
-import { ConfidenceBadge, TechChip } from "@/components/ui/tech-chip";
-import { splitDesignSections } from "@/lib/design-sections";
+import { CheckIcon, CopyIcon, DownloadIcon, GridIcon, MotionIcon, PaletteIcon } from "@/components/ui/icons";
 import { downloadText } from "@/lib/download";
-import { formatDate, formatSeconds, initials } from "@/lib/format";
+import { splitDesignSections } from "@/lib/design-sections";
 import { useHistory, useHistoryStatus, useIsHydrated } from "@/lib/history-store";
 import { AnimationsPanel, hasAnimationData } from "./animations-panel";
 import { ComponentsPanel, hasComponentData } from "./components-panel";
 import { DesignPanel, hasDesignData } from "./design-panel";
 import { MarkdownPreview } from "./markdown-preview";
-import { copyText } from "./use-copy";
+import { ResultsSidebar } from "./results-sidebar";
 
-type Tab = "preview" | "design" | "components" | "animations" | "raw";
+type Tab = "preview" | "raw" | "design" | "components" | "animations";
 
-const TABS: readonly Tab[] = ["preview", "design", "components", "animations", "raw"];
+const TABS: readonly Tab[] = ["preview", "raw", "design", "components", "animations"];
 const TAB_LABELS: Record<Tab, string> = {
   preview: "Preview",
+  raw: "Raw",
   design: "Design",
   components: "Components",
   animations: "Animations",
-  raw: "Raw",
+};
+const TAB_ICONS: Partial<Record<Tab, ReactNode>> = {
+  design: <PaletteIcon size={13} />,
+  components: <GridIcon size={13} />,
+  animations: <MotionIcon size={13} />,
 };
 type Format = "md" | "txt";
 
-// Shows one scan's documentation: header, copy/download buttons, tech chips and Preview/Design/Raw
-// tabs. The Design tab shows the "Design system" and "Design breakdown" sections of the document
-// (fonts, colours, components); Preview shows the rest; Raw and Copy/Download use the whole document.
+// The active-tab underline glides between tabs on this spring; the panel fades and rises in.
+const TAB_SPRING = { type: "spring", stiffness: 500, damping: 38 } as const;
+const PANEL_FADE = { duration: 0.22, ease: "easeOut" } as const;
+
+// Text shown inside a tab when the scan has nothing for it. Stores nothing.
+function TabNote({ children }: { children: ReactNode }) {
+  return <p className="ts-body max-w-xl text-ink-muted">{children}</p>;
+}
+
+// Shows one scan's documentation as a two-pane screen. Top bar: "Output | host [.md]" with Copy and
+// Download. Left: thumbnail, tech fingerprint and scan details. Right: Preview, Raw, Design,
+// Components and Animations tabs, scrolling inside the page on desktop. The Design tab shows the
+// "Design system" and "Design breakdown" sections of the document (fonts, colours, components);
+// Preview shows the rest; Raw and Copy/Download use the whole document.
 // Finds the scan in saved history by `id` (or the newest scan if no id). Only reads history;
 // the tab, format and copy status are temporary UI state and are not stored. Copy and Download
 // are disabled (with an explanation) for accounts without the "scan:export" permission.
@@ -44,7 +60,7 @@ export function ResultsView({ id }: { id?: string }) {
   const [tab, setTab] = useState<Tab>("preview");
   const [format, setFormat] = useState<Format>("md");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, design: null, components: null, animations: null, raw: null });
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ preview: null, raw: null, design: null, components: null, animations: null });
   const panelId = useId();
 
   const scan = hydrated ? (id ? history.find((s) => s.id === id) : history[0]) : undefined;
@@ -54,22 +70,28 @@ export function ResultsView({ id }: { id?: string }) {
 
   if (!scan) {
     return (
-      <EmptyState action={<ButtonLink href="/history" variant="secondary">Open History</ButtonLink>}>
-        {loadError ??
-          (id
-            ? isApiMode
-              ? "That scan was not found."
-              : "That scan was not found in this browser."
-            : "No results yet. Generate a scan to see its documentation here.")}
-      </EmptyState>
+      <PageFrame size="narrow">
+        <EmptyState action={<ButtonLink href="/history" variant="secondary">Open history</ButtonLink>}>
+          {loadError ??
+            (id
+              ? isApiMode
+                ? "That scan was not found."
+                : "That scan was not found in this browser."
+              : "No results yet. Analyze a website to see its documentation here.")}
+        </EmptyState>
+      </PageFrame>
     );
   }
 
-  // Copies the scan's markdown to the clipboard (with the old-style fallback when the clipboard API
-  // is blocked) and flashes "Copied"/"Copy blocked" for 1.5s. Stores nothing.
+  // Copies the scan's markdown to the clipboard and flashes "Copied"/"Copy blocked" for 1.5s. Stores nothing.
   async function copy() {
     if (!canExport) return;
-    setCopyState((await copyText(scan!.markdown)) ? "copied" : "failed");
+    try {
+      await navigator.clipboard.writeText(scan!.markdown);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
     setTimeout(() => setCopyState("idle"), 1500);
   }
 
@@ -89,127 +111,139 @@ export function ResultsView({ id }: { id?: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center gap-4">
-        <span className="grid size-[38px] flex-none place-items-center rounded-md bg-fig-500 ts-micro font-medium text-ink">
-          {initials(scan.host)}
-        </span>
-        <div className="min-w-0 flex-1 basis-56">
-          <h1 className="ts-h2 truncate text-ink">{scan.host} Documentation</h1>
-          <p className="ts-small truncate text-ink-muted">
-            {scan.url} · Scanned {formatDate(scan.createdAt)} · {formatSeconds(scan.durationMs)} · {scan.pages} pages
-          </p>
-        </div>
-        <ConfidenceBadge value={scan.confidence} />
-      </header>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2">
-          <span className="ts-label text-ink-dim">Format</span>
+    <div className="flex flex-col md:h-screen">
+      <header className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-subtle px-4 py-2 md:px-5">
+        <span className="ts-label text-ink-muted">Output</span>
+        <span aria-hidden="true" className="h-4 w-px bg-border-strong" />
+        <h1 className="ts-mono-ui min-w-0 truncate text-ink" title={scan.url}>
+          {scan.host}
+        </h1>
+        <label className="relative">
+          <span className="sr-only">File format</span>
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as Format)}
-            className="ts-mono-ui rounded-md border border-border-strong bg-bg-raised px-3 py-2.5 text-ink-body"
+            className="cursor-pointer appearance-none rounded-sm border border-border-strong bg-bg-surface py-0.5 pl-2 pr-5 font-mono text-[11px] leading-4 text-ink-body"
           >
-            <option value="md">Markdown (.md)</option>
-            <option value="txt">Plain text (.txt)</option>
+            <option value="md">.md</option>
+            <option value="txt">.txt</option>
           </select>
+          <svg aria-hidden="true" viewBox="0 0 8 5" className="pointer-events-none absolute right-1.5 top-1/2 w-2 -translate-y-1/2 text-ink-muted">
+            <path d="m1 1 3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </label>
-        <Button
-          variant="secondary"
-          onClick={copy}
-          disabled={!canExport}
-          title={canExport ? undefined : exportBlocked}
-          className="ml-auto"
-        >
-          {copyState === "copied" ? <CheckIcon /> : <CopyIcon />}
-          {copyState === "copied" ? "Copied" : copyState === "failed" ? "Copy blocked" : "Copy"}
-        </Button>
-        <Button onClick={download} disabled={!canExport} title={canExport ? undefined : exportBlocked}>
-          <DownloadIcon />
-          Download
-        </Button>
-        {!canExport && (
-          <p className="ts-small basis-full text-right text-ink-dim">{exportBlocked}</p>
-        )}
-      </div>
-
-      <section aria-labelledby="fingerprint">
-        <h2 id="fingerprint" className="ts-label mb-2 text-ink-dim">
-          Tech fingerprint
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {scan.tech.map((t) => (
-            <TechChip key={t.name} name={t.name} highlighted={t.highlighted} />
-          ))}
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="secondary" onClick={copy} disabled={!canExport} title={canExport ? undefined : exportBlocked}>
+            {copyState === "copied" ? <CheckIcon /> : <CopyIcon />}
+            {copyState === "copied" ? "Copied" : copyState === "failed" ? "Copy blocked" : "Copy"}
+          </Button>
+          <Button onClick={download} disabled={!canExport} title={canExport ? undefined : exportBlocked}>
+            <DownloadIcon />
+            Download
+          </Button>
         </div>
-      </section>
+      </header>
 
-      <div>
-        <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 border-b border-border-subtle">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              ref={(el) => {
-                tabRefs.current[t] = el;
-              }}
-              role="tab"
-              id={`${panelId}-${t}`}
-              aria-selected={tab === t}
-              aria-controls={panelId}
-              tabIndex={tab === t ? 0 : -1}
-              onClick={() => setTab(t)}
-              className={`ts-mono-ui -mb-px border-b-2 px-4 py-2.5 transition-colors ${
-                tab === t ? "border-mulberry-500 text-ink" : "border-transparent text-ink-muted hover:text-ink"
-              }`}
+      <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
+        <aside className="pane-scroll border-b border-border-subtle p-4 md:w-[270px] md:flex-none md:overflow-y-auto md:border-b-0 md:border-r md:p-5">
+          <ResultsSidebar scan={scan} />
+        </aside>
+
+        <MotionConfig reducedMotion="user">
+        <section className="flex min-w-0 flex-1 flex-col md:min-h-0">
+          <div className="flex items-center gap-4 border-b border-border-subtle px-2 md:px-7">
+            <div role="tablist" aria-label="Output view" onKeyDown={onTabKey} className="flex gap-1 overflow-hidden">
+              {TABS.map((t) => (
+                <button
+                  key={t}
+                  ref={(el) => {
+                    tabRefs.current[t] = el;
+                  }}
+                  role="tab"
+                  id={`${panelId}-${t}`}
+                  aria-selected={tab === t}
+                  aria-controls={panelId}
+                  tabIndex={tab === t ? 0 : -1}
+                  onClick={() => setTab(t)}
+                  className={`ts-mono-ui relative inline-flex h-[42px] items-center gap-1.5 whitespace-nowrap px-3 transition-colors ${
+                    tab === t ? "text-ink" : "text-ink-muted hover:text-ink-hover"
+                  }`}
+                >
+                  {TAB_ICONS[t]}
+                  {TAB_LABELS[t]}
+                  {tab === t && (
+                    <motion.span
+                      layoutId="results-tab-underline"
+                      aria-hidden="true"
+                      transition={TAB_SPRING}
+                      className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-violet-500"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+            {!canExport && <p className="ts-small ml-auto hidden flex-none text-warning md:block">{exportBlocked}</p>}
+          </div>
+
+          <div
+            role="tabpanel"
+            id={panelId}
+            aria-labelledby={`${panelId}-${tab}`}
+            tabIndex={0}
+            className="pane-scroll min-h-0 flex-1 px-4 py-7 md:overflow-y-auto md:px-12 md:py-9"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={PANEL_FADE}
+              className={tab === "preview" || tab === "raw" ? "max-w-[760px]" : "max-w-[1024px]"}
             >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
-        </div>
-        <div
-          role="tabpanel"
-          id={panelId}
-          aria-labelledby={`${panelId}-${tab}`}
-          className="rounded-b-lg border border-t-0 border-border-subtle bg-bg-surface p-6"
-        >
-          {tab === "preview" && <MarkdownPreview source={sections.document} />}
-          {tab === "design" &&
-            (hasDesignData(scan.analysis?.design) ? (
-              <DesignPanel design={scan.analysis.design} canExport={canExport} />
-            ) : sections.design ? (
-              <>
-                <p role="status" className="ts-small mb-4 rounded-md border border-border-strong bg-bg-raised p-3 text-warning">
-                  This is a text-only view. This scan has no visual design data (colour swatches, font previews),
-                  because it was made before that feature or by an older server. Run a new scan to see them.
-                </p>
-                <MarkdownPreview source={sections.design} />
-              </>
-            ) : (
-              <p className="ts-body text-ink-muted">
-                No design data for this scan. Scans made in AI mode include the colours, fonts and design tokens here.
-              </p>
-            ))}
-          {tab === "components" &&
-            (hasComponentData(scan.analysis?.components) ? (
-              <ComponentsPanel components={scan.analysis.components} />
-            ) : (
-              <p className="ts-body text-ink-muted">
-                No component previews for this scan. Scans made in AI mode include small HTML and CSS versions of the
-                site&apos;s buttons, inputs, cards and navigation here; older scans do not have them.
-              </p>
-            ))}
-          {tab === "animations" &&
-            (hasAnimationData(scan.analysis?.animations) ? (
-              <AnimationsPanel report={scan.analysis.animations} />
-            ) : (
-              <p className="ts-body text-ink-muted">
-                No animation data for this scan. Scans made in AI mode with screenshots turned on list the page&apos;s animations here,
-                with a GSAP or Framer Motion guess and a starter snippet; older scans do not have them.
-              </p>
-            ))}
-          {tab === "raw" && <pre className="ts-code overflow-x-auto text-ink-body">{scan.markdown}</pre>}
-        </div>
+              {tab === "preview" && <MarkdownPreview source={sections.document} />}
+              {tab === "design" &&
+                (hasDesignData(scan.analysis?.design) ? (
+                  <DesignPanel design={scan.analysis.design} canExport={canExport} />
+                ) : sections.design ? (
+                  <>
+                    <p role="status" className="ts-small mb-4 rounded-md border border-border-strong bg-bg-surface p-3 text-warning">
+                      This is a text-only view. This scan has no visual design data (colour swatches, font previews),
+                      because it was made before that feature or by an older server. Run a new scan to see them.
+                    </p>
+                    <MarkdownPreview source={sections.design} />
+                  </>
+                ) : (
+                  <TabNote>
+                    No design data for this scan. Scans made in AI mode include the colours, fonts and design tokens here.
+                  </TabNote>
+                ))}
+              {tab === "components" &&
+                (hasComponentData(scan.analysis?.components) ? (
+                  <ComponentsPanel components={scan.analysis.components} />
+                ) : (
+                  <TabNote>
+                    No component previews for this scan. Scans made in AI mode include small HTML and CSS versions of the
+                    site&apos;s buttons, inputs, cards and navigation here; older scans do not have them.
+                  </TabNote>
+                ))}
+              {tab === "animations" &&
+                (hasAnimationData(scan.analysis?.animations) ? (
+                  <AnimationsPanel report={scan.analysis.animations} />
+                ) : (
+                  <TabNote>
+                    No animation data for this scan. Scans made in AI mode with screenshots turned on list the page&apos;s animations here,
+                    with a GSAP or Framer Motion guess and a starter snippet; older scans do not have them.
+                  </TabNote>
+                ))}
+              {tab === "raw" && (
+                <pre className="ts-code overflow-x-auto rounded-lg border border-border-subtle bg-bg-sidebar p-5 text-ink-body">{scan.markdown}</pre>
+              )}
+            </motion.div>
+            </AnimatePresence>
+          </div>
+        </section>
+        </MotionConfig>
       </div>
     </div>
   );

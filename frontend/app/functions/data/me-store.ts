@@ -13,13 +13,13 @@ import { isApiMode } from "./mode";
 // Nothing is persisted and no token or response body is ever logged.
 
 // What GET /api/me says about the signed-in user. `role` is already checked (an unknown value
-// becomes "viewer"). The usage numbers are only kept when they are valid numbers.
+// becomes "viewer"). usage.used is only kept when it is a valid number; there is no monthly cap.
 export interface Me {
   uid: string | null;
   email: string | null;
   emailVerified: boolean;
   role: Role;
-  usage: { used?: number; limit?: number };
+  usage: { used?: number };
 }
 
 // The store's state. `owner` is the uid it belongs to. `loaded` turns true once the first request
@@ -63,7 +63,7 @@ function parseMe(raw: unknown): Me {
     email: typeof f.email === "string" ? f.email : null,
     emailVerified: f.emailVerified === true,
     role: isRole(f.role) ? f.role : "viewer",
-    usage: { used: count(usage.used, 0), limit: count(usage.limit, 1) },
+    usage: { used: count(usage.used, 0) },
   };
 }
 

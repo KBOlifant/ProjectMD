@@ -1,11 +1,12 @@
 namespace ProjectMD.Api.Services.Extraction.Components;
 
 // The JavaScript that runs inside the rendered page to read the look of a few main components.
-// Like DesignScript it only calls getComputedStyle and reads tag names and class names (to find
-// cards and badges); it never reads text, cookies, storage or form values and makes no request.
-// It checks at most 1500 elements, keeps at most 2 differently-styled examples of each kind
-// (button, input, card, nav, heading, badge) and returns one JSON string:
-//   { items:[ { kind, tag, styles:{ cssProperty: value } } ] }
+// Like DesignScript it calls getComputedStyle and reads tag names and class names (to find cards
+// and badges). It also reads each component's short visible text (or placeholder) so the preview
+// can repeat it, and the colour painted behind it. It never reads cookies, storage or typed form
+// values and makes no request. It checks at most 1500 elements, keeps at most 2 differently-styled
+// examples of each kind (button, input, card, nav, heading, badge) and returns one JSON string:
+//   { items:[ { kind, tag, text, backdrop, styles:{ cssProperty: value } } ] }
 public static class ComponentScript
 {
     public const string Source = """
@@ -29,6 +30,21 @@ public static class ComponentScript
     } catch (e) { /* keep the original */ }
     return v;
   };
+  // Visible text: one line per text line, at most 6 lines, joined with " | " so the AI can lay them out.
+  const MAX_TEXT = 300;
+  const textOf = (kind, el) => {
+    if (kind === 'input') { return (el.getAttribute('placeholder') || el.getAttribute('aria-label') || '').trim().slice(0, 80); }
+    const raw = (el.innerText || el.getAttribute('aria-label') || '').split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    return raw.slice(0, 6).join(' | ').slice(0, MAX_TEXT);
+  };
+  // The first solid background behind the element, or the page's default white.
+  const backdropOf = (el) => {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const v = colour(getComputedStyle(p).backgroundColor);
+      if (v && v !== 'transparent' && /^#[0-9a-f]{6}$/i.test(v)) { return v; }
+    }
+    return '#ffffff';
+  };
   const kinds = { button: [], input: [], card: [], nav: [], heading: [], badge: [] };
   const seen = new Set();
   const take = (kind, el) => {
@@ -47,7 +63,7 @@ public static class ComponentScript
     const key = kind + JSON.stringify(styles);
     if (seen.has(key)) { return; }
     seen.add(key);
-    kinds[kind].push({ kind, tag: el.tagName.toLowerCase(), styles });
+    kinds[kind].push({ kind, tag: el.tagName.toLowerCase(), text: textOf(kind, el), backdrop: backdropOf(el), styles });
   };
   const looksLike = (el, re) => typeof el.className === 'string' && re.test(el.className);
   const all = document.body ? document.body.querySelectorAll('*') : [];

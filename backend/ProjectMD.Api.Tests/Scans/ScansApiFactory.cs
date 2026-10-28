@@ -75,12 +75,11 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
 
 // The real API host (Program.cs) in the "Testing" environment: an in-memory SQLite database
 // instead of PostgreSQL, the test signing key trusted instead of Google's (tokens come from
-// TestTokens), and the monthly limit, per-minute rate limit and clock under test control. The
-// real authentication, authorization, rate limiter and scans controller all run.
+// TestTokens), and the per-minute rate limit and clock under test control. The real
+// authentication, authorization, rate limiter and scans controller all run.
 public class ScansApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
-    private readonly int _monthlyLimit;
     private readonly int _permitsPerMinute;
     private readonly TimeProvider? _clock;
     private readonly Action<IServiceCollection>? _configure;
@@ -88,10 +87,12 @@ public class ScansApiFactory : WebApplicationFactory<Program>
     // Every log line written by the host.
     public CapturingLoggerProvider Logs { get; } = new();
 
-    // A host with chosen limits, an optional fixed clock and an optional hook to replace services.
+    // A host with a chosen rate limit, an optional fixed clock and an optional hook to replace
+    // services. `monthlyLimit` is accepted for source compatibility with existing call sites but
+    // ignored: there is no monthly cap any more (see UsageService).
     public ScansApiFactory(int monthlyLimit, int permitsPerMinute, TimeProvider? clock = null, Action<IServiceCollection>? configure = null)
     {
-        _monthlyLimit = monthlyLimit;
+        _ = monthlyLimit;
         _permitsPerMinute = permitsPerMinute;
         _clock = clock;
         _configure = configure;
@@ -124,7 +125,6 @@ public class ScansApiFactory : WebApplicationFactory<Program>
                 options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
             });
 
-            services.Configure<UsageOptions>(options => options.MonthlyLimit = _monthlyLimit);
             services.Configure<ScanRateLimitOptions>(options => options.PermitsPerMinute = _permitsPerMinute);
 
             if (_clock is not null)

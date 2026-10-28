@@ -1,28 +1,28 @@
 ---
 name: screen-generate
-description: Build the Project MD Generate screen: hero, URL input, stat strip and recent scans.
+description: Build the Project MD Generate screen (wireframes v2): full-height hero with URL bar, "What you'll get" panel, stat strip and recent scans.
 ---
 
 # Screen: Generate (`/`)
 
-**Owns:** `frontend/app/page.tsx`.
+**Owns:** `frontend/app/(workspace)/page.tsx`, `components/ui/hero-backdrop.tsx`.
 
 ## Read first
-- Artifact README: "Content fundamentals", "Visual foundations"; `components/UrlInput`, `StatTile`.
+Wireframes v2: "Hero / Generate" and "What you'll get". Keep the scan logic of the existing page (parseUrl, startScan, `PermissionError` shown as the form error, hydration guard).
 
 ## Build
-- Status pill `AI-POWERED · LIVE` (`radius-pill`, `ts-label`).
-- Headline in `ts-display`: `Website → Documentation.` then `Intelligently.` on a second line, in `violet-400` at reduced emphasis (the README says `violet-500`, but its own rule bars `violet-500` text on `bg-base`; the rule wins).
-- Sub-copy in `body`: what it does in two short sentences.
-- `UrlInput`. On submit run `parseUrl`; on error show it in the field; on success call `startScan(url)` then `router.push("/processing")`.
-- `StatStrip` of four tiles (Total Scans, Avg Confidence, Pages Indexed, Avg Speed) computed from history; `—` when empty.
-- `RECENT SCANS` label, last three `HistoryRow`s, or `EmptyState`: "No scans yet. Generate your first .md file above to see it here."
-- `.hero-glow` behind the hero only.
+1. **Hero** (full viewport height on desktop, min 640px): `HeroBackdrop` behind everything, centred column 700px wide:
+   - pill "AI website intelligence" with a violet dot;
+   - `ts-hero` "Project" over "MD" (MD in `violet-400`);
+   - one 17px paragraph: inspect the stack, content, components, design tokens and motion, then package it for the team;
+   - `UrlInput` (violet **Analyze website** button, hint row). Disabled with `ScanBlockedNotice` when the account cannot create scans.
+2. **Hero image is a placeholder.** `HeroBackdrop` draws `/hero.jpg` over a dark violet gradient and a 35% scrim. Until the real image is supplied, drop it at `frontend/public/hero.jpg` (landscape, about 2400px wide, dark enough for white text). No code change is needed; a missing file falls back to the gradient.
+3. **What you'll get**: `Eyebrow`, h2 "A complete handoff, not another audit.", then three numbered cells in one bordered panel (Technical documentation, Design system exports, Reusable building blocks).
+4. **Stats and recent scans**: `StatStrip` (Total scans, Avg confidence, Pages indexed, Avg speed, all computed from history) and the latest three `HistoryRow`s with `.MD` download (gated by `scan:export`) plus "View all" when more than three. Empty state when none. These two blocks are not in the wireframe; they stay because they are cheap and useful, and are safe to delete.
 
 ## Rules
-- Exactly one primary button on the view.
-- Copy is terse, no exclamation marks, no emoji.
-- Wait for `useIsHydrated` before showing the empty state, to avoid a flash.
+- One `h1`. No second primary button. Respect `prefers-reduced-motion` (no animation is required).
+- The hero text must stay readable over any photo: keep the scrim.
 
 ## Done when
-Submitting a valid URL lands on `/processing` with the scan running; an invalid URL shows an inline error and stays put.
+Submitting a valid URL goes to `/processing`; an invalid one shows the error under the bar; the page matches the wireframe at 1440 and 390px wide.

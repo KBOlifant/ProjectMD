@@ -5,7 +5,7 @@ import type { DenyReason } from "@/app/functions/rbac/can";
 // from useDenyReason("scan:create"): "unverified" links to /verify-email, "role" says the account
 // is read-only, "signed-out" links to /login. Purely presentational; stores nothing.
 export function ScanBlockedNotice({ reason }: { reason: DenyReason }) {
-  const link = "text-rose-400 hover:text-ink";
+  const link = "text-violet-400 hover:text-ink-hover";
 
   if (reason === "unverified") {
     return (

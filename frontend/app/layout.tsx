@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/app/functions/auth/AuthProvider";
 import { ScanProvider } from "@/components/scan-provider";
@@ -9,9 +10,14 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
+const neuPrompter = localFont({
+  variable: "--font-neu-prompter",
+  src: [
+    { path: "./assets/neu-prompter/NeuPrompter-Regular.otf", weight: "400" },
+    { path: "./assets/neu-prompter/NeuPrompter-Medium.otf", weight: "500" },
+    { path: "./assets/neu-prompter/NeuPrompter-SemiBold.otf", weight: "600" },
+    { path: "./assets/neu-prompter/NeuPrompter-Bold.otf", weight: "700" },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +31,7 @@ export const metadata: Metadata = {
 // Stores nothing.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${neuPrompter.variable} h-full antialiased`}>
       <body className="min-h-full">
         <AuthProvider>
           <ScanProvider>{children}</ScanProvider>

@@ -20,7 +20,7 @@ public static partial class ComponentSanitizer
     private const int MaxNodes = 80;
     private const int MaxDepth = 8;
     private const int MaxRules = 40;
-    private const int MaxTextChars = 80;
+    private const int MaxTextChars = 160;
     private const int MaxValueChars = 200;
 
     private static readonly HashSet<string> Tags = new(StringComparer.Ordinal)
@@ -53,8 +53,9 @@ public static partial class ComponentSanitizer
     private static readonly string[] Forbidden =
         ["@", "\\", "<", ">", "url(", "expression", "javascript", "behavior", "binding", "image-set", "var(--"];
 
-    // Cleans one component. Returns null when the kind is unknown or nothing usable is left.
-    public static ComponentPreview? Clean(string? kind, string? name, string? html, string? css)
+    // Cleans one component. Returns null when the kind is unknown or nothing usable is left. The
+    // background is kept only as a plain #rrggbb colour.
+    public static ComponentPreview? Clean(string? kind, string? name, string? html, string? css, string? background = null)
     {
         if (kind is null || !ComponentSample.Kinds.Contains(kind))
         {
@@ -67,7 +68,8 @@ public static partial class ComponentSanitizer
             return null;
         }
 
-        return new ComponentPreview(kind, PlainText(name, 40) is { Length: > 0 } n ? n : kind, cleanHtml, CleanCss(css));
+        var cleanBackground = background is not null && ComponentSample.HexColour.IsMatch(background) ? background.ToLowerInvariant() : string.Empty;
+        return new ComponentPreview(kind, PlainText(name, 40) is { Length: > 0 } n ? n : kind, cleanHtml, CleanCss(css), cleanBackground);
     }
 
     // Rebuilds the HTML from allowed tags and attributes; "" when nothing is left.

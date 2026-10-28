@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project MD Internals</title>
+<style>
+  :root {
+    --bg: #f7f6fb; --surface: #ffffff; --surface-2: #f0eef7; --ink: #1c1830; --muted: #5d5874;
+    --line: #dcd8ea; --accent: #6d4aff; --accent-soft: #ece7ff; --ok: #1d8a5b; --ok-soft: #dcf3e8;
+    --no: #b23a48; --no-soft: #fbe3e6; --warn: #9a6400; --warn-soft: #fdf0d5;
+    --fe: #2f6fe0; --be: #6d4aff; --ai: #c2410c; --db: #0f8a7a; --pw: #b0367a;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --sans: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f0d17; --surface: #18151f; --surface-2: #221e2d; --ink: #ece9f5; --muted: #a39fb8;
+      --line: #322c42; --accent: #9b85ff; --accent-soft: #2a2245; --ok: #4fd39a; --ok-soft: #173326;
+      --no: #ff7b8a; --no-soft: #3a1c22; --warn: #f2b84b; --warn-soft: #3a2c10;
+      --fe: #6ea0ff; --be: #9b85ff; --ai: #ff9a5c; --db: #4fd1c0; --pw: #f07ab8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0d17; --surface: #18151f; --surface-2: #221e2d; --ink: #ece9f5; --muted: #a39fb8;
+    --line: #322c42; --accent: #9b85ff; --accent-soft: #2a2245; --ok: #4fd39a; --ok-soft: #173326;
+    --no: #ff7b8a; --no-soft: #3a1c22; --warn: #f2b84b; --warn-soft: #3a2c10;
+    --fe: #6ea0ff; --be: #9b85ff; --ai: #ff9a5c; --db: #4fd1c0; --pw: #f07ab8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--sans); }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  code { background: var(--surface-2); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  header.hero { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 12px 0 14px; letter-spacing: -.02em; }
+  h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  .lede { color: var(--muted); max-width: 760px; font-size: 18px; }
+  nav.toc { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  nav.toc .wrap { display: flex; gap: 6px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; }
+  nav.toc a { flex: none; text-decoration: none; color: var(--muted); font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  nav.toc a:hover { color: var(--ink); border-color: var(--accent); }
+  section { padding: 44px 0; border-bottom: 1px solid var(--line); }
+  .sub { color: var(--muted); margin: 0 0 22px; max-width: 800px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .diagram-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; margin: 14px 0; }
+  .diagram-box .diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .diagram-box .fallback { white-space: pre; font: 12px/1.45 var(--mono); color: var(--muted); }
+  .tag { display: inline-block; font: 600 11px/1 var(--mono); padding: 4px 7px; border-radius: 6px; letter-spacing: .04em; }
+  .t-fe { color: var(--fe); background: color-mix(in srgb, var(--fe) 14%, transparent); }
+  .t-be { color: var(--be); background: color-mix(in srgb, var(--be) 14%, transparent); }
+  .t-ai { color: var(--ai); background: color-mix(in srgb, var(--ai) 14%, transparent); }
+  .t-db { color: var(--db); background: color-mix(in srgb, var(--db) 14%, transparent); }
+  .t-pw { color: var(--pw); background: color-mix(in srgb, var(--pw) 14%, transparent); }
+  .path { font: 12px/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; margin: 14px 0; }
+
+  /* Big picture */
+  .stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: stretch; }
+  .tier { border-radius: 12px; padding: 14px; border: 1px solid var(--line); background: var(--surface); position: relative; }
+  .tier b { display: block; font-size: 15px; margin: 8px 0 4px; }
+  .tier p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+  /* Journey timeline */
+  ol.timeline { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  ol.timeline li { counter-increment: s; display: grid; grid-template-columns: 38px 1fr; gap: 12px; padding: 0 0 18px; position: relative; }
+  ol.timeline li::before { content: counter(s); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--mono); background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+  ol.timeline li::after { content: ""; position: absolute; left: 16px; top: 34px; bottom: 2px; width: 1px; background: var(--line); }
+  ol.timeline li:last-child::after { display: none; }
+  ol.timeline .step { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  ol.timeline .step p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+  /* Gates */
+  .gates { display: flex; flex-direction: column; gap: 8px; }
+  .gate { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .gate .n { font: 700 12px var(--mono); color: var(--be); }
+  .gate .fail { font: 600 11px var(--mono); color: var(--no); background: var(--no-soft); padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+  .gate small { color: var(--muted); display: block; }
+
+  /* Screenshots */
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .frame { border: 2px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+  .frame .win { height: 96px; overflow: hidden; position: relative; }
+  .frame .cap { font: 600 10.5px/1.3 var(--mono); padding: 5px 7px; background: #000; color: #fff; }
+  .fake { position: absolute; left: 0; right: 0; top: 0; transition: transform .4s; }
+  .fake > div { margin: 0 8px 6px; border-radius: 4px; }
+  .arrow-row { text-align: center; font: 600 13px var(--mono); color: var(--muted); padding: 10px 0; }
+  .sheet { display: grid; grid-template-columns: repeat(3, 1fr); background: #000; border-radius: 10px; overflow: hidden; max-width: 640px; margin: 0 auto; border: 2px solid #000; }
+  .sheet .frame { border: 1px solid #000; border-radius: 0; }
+  .sheet .frame .win { height: 72px; }
+  .payload { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+  .part { border: 1px dashed var(--ai); border-radius: 10px; padding: 12px; background: color-mix(in srgb, var(--ai) 6%, var(--surface)); }
+  .part .mono { display: block; color: var(--ai); margin-bottom: 4px; }
+  .part p { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+  /* Groq cards */
+  .call { border-top: 4px solid var(--ai); }
+  .call dl { margin: 10px 0 0; display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; font-size: 13.5px; }
+  .call dt { color: var(--muted); }
+  .call dd { margin: 0; }
+  pre.prompt { background: var(--surface-2); border-radius: 10px; padding: 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; margin: 12px 0 0; color: var(--ink); }
+
+  /* RBAC */
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .tbl { overflow-x: auto; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  td.c, th.c { text-align: center; }
+  .yes { display: inline-block; min-width: 34px; padding: 3px 8px; border-radius: 6px; background: var(--ok-soft); color: var(--ok); font: 700 12px var(--mono); }
+  .nope { display: inline-block; min-width: 34px; padding: 3px 8px; border-radius: 6px; background: var(--no-soft); color: var(--no); font: 700 12px var(--mono); }
+
+  /* Session */
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .zone { border: 2px solid var(--line); border-radius: 14px; padding: 14px; }
+  .zone > .eyebrow { display: block; margin-bottom: 10px; }
+  .slot { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .slot b { font-size: 14px; }
+  .slot small { display: block; color: var(--muted); }
+  .persist { float: right; font: 600 11px var(--mono); padding: 2px 7px; border-radius: 6px; }
+  .persist.on { background: var(--ok-soft); color: var(--ok); }
+  .persist.off { background: var(--surface-2); color: var(--muted); }
+
+  /* Animation card mock */
+  .mock { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .mock-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .mock-head b { margin-right: auto; }
+  .mock pre { margin: 0; padding: 14px; font: 12.5px/1.5 var(--mono); background: var(--surface-2); overflow-x: auto; }
+  .mock p { margin: 0; padding: 12px 14px; color: var(--muted); font-size: 14px; }
+
+  ul.gotchas { padding-left: 20px; }
+  ul.gotchas li { margin-bottom: 8px; }
+  footer { padding: 30px 0 60px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Project MD · how it works · Testing branch, 26 Oct 2026</div>
+    <h1>From a pasted URL to a .md file</h1>
+    <p class="lede">A visual walk through the whole app: the input box, the backend gates, Playwright, the
+      screenshots, the three Groq prompts, the database, roles, how your login is remembered, and how animations
+      and components are broken down. The written version with file links is <a href="README.md">README.md</a> in this folder.
+      For every step with the exact file and line that does it, see <a href="step-by-step.html">step-by-step.html</a>.</p>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <div class="wrap">
+    <a href="#big">Big picture</a><a href="#journey">Input journey</a><a href="#gates">Backend gates</a>
+    <a href="#pipeline">Pipeline</a><a href="#playwright">Playwright</a><a href="#shots">Screenshots</a>
+    <a href="#groq">Groq prompts</a><a href="#db">Database</a><a href="#rbac">RBAC</a>
+    <a href="#session">Login memory</a><a href="#anim">Animations</a><a href="#comp">Components</a>
+    <a href="#tree">UI tree</a><a href="#gotchas">Gotchas</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ===================================================================== BIG PICTURE -->
+<section id="big"><div class="wrap">
+  <h2>1 · The big picture</h2>
+  <p class="sub">Six moving parts. The colours here are reused through the page.</p>
+  <div class="stack">
+    <div class="tier"><span class="tag t-fe">FRONTEND</span><b>Next.js 16 + React 19</b><p>Pages, forms, tabs. Holds no secrets. Sends your URL and token.</p><div class="path">frontend/</div></div>
+    <div class="tier"><span class="tag t-fe">AUTH</span><b>Firebase Auth</b><p>Only for sign-in. Gives the browser a signed ID token (JWT).</p><div class="path">app/functions/firebase</div></div>
+    <div class="tier"><span class="tag t-be">BACKEND</span><b>ASP.NET Core API</b><p>Checks token, role, quota. Runs the scan pipeline. The real lock.</p><div class="path">backend/ProjectMD.Api</div></div>
+    <div class="tier"><span class="tag t-pw">BROWSER</span><b>Playwright Chromium</b><p>Opens the site for real, measures styles, takes screenshots.</p><div class="path">Services/Extraction</div></div>
+    <div class="tier"><span class="tag t-ai">AI</span><b>Groq</b><p>Writes prose, reads screenshots, writes component HTML/CSS.</p><div class="path">Services/Ai</div></div>
+    <div class="tier"><span class="tag t-db">DATA</span><b>PostgreSQL (Aiven)</b><p>Users, roles, scans, AI cache, token ledger.</p><div class="path">Data/AppDbContext.cs</div></div>
+  </div>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart LR
+  U(["You"]) --> FE["Next.js frontend"]
+  FE <-->|"sign in, ID token"| FB[("Firebase Auth")]
+  FE -->|"POST /api/scans + Bearer token"| BE["ASP.NET Core API"]
+  BE -->|"verify token signature"| FB
+  BE -->|"open page"| PW["Playwright Chromium"]
+  PW -->|"guarded proxy"| WEB(("Website"))
+  BE -->|"up to 3 prompts"| GQ["Groq"]
+  BE <-->|"EF Core"| DB[("PostgreSQL")]
+  BE -->|"201 Scan JSON"| FE
+  </script></div>
+</div></section>
+
+<!-- ===================================================================== JOURNEY -->
+<section id="journey"><div class="wrap">
+  <h2>2 · Where your input goes</h2>
+  <p class="sub">The input box is <code>UrlInput</code> on the Generate page. Follow one scan from keypress to Results.</p>
+  <div class="grid g2">
+    <ol class="timeline">
+      <li><div class="step"><span class="tag t-fe">FE</span> <b>You type a URL and press Analyze</b><p><code>UrlInput</code> is a controlled form; the text lives in the Generate page.</p><div class="path">components/ui/url-input.tsx · app/(workspace)/page.tsx</div></div></li>
+      <li><div class="step"><span class="tag t-fe">FE</span> <b>Quick check: <code>parseUrl</code></b><p>Adds https:// if missing, only http(s), rejects local/private hosts. Shows an error in place.</p><div class="path">lib/url.ts</div></div></li>
+      <li><div class="step"><span class="tag t-fe">FE</span> <b><code>startScan(url)</code> + go to /processing</b><p>Throws if you lack <code>scan:create</code>. Starts a 100 ms timer.</p><div class="path">components/scan-provider.tsx</div></div></li>
+      <li><div class="step"><span class="tag t-fe">FE</span> <b>3 second progress animation</b><p>Fetch 300 · Render 600 · Fingerprint 900 · Write 1200 ms. <b>Cosmetic:</b> the real request starts after it.</p><div class="path">lib/scan.ts</div></div></li>
+      <li><div class="step"><span class="tag t-fe">FE</span> <b><code>apiFetch("/api/scans", POST)</code></b><p>Gets your Firebase ID token and sends it as <code>Authorization: Bearer</code>. On 401 it retries once with a fresh token.</p><div class="path">app/functions/data/api-client.ts · api-provider.ts</div></div></li>
+    </ol>
+    <ol class="timeline" start="6" style="counter-reset: s 5">
+      <li><div class="step"><span class="tag t-be">BE</span> <b>Gates: token, role, rate limit</b><p>See section 3. Any gate can answer 401 / 403 / 429.</p><div class="path">Program.cs · Auth/</div></div></li>
+      <li><div class="step"><span class="tag t-be">BE</span> <b><code>ScansController.Create</code></b><p>Server URL check, user row, monthly quota (10).</p><div class="path">Controllers/ScansController.cs</div></div></li>
+      <li><div class="step"><span class="tag t-pw">PW</span> <span class="tag t-ai">AI</span> <b>The pipeline runs</b><p>Playwright measures, Groq writes. 10 to 75 s. See sections 4 to 7.</p><div class="path">Services/Pipeline/PipelineScanGenerator.cs</div></div></li>
+      <li><div class="step"><span class="tag t-db">DB</span> <b>Save + 201</b><p><code>ScanRecorder</code> re-checks quota in a transaction, inserts the Scans row, returns the Scan JSON.</p><div class="path">Services/ScanRecorder.cs</div></div></li>
+      <li><div class="step"><span class="tag t-fe">FE</span> <b>Results</b><p><code>addScan</code> puts it in the history cache, usage refreshes, "View Results" opens <code>/results/[id]</code>.</p><div class="path">lib/history-store.ts · components/results/results-view.tsx</div></div></li>
+    </ol>
+  </div>
+</div></section>
+
+<!-- ===================================================================== GATES -->
+<section id="gates"><div class="wrap">
+  <h2>3 · The backend gates (middleware order)</h2>
+  <p class="sub">Every request walks down this list from <code>Program.cs</code>. Order matters: auth must come after CORS and before the rate limiter so the limiter can key on your uid.</p>
+  <div class="gates">
+    <div class="gate"><span class="n">01</span><div><b>Exception handler</b><small>Any crash becomes a safe ProblemDetails 500, no stack trace.</small></div><span></span></div>
+    <div class="gate"><span class="n">02</span><div><b>HTTP logging</b><small>Method, path, status, duration. Never headers, so your token is never logged.</small></div><span></span></div>
+    <div class="gate"><span class="n">03</span><div><b>CORS "Frontend"</b><small>Only origins in <code>Cors:AllowedOrigins</code> (http://localhost:3000). No cookies.</small></div><span class="fail">blocked in browser</span></div>
+    <div class="gate"><span class="n">04</span><div><b>Authentication: Firebase JWT</b><small>Signature (Google's public keys), issuer <code>securetoken.google.com/project-md-51f14</code>, audience, expiry.</small></div><span class="fail">401</span></div>
+    <div class="gate"><span class="n">05</span><div><b>Claims transformation: database role</b><small><code>DbRoleClaimsTransformation</code> throws away any role in the token and uses <code>AppUsers.Role</code>.</small></div><span class="fail">503 if DB down</span></div>
+    <div class="gate"><span class="n">06</span><div><b>Authorization: permission policy</b><small><code>[Authorize(Policy = "scan:create")]</code> → <code>PermissionHandler</code> → <code>PermissionRules.DenyReason</code>.</small></div><span class="fail">403 role / unverified</span></div>
+    <div class="gate"><span class="n">07</span><div><b>Rate limiter</b><small>POST /api/scans: 5 per minute per user.</small></div><span class="fail">429 rate</span></div>
+    <div class="gate"><span class="n">08</span><div><b>Controller</b><small>URL validator (400 url), quota (429 quota), pipeline (400/502 extract), budget (429 budget).</small></div><span></span></div>
+  </div>
+</div></section>
+
+<!-- ===================================================================== PIPELINE -->
+<section id="pipeline"><div class="wrap">
+  <h2>4 · The pipeline</h2>
+  <p class="sub"><code>Scanner:Mode</code> chooses: <b>static</b> = mock (the default in appsettings.json!), <b>extract</b> = Playwright, no AI, <b>ai</b> = Playwright + Groq. The free stage always runs first; if it fails, Groq is never called. Each AI step may fail without failing the scan.</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart TD
+  URL["Validated URL"] --> PF
+  subgraph FREE["Free stage: no AI"]
+    PF["PlaywrightPageFetcher<br/>RawPage: html, css, scripts, api calls,<br/>design, components, screenshots"] --> BD{"BlockDetector<br/>bot-check or HTTP error?"}
+    BD -- yes --> STOP["stop: ExtractionException"]
+    BD -- ok --> HR["HtmlReducer (AngleSharp)<br/>text, outline, links, ContentHash"]
+    HR --> DG[["PageDigest"]]
+    DG --> TF["TechFingerprinter<br/>TechRules.json"]
+  end
+  subgraph AI["AI stage (ai mode)"]
+    TF --> N1["Groq 1: text notes"]
+    N1 --> N2["Groq 2: vision"]
+    N2 --> N3["Groq 3: components"]
+  end
+  N3 --> CE["ConfidenceEstimator"]
+  CE --> MD["MarkdownDocumentBuilder<br/>the .md"]
+  CE --> SA["ScanAnalysisJson<br/>design, api, components, animations"]
+  </script></div>
+  <div class="grid g3">
+    <div class="card"><h3>Code writes the facts</h3><p class="sub" style="margin:0">Tech stack, API endpoints, colours, fonts, outline, measured animations. Never invented by the AI.</p></div>
+    <div class="card"><h3>Groq writes the prose</h3><p class="sub" style="margin:0">Overview, architecture bullets, endpoint purposes, tips, animation descriptions, design breakdown.</p></div>
+    <div class="card"><h3>Two outputs</h3><p class="sub" style="margin:0"><code>Markdown</code> (the .md text) and <code>Analysis</code> (JSON for the Design, Components and Animations tabs).</p></div>
+  </div>
+</div></section>
+
+<!-- ===================================================================== PLAYWRIGHT -->
+<section id="playwright"><div class="wrap">
+  <h2>5 · Where Playwright comes in</h2>
+  <p class="sub">Only in the backend (<code>Microsoft.Playwright</code> 1.63 for .NET). One shared headless Chromium; each scan gets a fresh, throw-away context. The browser itself is not allowed to look up any host name: every request is handed to our proxy, checked, and fetched by our own HTTP client.</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+sequenceDiagram
+  autonumber
+  participant PF as PlaywrightPageFetcher
+  participant BR as Chromium
+  participant RP as PageRequestProxy
+  participant RG as RequestGuard + GuardedHttpClient
+  participant W as Website
+  PF->>BR: launch once, host lookup disabled (MAP * ~NOTFOUND)
+  PF->>BR: new context 1440x900, no service workers, no downloads
+  PF->>BR: RouteAsync("**/*") = every request to the proxy
+  PF->>BR: GotoAsync(url), wait for network idle
+  loop every request: HTML, JS, CSS, XHR, fonts, images
+    BR->>RP: intercepted request
+    RP->>RG: public IP only? http/https? safe port?
+    RG->>W: connect to the checked IP
+    W-->>RG: response
+    RG-->>BR: FulfillAsync(body)
+    Note over RP: ApiRecorder notes XHR shapes, CSS text is kept
+  end
+  PF->>BR: read outerHTML
+  PF->>BR: DesignScript (getComputedStyle, 800 elements)
+  PF->>BR: ComponentScript (buttons, inputs, cards...)
+  PF->>BR: VisualCapturer (screenshots + MotionScript)
+  PF->>BR: close context
+  </script></div>
+  <div class="note"><b>Why so careful?</b> Playwright's own interception misses redirect hops, so a public site that redirects to
+    <code>169.254.169.254</code> (cloud metadata) could reach your server's internals. This design blocks that (SSRF protection).
+    Also: <code>frontend/lib/scrape.ts</code> uses Playwright too, but it is not wired into the app, the package is not installed, and it has no such guard.</div>
+</div></section>
+
+<!-- ===================================================================== SCREENSHOTS -->
+<section id="shots"><div class="wrap">
+  <h2>6 · Screenshots: taken, stitched, read</h2>
+  <p class="sub">VisualCapturer scrolls with real mouse-wheel events (so smooth-scroll libraries react), waits 700 ms, and shoots only the visible 1440×900 window as a JPEG at quality 60. Six frames, 760 px apart.</p>
+
+  <div class="shots" id="frames"></div>
+  <div class="arrow-row">↓ ContactSheet.BuildHtml: our own HTML page, frames as data: images, 3 × 2 grid, numbered captions ↓<br>rendered in a second context with JavaScript OFF, then one full-page screenshot ↓</div>
+  <div class="sheet" id="sheet"></div>
+  <div class="arrow-row">↓ MotionPromptBuilder.PickImages (max 3) → GroqLlmClient.BuildBody ↓</div>
+
+  <div class="payload">
+    <div class="part"><span class="mono">part 1 · text</span><p>The measured facts between <code>&lt;&lt;&lt;VISUAL</code> and <code>VISUAL&gt;&gt;&gt;</code>: libraries, animations with real timings, colours, fonts.</p></div>
+    <div class="part"><span class="mono">part 2 · image_url</span><p><code>data:image/jpeg;base64,…</code> the first screen, full size.</p></div>
+    <div class="part"><span class="mono">part 3 · image_url</span><p>The contact sheet. The model compares numbered frames to spot what moved.</p></div>
+  </div>
+  <div class="note">Screenshots live in memory for that one scan only. They are never written to disk or the database. Each image is budgeted at 2048 tokens before the call.</div>
+</div></section>
+
+<!-- ===================================================================== GROQ -->
+<section id="groq"><div class="wrap">
+  <h2>7 · Groq: where the prompts are</h2>
+  <p class="sub">All three calls go through <code>GroqLlmClient.CompleteAsync</code> → <code>POST https://api.groq.com/openai/v1/chat/completions</code> with <code>messages: [system, user]</code>, temperature 0, no streaming. The system prompts are C# constants. The page facts are fenced between markers and treated as untrusted data.</p>
+  <div class="grid g3">
+    <div class="card call">
+      <span class="tag t-ai">CALL 1 · TEXT NOTES</span>
+      <dl>
+        <dt>Builder</dt><dd><code>PromptBuilder</code></dd>
+        <dt>Model</dt><dd><code>Ai:FastModel</code> (openai/gpt-oss-20b), strict JSON schema</dd>
+        <dt>Facts</dt><dd>title, description, tech, rendering, API endpoints as E1…E15, design summary, outline, excerpt. Max 3000 input tokens.</dd>
+        <dt>Returns</dt><dd><code>AiDocument</code>: overview, architecture, endpoint purposes, design, tips</dd>
+      </dl>
+      <pre class="prompt">system: "You write short documentation notes about a public website, using only facts extracted from one of its pages…"
+user:   &lt;&lt;&lt;FACTS
+        Title: …
+        Technologies: …
+        API endpoints: E1 GET /api/…
+        FACTS&gt;&gt;&gt;</pre>
+    </div>
+    <div class="card call">
+      <span class="tag t-ai">CALL 2 · VISION</span>
+      <dl>
+        <dt>Builder</dt><dd><code>MotionPromptBuilder</code> via <code>MotionAnalyzer</code></dd>
+        <dt>Model</dt><dd><code>Motion:VisionModel</code> (qwen/qwen3.8-27b), json_object</dd>
+        <dt>Facts</dt><dd>measured motion + design facts, <b>plus the images</b></dd>
+        <dt>Returns</dt><dd><code>MotionNotes</code>: summary, animations[], design breakdown (overview, typography, colours, components)</dd>
+      </dl>
+      <pre class="prompt">system: "You are a senior web designer and front-end developer. You look at one web page and write… (1) animations (2) design…"
+user:   &lt;&lt;&lt;VISUAL … VISUAL&gt;&gt;&gt;
+        + image 1 + contact sheet</pre>
+    </div>
+    <div class="card call">
+      <span class="tag t-ai">CALL 3 · COMPONENTS</span>
+      <dl>
+        <dt>Builder</dt><dd><code>ComponentAnalyzer.BuildRequest</code></dd>
+        <dt>Model</dt><dd><code>Ai:FastModel</code>, up to 2 attempts</dd>
+        <dt>Facts</dt><dd>one line of measured CSS per component</dd>
+        <dt>Returns</dt><dd><code>ComponentPreviews</code>: up to 8 HTML + CSS snippets, then sanitised</dd>
+      </dl>
+      <pre class="prompt">system: "You are a senior front-end developer. You get the measured computed styles of a few real components…"
+user:   &lt;&lt;&lt;COMPONENTS
+        button: color #fff; background-color …
+        COMPONENTS&gt;&gt;&gt;</pre>
+    </div>
+  </div>
+  <h3 style="margin-top:26px">The same credit-saving loop wraps every call</h3>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart LR
+  B["build request"] --> C{"ExtractionCache hit?<br/>content hash + prompt version + model"}
+  C -- yes --> USE["use cached answer<br/>(log 0-token hit)"]
+  C -- no --> G{"LlmBudgetGuard<br/>under 60k/user and<br/>200k/day overall?"}
+  G -- no --> FB["skip: basic document"]
+  G -- yes --> CALL["Groq call<br/>1 retry on 429/5xx"]
+  CALL --> P{"valid JSON?"}
+  P -- no --> FB
+  P -- yes --> ST["cache 7 days"] --> L["write real tokens to LlmUsage"] --> USE
+  </script></div>
+</div></section>
+
+<!-- ===================================================================== DB -->
+<section id="db"><div class="wrap">
+  <h2>8 · The database</h2>
+  <p class="sub">PostgreSQL on Aiven through EF Core. Firebase only knows your login; everything else is here. Clearing history is a soft delete (<code>DeletedAt</code>), so cleared scans still count toward the month.</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+erDiagram
+  AppUsers ||--o{ Scans : owns
+  AppUsers ||--o{ LlmUsage : spends
+  AppUsers {
+    uuid Id PK
+    string FirebaseUid UK
+    string Email
+    string Role
+    timestamptz CreatedAt
+    timestamptz LastSeenAt
+  }
+  Scans {
+    uuid Id PK
+    uuid UserId FK
+    string Url
+    string Host
+    int Confidence
+    jsonb Tech
+    text Markdown
+    jsonb Analysis
+    timestamptz DeletedAt
+  }
+  LlmUsage {
+    uuid Id PK
+    uuid UserId FK
+    string Model
+    int PromptTokens
+    int CompletionTokens
+    bool CacheHit
+  }
+  ExtractionCache {
+    string ContentHash PK
+    int PromptVersion PK
+    string Model PK
+    text Markdown
+    timestamptz ExpiresAt
+    int HitCount
+  }
+  </script></div>
+</div></section>
+
+<!-- ===================================================================== RBAC -->
+<section id="rbac"><div class="wrap">
+  <h2>9 · RBAC: who may do what</h2>
+  <p class="sub">The matrix exists twice: <code>Auth/Permissions.cs</code> (backend, enforces) and <code>app/functions/rbac/permissions.ts</code> (frontend, only hides buttons). Your role is a column in <code>AppUsers</code>; a role inside the token is ignored.</p>
+  <div class="card tbl">
+    <table>
+      <thead><tr><th>Permission</th><th class="c">viewer</th><th class="c">member</th><th class="c">admin</th></tr></thead>
+      <tbody>
+        <tr><td><code>scan:read</code> list and open your scans</td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td></tr>
+        <tr><td><code>scan:export</code> copy and download</td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td></tr>
+        <tr><td><code>scan:create</code> + verified email</td><td class="c"><span class="nope">no</span></td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td></tr>
+        <tr><td><code>history:clear</code></td><td class="c"><span class="nope">no</span></td><td class="c"><span class="yes">yes</span></td><td class="c"><span class="yes">yes</span></td></tr>
+        <tr><td><code>admin:access</code> /admin/users</td><td class="c"><span class="nope">no</span></td><td class="c"><span class="nope">no</span></td><td class="c"><span class="yes">yes</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="diagram-box"><script type="text/x-mermaid">
+sequenceDiagram
+  autonumber
+  participant FE as Frontend
+  participant JWT as JWT bearer
+  participant TR as DbRoleClaimsTransformation
+  participant DB as AppUsers
+  participant PH as PermissionHandler
+  participant C as Controller
+  FE->>JWT: request + Bearer ID token
+  JWT->>JWT: check signature, issuer, audience, expiry
+  JWT->>TR: uid, email, email_verified
+  TR->>TR: memory cache role:uid (30 s)?
+  TR->>DB: miss: find or create row by FirebaseUid
+  Note over TR,DB: new user = Auth:DefaultRole (member)<br/>verified email in Auth:AdminEmails = admin
+  DB-->>TR: Role
+  TR->>PH: principal with ONLY the database role
+  PH->>PH: DenyReason(role, emailVerified, permission)
+  alt allowed
+    PH->>C: run endpoint
+  else denied
+    PH-->>FE: 403 reason role or unverified
+  end
+  </script></div>
+  <div class="grid g3">
+    <div class="card"><h3>Frontend learns the role</h3><p class="sub" style="margin:0"><code>AuthProvider</code> → <code>setMeOwner(uid)</code> → <code>GET /api/me</code> → <code>{ role, usage }</code>. Until it answers, status is <code>loading</code> and every <code>useCan()</code> is false.</p></div>
+    <div class="card"><h3>Fails closed</h3><p class="sub" style="margin:0">If <code>/api/me</code> fails you become <b>viewer</b> and <code>ServerNotice</code> offers Retry. An unknown role string also becomes viewer.</p></div>
+    <div class="card"><h3>UI gates</h3><p class="sub" style="margin:0"><code>useCan()</code>, <code>&lt;Can permission&gt;</code>, <code>assertCan()</code> in <code>startScan</code>, Admin link in <code>MainNav</code>. Admins change roles via <code>PUT /api/admin/users/{id}/role</code>.</p></div>
+  </div>
+</div></section>
+
+<!-- ===================================================================== SESSION -->
+<section id="session"><div class="wrap">
+  <h2>10 · Where the app remembers you are logged in</h2>
+  <p class="sub">In your <b>browser</b>, not on the server. The backend is stateless: no cookies, no sessions. Every request carries a token and is checked from scratch.</p>
+  <div class="two">
+    <div class="zone" style="border-color: var(--fe)">
+      <span class="eyebrow" style="color: var(--fe)">Your browser</span>
+      <div class="slot"><span class="persist on">survives refresh</span><b>IndexedDB · firebaseLocalStorageDb</b><small>Written by the Firebase SDK (default "local" persistence). Holds the refresh token. This is the "remember me".</small></div>
+      <div class="slot"><span class="persist on">auto-renewed</span><b>Firebase SDK · ID token</b><small>A 1-hour JWT. <code>getIdToken()</code> hands it to <code>apiFetch</code> on every call.</small></div>
+      <div class="slot"><span class="persist off">memory</span><b>AuthProvider · CurrentUser</b><small>uid, email, verified, role. Rebuilt on load by <code>onAuthStateChanged</code>.</small></div>
+      <div class="slot"><span class="persist off">memory</span><b>me-store · role + usage</b><small>From <code>GET /api/me</code>.</small></div>
+      <div class="slot"><span class="persist off">memory</span><b>history-store · your scans</b><small>From <code>GET /api/scans</code> (static mode: <code>localStorage</code> key <code>projectmd.history.&lt;uid&gt;</code>).</small></div>
+    </div>
+    <div class="zone" style="border-color: var(--be)">
+      <span class="eyebrow" style="color: var(--be)">Backend</span>
+      <div class="slot"><span class="persist off">nothing</span><b>No session</b><small>Each request: verify JWT signature with Google's public keys, then look up the role.</small></div>
+      <div class="slot"><span class="persist off">30 s</span><b>IMemoryCache · role:uid</b><small>Saves a DB hit per request. Evicted the moment an admin changes your role.</small></div>
+      <div class="slot"><span class="persist on">database</span><b>AppUsers row</b><small>Your role and LastSeenAt. Created on your first <code>GET /api/me</code>.</small></div>
+      <p class="sub" style="margin:12px 0 0">See it yourself: DevTools → Application → IndexedDB → <code>firebaseLocalStorageDb</code>. Sign out deletes it.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ===================================================================== ANIMATIONS -->
+<section id="anim"><div class="wrap">
+  <h2>11 · How animations are broken down</h2>
+  <p class="sub">Three layers: <b>measure</b> in the browser, <b>see</b> with the vision model, <b>package</b> with plain code (no AI).</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart TD
+  subgraph M["1 Measure: MotionScript, run on load and after scrolling"]
+    L["libraries: GSAP, ScrollTrigger, Lenis, Lottie, Three.js, Framer, AOS..."]
+    DA["document.getAnimations(): real duration and easing"]
+    GT["GSAP tweens and ScrollTriggers"]
+    CNT["counts: canvas, video, split text, sticky, will-change"]
+  end
+  M --> MER["MotionEvidenceReader: clean, cap, merge"]
+  MER --> EV[["MotionEvidence"]]
+  EV --> VP["2 See: Groq vision call<br/>facts + screenshots"]
+  VP --> MN[["animations[]: section, name, description,<br/>trigger, evidence, library, recreate"]]
+  MN --> ARB["3 Package: AnimationReportBuilder"]
+  EV --> ARB
+  ARB --> EST["estimate GSAP / Framer Motion / CSS"]
+  ARB --> DUR["median measured duration, else 600 ms"]
+  ARB --> SN["AnimationSnippets: fixed templates per trigger"]
+  EST --> TAB["Animations tab"]
+  DUR --> TAB
+  SN --> TAB
+  </script></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>The estimate, in order</h3>
+      <ol style="margin:0; padding-left:20px; color: var(--muted); font-size: 14.5px">
+        <li>AI's library hint says GSAP / ScrollTrigger → <b>GSAP</b>; says Framer → <b>Framer Motion</b>; says CSS → <b>CSS</b></li>
+        <li>Trigger is <code>scroll-scrub</code>, or the page has GSAP → <b>GSAP</b></li>
+        <li>Page has Framer → <b>Framer Motion</b></li>
+        <li>Trigger <code>hover</code> or <code>loop</code> → <b>CSS</b>, otherwise <b>Framer Motion</b></li>
+      </ol>
+      <p class="sub" style="margin:12px 0 0">Triggers: load, scroll, scroll-scrub, hover, click, loop, page-transition, unknown. Evidence is <b>measured</b> when it matches a browser-reported animation, otherwise <b>inferred</b>.</p>
+    </div>
+    <div class="mock" aria-label="Example animation card">
+      <div class="mock-head"><b>Feature cards fade up</b><span class="tag t-be">scroll</span><span class="tag t-db">measured</span><span class="tag t-ai">est. GSAP</span></div>
+      <p>Example of one card on the tab. The code comes from a fixed template; only the trigger and the duration are filled in, so no page text can end up in it.</p>
+      <pre>gsap.registerPlugin(ScrollTrigger);
+
+gsap.from(".target", {
+  opacity: 0,
+  y: 40,
+  duration: 0.6,
+  ease: "power2.out",
+  scrollTrigger: { trigger: ".target", start: "top 80%" },
+});</pre>
+    </div>
+  </div>
+</div></section>
+
+<!-- ===================================================================== COMPONENTS -->
+<section id="comp"><div class="wrap">
+  <h2>12 · How components and the design system are broken down</h2>
+  <p class="sub">Both start as <code>getComputedStyle</code> readings inside the real page. Design values stay measured; component previews are rewritten by Groq and then rebuilt from an allow-list.</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart TD
+  subgraph CAP["In the browser"]
+    CS["ComponentScript: up to 1500 elements,<br/>2 differently styled per kind:<br/>button, input, card, nav, heading, badge"]
+    DS["DesignScript: up to 800 visible elements"]
+  end
+  CS --> STY[["ComponentStyles: 22 CSS props each"]]
+  STY --> CA["Groq call 3: write tidy HTML + CSS"]
+  CA --> SAN["ComponentSanitizer: tag and property allow-lists,<br/>no scripts, url(), @rules, inline styles"]
+  SAN --> CP["Components tab: sandboxed iframe + strict CSP"]
+  DS --> DAN["DesignAnalyzer + CssAnalyzer: merge colours,<br/>guess roles, fonts, radii, shadows, spacing,<br/>CSS variables, breakpoints, framework"]
+  DAN --> DSY[["DesignSystem"]]
+  DSY --> DP["Design tab"]
+  DP --> D1["DesignColours"]
+  DP --> D2["DesignFonts (Google Fonts)"]
+  DP --> D3["DesignTokens"]
+  DP --> D4["DesignExport: Figma, CSS vars, Tailwind"]
+  </script></div>
+</div></section>
+
+<!-- ===================================================================== TREE -->
+<section id="tree"><div class="wrap">
+  <h2>13 · Frontend component tree</h2>
+  <p class="sub">Providers wrap everything; the two route groups decide whether you see the login column or the workspace shell.</p>
+  <div class="diagram-box"><script type="text/x-mermaid">
+flowchart TD
+  RL["RootLayout"] --> AP["AuthProvider"] --> SP["ScanProvider"]
+  SP --> AL["(auth) layout: RedirectIfAuthed"]
+  SP --> WL["(workspace) layout: RequireAuth"]
+  AL --> LG["login / signup / reset / verify-email"]
+  WL --> SH["Shell: MainNav, UserMenu, UsageMeter,<br/>ServerNotice, VerifyBanner"]
+  SH --> GEN["/ Generate: UrlInput, StatTile, HistoryRow"]
+  SH --> PRO["/processing: ProgressCard"]
+  SH --> RES["/results/[id]: ResultsView"]
+  SH --> HIS["/history"]
+  SH --> ADM["/admin/users: UsersPanel, UsersTable"]
+  RES --> SB["ResultsSidebar"]
+  RES --> T1["Preview: MarkdownPreview"]
+  RES --> T2["Raw"]
+  RES --> T3["Design: DesignPanel"]
+  RES --> T4["Components: ComponentsPanel"]
+  RES --> T5["Animations: AnimationsPanel"]
+  </script></div>
+</div></section>
+
+<!-- ===================================================================== GOTCHAS -->
+<section id="gotchas"><div class="wrap">
+  <h2>14 · Things I noticed while reading</h2>
+  <ul class="gotchas">
+    <li><code>appsettings.json</code> ships <code>Scanner:Mode = "static"</code> (the backend mock). Real scans need <code>Scanner__Mode=ai</code> in <code>backend/.env</code>.</li>
+    <li>The Processing animation runs a fixed 3 s before the real request even starts, so every scan waits 3 s longer than it needs to.</li>
+    <li><code>frontend/lib/scrape.ts</code> and <code>test-scrape.ts</code> are unused, import a <code>playwright</code> package that is not installed, and have no private-IP guard.</li>
+    <li><code>docs/HANDOFF.md</code> has unresolved merge-conflict markers, and one side claims component previews no longer use AI. This branch still uses AI for them.</li>
+    <li><code>docs/ARCHITECTURE.md</code> still describes the old browser-only mock.</li>
+    <li>The Results sidebar "thumbnail" is an illustration; screenshots are never stored.</li>
+  </ul>
+</div></section>
+
+</main>
+
+<footer><div class="wrap">Diagrams are drawn by Mermaid loaded from cdn.jsdelivr.net. Offline, each one shows its source text instead.</div></footer>
+
+<script>
+  // Fake page sections used to draw the six scroll frames and the contact sheet.
+  (function () {
+    var blocks = [
+      ["var(--accent)", 10], ["var(--surface)", 46], ["var(--fe)", 18], ["var(--surface)", 30],
+      ["var(--pw)", 26], ["var(--surface)", 22], ["var(--db)", 30], ["var(--surface)", 26],
+      ["var(--ai)", 22], ["var(--surface)", 30], ["var(--be)", 34], ["var(--surface)", 20],
+      ["var(--fe)", 26], ["var(--surface)", 30], ["var(--muted)", 40]
+    ];
+    function fakePage() {
+      var d = document.createElement("div");
+      d.className = "fake";
+      blocks.forEach(function (b) {
+        var s = document.createElement("div");
+        s.style.background = b[0];
+        s.style.height = b[1] + "px";
+        s.style.border = "1px solid var(--line)";
+        d.appendChild(s);
+      });
+      return d;
+    }
+    function frame(i, scale) {
+      var f = document.createElement("div");
+      f.className = "frame";
+      var win = document.createElement("div");
+      win.className = "win";
+      var page = fakePage();
+      page.style.transform = "translateY(" + (-i * 76 * scale) + "px) scale(" + scale + ")";
+      page.style.transformOrigin = "top left";
+      page.style.width = (100 / scale) + "%";
+      win.appendChild(page);
+      var cap = document.createElement("div");
+      cap.className = "cap";
+      cap.textContent = "Frame " + (i + 1) + " - scrolled " + (i * 760) + " px - " + (i * 0.7).toFixed(1) + " s";
+      f.appendChild(win);
+      f.appendChild(cap);
+      return f;
+    }
+    var frames = document.getElementById("frames");
+    var sheet = document.getElementById("sheet");
+    for (var i = 0; i < 6; i++) {
+      frames.appendChild(frame(i, 1));
+      sheet.appendChild(frame(i, 0.75));
+    }
+  })();
+</script>
+<script type="module">
+  const sources = [...document.querySelectorAll('script[type="text/x-mermaid"]')];
+  const show = (s, html) => {
+    const d = document.createElement("div");
+    d.className = "diagram";
+    d.innerHTML = html;
+    s.after(d);
+  };
+  const escape = (t) => t.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  try {
+    const { default: mermaid } = await import("https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs");
+    const dark = document.documentElement.dataset.theme === "dark" ||
+      (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+    mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict", fontFamily: "Inter, Segoe UI, system-ui, sans-serif" });
+    let n = 0;
+    for (const s of sources) {
+      try {
+        const { svg } = await mermaid.render("diagram" + n++, s.textContent.trim());
+        show(s, svg);
+      } catch (e) {
+        show(s, '<pre class="fallback">' + escape(s.textContent.trim()) + "</pre>");
+      }
+    }
+  } catch (e) {
+    for (const s of sources) show(s, '<pre class="fallback">' + escape(s.textContent.trim()) + "</pre>");
+  }
+</script>
+</body>
+</html>
