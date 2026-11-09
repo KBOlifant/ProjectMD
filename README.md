@@ -438,6 +438,7 @@ Further reading (What Claude Opus 5.5 wrote):
 - [Playwright](https://playwright.dev/) for headless browser rendering
 - [Neu Prompter](https://www.1001fonts.com/) font, used under its EULA (see `frontend/app/assets/neu-prompter/`)
 - [shields.io](https://shields.io/) and [skillicons.dev](https://skillicons.dev/) for the badges and icons
+- [Motion Dev](https://motion.dev/examples/js-stagger-grid) for the grid animation
 
 ---
 
