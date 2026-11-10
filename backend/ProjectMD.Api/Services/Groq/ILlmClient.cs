@@ -1,4 +1,4 @@
-﻿namespace ProjectMD.Api.Services.Ai;
+﻿namespace ProjectMD.Api.Services.Groq;
 
 // One question for the language model: fixed instructions (System), the page facts (User), the
 // model name and the hard cap on the answer length. JsonSchema, when set, asks the provider for JSON

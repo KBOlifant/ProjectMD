@@ -3,6 +3,7 @@ using ProjectMD.Api.Models;
 using ProjectMD.Api.Services.Ai;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Components;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Pipeline;
 
@@ -200,7 +201,7 @@ public sealed class PipelineScanGenerator : IScanGenerator
         LlmResult result;
         try
         {
-            result = await CompleteWithOneRetryAsync(request, options, ct);
+            result = await _llm.WriteProseAsync(request, options, _clock, _logger, ct);
         }
         catch (LlmNotConfiguredException)
         {
@@ -245,26 +246,6 @@ public sealed class PipelineScanGenerator : IScanGenerator
         {
             _logger.LogWarning("Motion notes failed ({ErrorType}); the document has none", ex.GetType().Name);
             return null;
-        }
-    }
-
-    // Calls the model. If the provider says 429/5xx (a transient LlmProviderException) it waits
-    // Ai:RetryBackoffMs and tries exactly once more; a second failure is not retried.
-    private async Task<LlmResult> CompleteWithOneRetryAsync(LlmRequest request, AiOptions options, CancellationToken ct)
-    {
-        try
-        {
-            return await _llm.CompleteAsync(request, ct);
-        }
-        catch (LlmProviderException ex) when (ex.IsTransient && !ct.IsCancellationRequested)
-        {
-            _logger.LogWarning("AI provider returned a transient error (status {Status}); retrying once", ex.StatusCode);
-            if (options.RetryBackoffMs > 0)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(options.RetryBackoffMs), _clock, ct);
-            }
-
-            return await _llm.CompleteAsync(request, ct);
         }
     }
 

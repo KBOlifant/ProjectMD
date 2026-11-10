@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "firebase": "^13.0.0",
     "framer-motion": "^14.6.0",
     "locomotive-scroll": "^5.0.1",

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProjectMD.Api.Data;
 using ProjectMD.Api.Models;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 

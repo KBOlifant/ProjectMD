@@ -5,11 +5,11 @@ description: Use when changing the AI calls (Groq), prompts, structured output, 
 
 # AI Calls, Budget and Cleaning
 
-Code: `backend/ProjectMD.Api/Services/Ai/` and `Services/Pipeline/`. Settings: `Ai` and `Motion` sections.
+Code: `backend/ProjectMD.Api/Services/Groq/` (client and every model call), `Services/Ai/` and `Services/Pipeline/`. Settings: `Ai` and `Motion` sections.
 
 ## What the AI does
 
-It writes short explanations only, as a small JSON object that follows a schema (`AiDocument`, `PromptBuilder`). Facts (technologies, endpoints, colours, outline) are written by code. API endpoints are given to the model as ids (E1, E2...) so it cannot invent a path. Text is `openai/gpt-oss-20b`-class via Groq's OpenAI-compatible endpoint (`GroqLlmClient`); the model names come from configuration (`Ai:FastModel`, `Motion:VisionModel`), never from code.
+It writes short explanations only, as a small JSON object that follows a schema (`AiDocument`, `PromptBuilder`). Facts (technologies, endpoints, colours, outline) are written by code. API endpoints are given to the model as ids (E1, E2...) so it cannot invent a path. Text is `openai/gpt-oss-20b`-class via Groq's OpenAI-compatible endpoint (`GroqLlmClient`, all calls in `Services/Groq/GroqCalls.cs`); the model names come from configuration (`Ai:FastModel`, `Motion:VisionModel`), never from code.
 
 Calls per scan, at most: the prose call, the vision call for animations (needs screenshots), and the component-preview call.
 

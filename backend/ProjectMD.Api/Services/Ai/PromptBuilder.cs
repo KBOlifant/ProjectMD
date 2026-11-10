@@ -2,6 +2,7 @@ using System.Text;
 using ProjectMD.Api.Models;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 
@@ -92,7 +93,7 @@ public sealed class PromptBuilder
 
         var facts = BuildFacts(digest, tech, TokenEstimator.ToQuarters(factsTokens));
         var user = FactsOpen + "\n" + facts + "\n" + FactsClose;
-        return new LlmRequest(SystemPrompt, user, model, options.MaxOutputTokens, AiDocumentSchema.Json);
+        return new  (SystemPrompt, user, model, options.MaxOutputTokens, AiDocumentSchema.Json);
     }
 
     // Tokens used by everything that is not page facts: the system text and the two markers.

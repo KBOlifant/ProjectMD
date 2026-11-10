@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ProjectMD.Api.Models;
@@ -6,6 +6,7 @@ using ProjectMD.Api.Services.Ai;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Visual;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Tests.Ai;
 
@@ -237,11 +238,11 @@ public class MotionAiTests
     // ---- Groq request body ------------------------------------------------------------------------
 
     [Fact]
-    public void Groq_body_with_images_uses_content_parts_and_the_requested_reasoning()
+    public async Task Groq_body_with_images_uses_content_parts_and_the_requested_reasoning()
     {
         var request = new MotionPromptBuilder().Build(Visual(), null, EnabledOptions())!;
 
-        using var json = JsonDocument.Parse(GroqLlmClient.BuildBody(request, new AiOptions()));
+        using var json = JsonDocument.Parse(await GroqLlmClientTests.SentBodyAsync(request));
         var root = json.RootElement;
 
         var content = root.GetProperty("messages")[1].GetProperty("content");
@@ -256,13 +257,13 @@ public class MotionAiTests
     }
 
     [Fact]
-    public void Groq_body_in_schema_mode_names_the_schema()
+    public async Task Groq_body_in_schema_mode_names_the_schema()
     {
         var options = EnabledOptions();
         options.ResponseFormat = "json_schema";
         var request = new MotionPromptBuilder().Build(Visual(), null, options)!;
 
-        using var json = JsonDocument.Parse(GroqLlmClient.BuildBody(request, new AiOptions()));
+        using var json = JsonDocument.Parse(await GroqLlmClientTests.SentBodyAsync(request));
 
         var format = json.RootElement.GetProperty("response_format");
         Assert.Equal("json_schema", format.GetProperty("type").GetString());
@@ -284,20 +285,20 @@ public class MotionAiTests
     }
 
     [Fact]
-    public void Groq_body_asks_for_hidden_reasoning_when_a_vision_model_thinks()
+    public async Task Groq_body_asks_for_hidden_reasoning_when_a_vision_model_thinks()
     {
         var request = new LlmRequest("sys", "user", "qwen/qwen3.8-27b", 500, null, [new LlmImage("image/jpeg", FirstFrame)], "low");
 
-        using var json = JsonDocument.Parse(GroqLlmClient.BuildBody(request, new AiOptions()));
+        using var json = JsonDocument.Parse(await GroqLlmClientTests.SentBodyAsync(request));
 
         Assert.Equal("low", json.RootElement.GetProperty("reasoning_effort").GetString());
         Assert.Equal("hidden", json.RootElement.GetProperty("reasoning_format").GetString());
     }
 
     [Fact]
-    public void Groq_body_without_images_is_unchanged()
+    public async Task Groq_body_without_images_is_unchanged()
     {
-        using var json = JsonDocument.Parse(GroqLlmClient.BuildBody(new LlmRequest("sys", "user facts", "openai/gpt-oss-20b", 500), new AiOptions()));
+        using var json = JsonDocument.Parse(await GroqLlmClientTests.SentBodyAsync(new LlmRequest("sys", "user facts", "openai/gpt-oss-20b", 500)));
         var root = json.RootElement;
 
         Assert.Equal("user facts", root.GetProperty("messages")[1].GetProperty("content").GetString());

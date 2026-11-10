@@ -7,6 +7,7 @@ using ProjectMD.Api.Services;
 using ProjectMD.Api.Services.Ai;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Tests.Ai;
 

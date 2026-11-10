@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useScan } from "@/components/scan-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -33,10 +34,23 @@ function FailedCard({ host, url, message, onRetry }: { host: string; url: string
 export default function ProcessingPage() {
   const router = useRouter();
   const { session, cancelScan } = useScan();
+  const [showGrid, setShowGrid] = useState(true); // dev-only toggle button below
 
   if (!session) {
     return (
+      
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        {/* {showGrid && <GridBreath />}
+        {process.env.NODE_ENV === "development" && (
+          <button
+            type="button"
+            onClick={() => setShowGrid((on) => !on)}
+            aria-pressed={showGrid}
+            className="ts-body fixed bottom-4 right-4 z-50 rounded-md border border-dashed border-white/30 bg-black/60 px-3 py-1.5 text-white"
+          >
+            Dev: grid {showGrid ? "on" : "off"}
+          </button>
+        )} */}
         <div className="w-full max-w-[520px]">
           <EmptyState action={<ButtonLink href="/">Go to Generate</ButtonLink>}>
             Nothing is scanning. Paste a URL on Generate to start.
@@ -67,7 +81,17 @@ export default function ProcessingPage() {
 
   return (
     <div className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <GridBreath />
+      {showGrid && <GridBreath />}
+      {process.env.NODE_ENV === "development" && (
+        <button
+          type="button"
+          onClick={() => setShowGrid((on) => !on)}
+          aria-pressed={showGrid}
+          className="ts-body fixed bottom-4 right-4 z-50 rounded-md border border-dashed border-white/30 bg-black/60 px-3 py-1.5 text-white"
+        >
+          Dev: grid {showGrid ? "on" : "off"}
+        </button>
+      )}
       <ProgressCard
         host={host}
         url={session.url}
