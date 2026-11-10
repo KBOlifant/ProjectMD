@@ -4,7 +4,7 @@ import { useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-const MS_PER_CHAR = 45;
+const MS_PER_CHAR = 20;
 
 const scramble = (text: string, revealed: number) =>
   [...text]

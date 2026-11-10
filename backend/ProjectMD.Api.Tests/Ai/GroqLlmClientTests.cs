@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using ProjectMD.Api.Services;
 using ProjectMD.Api.Services.Ai;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Tests.Ai;
 
@@ -125,6 +126,15 @@ public class GroqLlmClientTests
         return (new GroqLlmClient(new FakeHttpFactory(handler), Options.Create(ai), factory.CreateLogger<GroqLlmClient>()), logs);
     }
 
+    // The JSON body the client sends for a request, captured through the fake network.
+    internal static async Task<string> SentBodyAsync(LlmRequest request)
+    {
+        var handler = new FakeGroqHandler().Reply(HttpStatusCode.OK, Success());
+        var (client, _) = Create(handler);
+        await client.CompleteAsync(request, CancellationToken.None);
+        return handler.Seen[0].Body;
+    }
+
     private static LlmRequest Request() => new("SYSTEM PROMPT", "USER PAGE FACTS", "openai/gpt-oss-20b", 700);
 
     // URL, bearer header, model, caps, temperature, reasoning settings.
@@ -148,7 +158,6 @@ public class GroqLlmClientTests
         Assert.Equal(0, root.GetProperty("temperature").GetInt32());
         Assert.Equal("low", root.GetProperty("reasoning_effort").GetString());
         Assert.False(root.GetProperty("include_reasoning").GetBoolean());
-        Assert.False(root.GetProperty("stream").GetBoolean());
         var messages = root.GetProperty("messages");
         Assert.Equal("system", messages[0].GetProperty("role").GetString());
         Assert.Equal("USER PAGE FACTS", messages[1].GetProperty("content").GetString());

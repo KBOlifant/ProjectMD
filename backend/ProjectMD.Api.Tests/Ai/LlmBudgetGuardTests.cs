@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using ProjectMD.Api.Models;
 using ProjectMD.Api.Services.Ai;
 using ProjectMD.Api.Tests.Scans;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Tests.Ai;
 

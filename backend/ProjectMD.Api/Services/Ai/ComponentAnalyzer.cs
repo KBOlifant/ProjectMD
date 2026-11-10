@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Components;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 
@@ -124,7 +125,7 @@ public sealed class ComponentAnalyzer : IComponentAnalyzer
             LlmResult result;
             try
             {
-                result = await _llm.CompleteAsync(request, ct);
+                result = await _llm.WriteComponentPreviewsAsync(request, ct);
             }
             catch (LlmProviderException ex) when (ex.StatusCode == 400 && attempt < MaxAttempts && !ct.IsCancellationRequested)
             {

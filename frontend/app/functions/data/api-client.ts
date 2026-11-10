@@ -2,8 +2,9 @@ import { getIdToken } from "@/app/functions/auth/auth-service";
 
 // Small fetch wrapper for the Project MD backend (api mode only). It adds the signed-in user's
 // Firebase ID token as `Authorization: Bearer <token>`, retries once on 401 with a fresh token, and
-// turns every failure into an ApiError. Tokens and request/response bodies are never logged or
-// stored; the token only ever travels in the Authorization header (never in a URL).
+// turns every failure into an ApiError. In development builds every request and response (bodies
+// included) is logged to the console; the token is always redacted, never stored, and only ever
+// travels in the Authorization header (never in a URL).
 
 // Backend base URL without a trailing slash. Written out in full so Next inlines it at build time.
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080").replace(/\/+$/, "");
@@ -93,6 +94,35 @@ async function readToken(forceRefresh: boolean): Promise<string | null> {
   }
 }
 
+// Verbose console logging of every backend call (request, response status and parsed body, including
+// the scan object). Development builds only, so nothing is logged in production. The Firebase token
+// is never printed: the Authorization header is shown as "Bearer <redacted>".
+const DEBUG_API = process.env.NODE_ENV !== "production";
+let nextCallId = 1;
+
+function parseBody(raw: string): unknown {
+  if (raw === "") return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+// Logs a response without consuming it (reads a clone). Never throws.
+async function logResponse(callId: number, method: string, path: string, res: Response, ms: number): Promise<void> {
+  if (!DEBUG_API) return;
+  try {
+    const body = parseBody(await res.clone().text());
+    console.groupCollapsed(`[api #${callId}] <- ${res.status} ${method} ${path} (${Math.round(ms)}ms)`);
+    console.log("status:", res.status, res.statusText);
+    console.log("body:", body);
+    console.groupEnd();
+  } catch {
+    // Logging must never break a request.
+  }
+}
+
 // Sends one request with the given token (or none). A network failure (server down, CORS, offline)
 // becomes an ApiError with status 0; an aborted request is rethrown unchanged.
 async function send(path: string, init: RequestInit, token: string | null): Promise<Response> {
@@ -100,10 +130,24 @@ async function send(path: string, init: RequestInit, token: string | null): Prom
   headers.set("Accept", "application/json");
   if (init.body != null && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const method = (init.method ?? "GET").toUpperCase();
+  const callId = nextCallId++;
+  if (DEBUG_API) {
+    const shown = Object.fromEntries(headers.entries());
+    if (token) shown.authorization = "Bearer <redacted>";
+    console.log(`[api #${callId}] -> ${method} ${API_URL}${path}`, {
+      headers: shown,
+      body: typeof init.body === "string" ? parseBody(init.body) : init.body,
+    });
+  }
+  const started = performance.now();
   try {
-    return await fetch(API_URL + path, { ...init, headers });
+    const res = await fetch(API_URL + path, { ...init, headers });
+    await logResponse(callId, method, path, res, performance.now() - started);
+    return res;
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") throw err;
+    if (DEBUG_API) console.error(`[api #${callId}] !! ${method} ${path} network failure`, err);
     throw new ApiError(0, NETWORK_MESSAGE);
   }
 }

@@ -1,3 +1,5 @@
+using ProjectMD.Api.Services.Groq;
+
 namespace ProjectMD.Api.Services.Ai;
 
 // Runs once when the app starts in `ai` mode and says plainly in the log whether AI writing is

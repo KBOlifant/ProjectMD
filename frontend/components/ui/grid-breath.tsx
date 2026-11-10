@@ -4,10 +4,10 @@ import { motion, useReducedMotion } from "framer-motion";
 
 const COLUMNS = 24;
 const ROWS = 14;
-const BREATH_SECONDS = 4.6; // one full in-and-out
-const WAVE_DELAY = 0.07; // seconds of lag per cell of distance from the centre
-const CENTRE_HUE = 258; // violet-500
-const HUE_SHIFT = 22; // degrees toward blue on the left and pink on the right
+const BREATH_SECONDS = 7.6; // one full in-and-out
+const WAVE_DELAY = 0.1; // seconds of lag per cell of distance from the centre
+const CENTRE_HUE = 270; // violet-500
+const HUE_SHIFT = 32; // degrees toward blue on the left and pink on the right
 
 const CELLS = Array.from({ length: COLUMNS * ROWS }, (_, i) => {
   const dx = (i % COLUMNS) - (COLUMNS - 1) / 2;
@@ -25,7 +25,7 @@ export function GridBreath() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 -z-10 grid gap-1.5 p-6 [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_80%)]"
+      className="pointer-events-none absolute inset-0 -z-10 grid gap-2 p-6 [mask-image:radial-gradient(ellipse_at_center,black_10%,transparent_80%)]"
       style={{ gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)` }}
     >
       {CELLS.map((cell) => (

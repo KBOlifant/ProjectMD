@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 

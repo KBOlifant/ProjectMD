@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Visual;
 using ProjectMD.Api.Services.Pipeline;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 
@@ -112,7 +113,7 @@ public sealed class MotionAnalyzer : IMotionAnalyzer
         LlmResult result;
         try
         {
-            result = await _llm.CompleteAsync(request, ct);
+            result = await _llm.DescribeMotionAsync(request, ct);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using ProjectMD.Api.Services.Extraction;
 using ProjectMD.Api.Services.Extraction.Visual;
+using ProjectMD.Api.Services.Groq;
 
 namespace ProjectMD.Api.Services.Ai;
 
